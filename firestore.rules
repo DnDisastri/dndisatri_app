@@ -82,6 +82,12 @@ service cloud.firestore {
       allow update, delete: if isDM();
     }
 
+    // Maps: everyone authenticated can read; only DM can upload/edit/delete
+    match /maps/{mapId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isDM();
+    }
+
     // Audit log / ledger (read: DM only; append-only for players; DM can prune)
     match /audit_log/{entryId} {
       allow read: if isDM();

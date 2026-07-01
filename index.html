@@ -130,6 +130,10 @@
             <span class="nav-icon">🛡️</span>
             <span>Gilda</span>
           </button>
+          <button class="nav-btn" onclick="showSection('maps')">
+            <span class="nav-icon">🗺️</span>
+            <span>Mappe</span>
+          </button>
           <button class="nav-btn" onclick="showSection('market')">
             <span class="nav-icon">🪙</span>
             <span>Mercato</span>
@@ -988,6 +992,19 @@
       </div>
     </section>
 
+    <!-- MAPPE -->
+    <section id="maps" class="hidden">
+      <div class="container">
+        <div class="section-header">
+          <button class="back-btn" onclick="showSection('dashboard')">← Indietro</button>
+          <h2>🗺️ Mappe</h2>
+        </div>
+        <div id="maps-content">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </section>
+
     <!-- REGISTRO / AUDIT LOG (DM) -->
     <section id="audit" class="hidden">
       <div class="container">
@@ -1066,9 +1083,12 @@
 
     <!-- Hidden avatar file input -->
     <input type="file" id="avatar-input" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)" />
+
+    <!-- Hidden map file input -->
+    <input type="file" id="map-file-input" accept="image/png,image/jpeg" style="display:none;" onchange="handleMapUpload(event)" />
   </div>
 
   <!-- Firebase SDK (modular) -->
-  <script type="module" src="app.js?v=13"></script>
+  <script type="module" src="app.js?v=14"></script>
 </body>
 </html>

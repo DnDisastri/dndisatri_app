@@ -736,7 +736,7 @@ function hideLoading() {
 
 // === NAVIGATION ===
 window.showSection = function(sectionId) {
-  const sections = ['dashboard', 'characters', 'quests', 'archive', 'guild', 'market', 'profile', 'notifications', 'audit', 'fallen', 'pending'];
+  const sections = ['dashboard', 'characters', 'quests', 'archive', 'guild', 'maps', 'market', 'profile', 'notifications', 'audit', 'fallen', 'pending'];
   sections.forEach(id => hideElement(id));
 
   showElement(sectionId);
@@ -749,6 +749,8 @@ window.showSection = function(sectionId) {
     loadArchivedQuests();
   } else if (sectionId === 'guild') {
     loadGuild();
+  } else if (sectionId === 'maps') {
+    loadMaps();
   } else if (sectionId === 'market') {
     loadMarket();
   } else if (sectionId === 'profile') {
@@ -3786,6 +3788,143 @@ async function loadAudit() {
     el.innerHTML = '<div class="empty-state"><p>Errore nel caricamento del registro</p></div>';
   }
 }
+
+// ===================================================================
+// MAPPE
+// ===================================================================
+function fileToImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Comprime un'immagine sotto un budget di byte (limite documento Firestore ~1 MiB)
+async function compressImage(file, budget = 900000) {
+  const img = await fileToImage(file);
+  const dims = [1600, 1300, 1000, 800];
+  const quals = [0.82, 0.7, 0.6, 0.5, 0.4];
+  for (const maxDim of dims) {
+    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+    const w = Math.max(1, Math.round(img.width * scale));
+    const h = Math.max(1, Math.round(img.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    for (const q of quals) {
+      const url = canvas.toDataURL('image/jpeg', q);
+      if (url.length <= budget) return url;
+    }
+  }
+  return null;
+}
+
+async function loadMaps() {
+  const el = document.getElementById('maps-content');
+  el.innerHTML = '<div class="loading"><div class="dice-spinner">🎲</div></div>';
+  try {
+    const snap = await getDocs(collection(db, 'maps'));
+    const maps = [];
+    snap.forEach(d => maps.push({ id: d.id, ...d.data() }));
+    maps.sort((a, b) => ((b.createdAt && b.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0));
+    window._maps = maps;
+    renderMaps(maps);
+  } catch (e) {
+    console.error('Errore mappe:', e);
+    el.innerHTML = '<div class="empty-state"><p>Errore nel caricamento delle mappe</p></div>';
+  }
+}
+
+function renderMaps(maps) {
+  const el = document.getElementById('maps-content');
+
+  const dmControl = currentUserRole === 'dm' ? `
+    <div class="profile-box" style="margin-bottom:1rem; text-align:left;">
+      <label>Titolo mappa</label>
+      <input type="text" id="map-title-input" placeholder="Es. Città di Neverwinter" />
+      <div class="character-actions" style="margin-top:0.5rem;">
+        <button class="btn-info btn-lg" onclick="triggerMapUpload()">📤 Carica Mappa (JPG/PNG)</button>
+      </div>
+    </div>` : '';
+
+  const grid = maps.length === 0
+    ? '<div class="empty-state"><div class="empty-state-icon">🗺️</div><p>Nessuna mappa disponibile.</p></div>'
+    : `<div class="cards-grid">${maps.map(m => `
+        <div class="card" style="cursor:pointer;" onclick="viewMap('${m.id}')">
+          <img src="${m.image}" alt="${m.title}" class="map-thumb" />
+          <h3>${m.title}</h3>
+          <p style="color: var(--gray); font-size: 0.85rem;">Caricata da ${m.uploadedByName || '—'}</p>
+          ${currentUserRole === 'dm' ? `<button class="btn-danger" onclick="event.stopPropagation(); deleteMap('${m.id}')">🗑️ Elimina</button>` : ''}
+        </div>
+      `).join('')}</div>`;
+
+  el.innerHTML = dmControl + grid;
+}
+
+window.triggerMapUpload = function() {
+  const title = (document.getElementById('map-title-input').value || '').trim();
+  if (!title) { alert('Inserisci un titolo per la mappa.'); return; }
+  window._pendingMapTitle = title;
+  document.getElementById('map-file-input').click();
+};
+
+window.handleMapUpload = async function(event) {
+  const file = event.target.files && event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  if (currentUserRole !== 'dm') { alert('Solo i DM possono caricare mappe.'); return; }
+  const title = window._pendingMapTitle || 'Mappa';
+  try {
+    showLoading();
+    const image = await compressImage(file, 900000);
+    if (!image) {
+      hideLoading();
+      alert('Immagine troppo grande anche dopo la compressione. Usa una risoluzione più bassa.');
+      return;
+    }
+    await addDoc(collection(db, 'maps'), {
+      title,
+      image,
+      uploadedBy: currentUser.uid,
+      uploadedByName: currentUsername,
+      createdAt: serverTimestamp()
+    });
+    hideLoading();
+    loadMaps();
+  } catch (e) {
+    hideLoading();
+    console.error('Errore caricamento mappa:', e);
+    alert('Errore nel caricamento della mappa');
+  }
+};
+
+window.viewMap = function(mapId) {
+  const map = (window._maps || []).find(m => m.id === mapId);
+  if (!map) return;
+  document.getElementById('generic-content').innerHTML = `
+    <h3>${map.title}</h3>
+    <img src="${map.image}" alt="${map.title}" style="width:100%; height:auto; border-radius:8px;" />
+    <div class="modal-buttons">
+      <button onclick="hideGeneric()">Chiudi</button>
+    </div>
+  `;
+  showElement('generic-modal');
+};
+
+window.deleteMap = async function(mapId) {
+  if (currentUserRole !== 'dm') { alert('Solo i DM possono eliminare mappe.'); return; }
+  if (!confirm('Eliminare questa mappa?')) return;
+  try { showLoading(); await deleteDoc(doc(db, 'maps', mapId)); hideLoading(); loadMaps(); }
+  catch (e) { hideLoading(); console.error(e); alert('Errore'); }
+};
 
 // === FUNZIONE AGGIUNGI RIGA ARMA ===
 window.addWeaponRow = function() {
