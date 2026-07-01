@@ -77,6 +77,26 @@ function hpGainForLevel(hitDie, conMod) {
   return Math.max(1, Math.floor(hitDie / 2) + 1 + conMod);
 }
 
+// === OGGETTI MAGICI: CARATTERISTICHE EFFICACI ===
+// char.stats = punteggi BASE (creazione + ASI). char.itemEffects = effetti temporanei
+// da oggetti magici: { name, ability, mode: 'set'|'bonus', value }.
+// 'set' porta il punteggio a `value` (solo se migliore, come da regole 5e);
+// 'bonus' somma `value` (può essere negativo). Restituisce i punteggi EFFICACI.
+function effectiveStats(char) {
+  const stats = Object.assign({ str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 }, char.stats || {});
+  (char.itemEffects || []).forEach(e => {
+    if (!e || !(e.ability in stats)) return;
+    if (e.mode === 'set') {
+      stats[e.ability] = Math.max(stats[e.ability], e.value);
+    } else {
+      stats[e.ability] = stats[e.ability] + (e.value || 0);
+    }
+  });
+  return stats;
+}
+
+const STAT_LABELS = { str: 'FOR', dex: 'DES', con: 'COS', int: 'INT', wis: 'SAG', cha: 'CAR' };
+
 // ===================================================================
 // PATCH PER APP.JS - Aggiungere dopo le funzioni utility esistenti
 // ===================================================================
@@ -122,8 +142,8 @@ async function exportCharacterToPDF(char) {
   
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  
-  const stats = char.stats || {};
+
+  const stats = effectiveStats(char);
   const combat = char.combat || {};
   const weapons = char.weapons || [];
   const skills = char.skills || {};
@@ -1129,16 +1149,10 @@ window.handleAddCharacter = async function(event) {
 window.showCharacterDetail = function(charId) {
   const char = currentCharacters.find(c => c.id === charId);
   if (!char) return;
-  
-  const stats = char.stats || {};
+
+  const baseStats = char.stats || {};
+  const stats = effectiveStats(char); // include gli effetti degli oggetti magici
   const combat = char.combat || {};
-  
-  const strMod = calculateModifier(stats.str || 10);
-  const dexMod = calculateModifier(stats.dex || 10);
-  const conMod = calculateModifier(stats.con || 10);
-  const intMod = calculateModifier(stats.int || 10);
-  const wisMod = calculateModifier(stats.wis || 10);
-  const chaMod = calculateModifier(stats.cha || 10);
   
   // Only DMs can kill characters
   const killButton = currentUserRole === 'dm' ? 
@@ -1159,7 +1173,8 @@ window.showCharacterDetail = function(charId) {
   // DM can grant an extra ASI or a feat directly (house rules / class exceptions)
   const dmGrantButtons = currentUserRole === 'dm' ?
     `<button onclick="dmGrantASI('${char.id}')" class="btn-warning">➕ ASI Extra</button>
-     <button onclick="dmGrantFeat('${char.id}')" class="btn-warning">🏅 Assegna Talento</button>` : '';
+     <button onclick="dmGrantFeat('${char.id}')" class="btn-warning">🏅 Assegna Talento</button>
+     <button onclick="dmAddItemEffect('${char.id}')" class="btn-warning">🔮 Effetto Oggetto</button>` : '';
   
   const detailContent = document.getElementById('character-detail-content');
   detailContent.innerHTML = `
@@ -1173,38 +1188,28 @@ window.showCharacterDetail = function(charId) {
       
       <h4 style="margin-top: 1.5rem;">Caratteristiche</h4>
       <div class="character-stats-grid">
-        <div class="stat-box">
-          <span class="stat-label">FOR</span>
-          <span class="stat-value">${stats.str || 10}</span>
-          <span class="stat-modifier">${formatModifier(strMod)}</span>
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">DES</span>
-          <span class="stat-value">${stats.dex || 10}</span>
-          <span class="stat-modifier">${formatModifier(dexMod)}</span>
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">COS</span>
-          <span class="stat-value">${stats.con || 10}</span>
-          <span class="stat-modifier">${formatModifier(conMod)}</span>
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">INT</span>
-          <span class="stat-value">${stats.int || 10}</span>
-          <span class="stat-modifier">${formatModifier(intMod)}</span>
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">SAG</span>
-          <span class="stat-value">${stats.wis || 10}</span>
-          <span class="stat-modifier">${formatModifier(wisMod)}</span>
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">CAR</span>
-          <span class="stat-value">${stats.cha || 10}</span>
-          <span class="stat-modifier">${formatModifier(chaMod)}</span>
-        </div>
+        ${['str', 'dex', 'con', 'int', 'wis', 'cha'].map(k => {
+          const val = stats[k] || 10;
+          const modded = val !== (baseStats[k] || 10);
+          return `
+            <div class="stat-box">
+              <span class="stat-label">${STAT_LABELS[k]}</span>
+              <span class="stat-value">${val}${modded ? ' <span title="Modificato da oggetto magico" style="color: var(--success);">🔮</span>' : ''}</span>
+              <span class="stat-modifier">${formatModifier(calculateModifier(val))}</span>
+            </div>
+          `;
+        }).join('')}
       </div>
-      
+
+      ${(char.itemEffects && char.itemEffects.length > 0) ? `
+        <h4 style="margin-top: 1.5rem;">Oggetti Magici</h4>
+        ${char.itemEffects.map((e, i) => `
+          <p>🔮 <strong>${e.name}</strong>: ${STAT_LABELS[e.ability] || e.ability} ${e.mode === 'set' ? `= ${e.value}` : `${e.value >= 0 ? '+' : ''}${e.value}`}
+            ${currentUserRole === 'dm' ? `<button onclick="dmRemoveItemEffect('${char.id}', ${i})" class="btn-danger" style="padding: 0.1rem 0.5rem; margin-left: 0.5rem;">✕</button>` : ''}
+          </p>
+        `).join('')}
+      ` : ''}
+
       <h4 style="margin-top: 1.5rem;">Combattimento</h4>
       <p><strong>Classe Armatura:</strong> ${combat.ac || 10}</p>
       <p><strong>Iniziativa:</strong> ${formatModifier(combat.initiative || 0)}</p>
@@ -1656,34 +1661,31 @@ window.submitLevelUpRequest = async function(charId) {
   const currentLevel = char.level || 1;
   const newLevel = currentLevel + 1;
   const hitDie = parseInt(document.getElementById('levelup-hitdie').value) || 8;
-  const conMod = calculateModifier((char.stats && char.stats.con) || 10);
-  const hpGain = hpGainForLevel(hitDie, conMod);
 
   // Cloni completi: updateDoc sostituisce interamente le mappe annidate
   const stats = Object.assign({ str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 }, char.stats || {});
   const combat = Object.assign({ ac: 10, initiative: 0, speed: 30, hpMax: 10, hpCurrent: 10, hpTemp: 0 }, char.combat || {});
   const feats = Array.isArray(char.feats) ? char.feats.slice() : [];
 
-  const prevHpCurrent = combat.hpCurrent !== undefined ? combat.hpCurrent : combat.hpMax;
-  combat.hpMax = (combat.hpMax || 0) + hpGain;
-  combat.hpCurrent = prevHpCurrent + hpGain;
+  // Mod COS PRIMA dell'ASI (per calcolare l'eventuale aumento retroattivo dei PF)
+  const oldConMod = calculateModifier(stats.con);
 
-  const statLabels = { str: 'FOR', dex: 'DES', con: 'COS', int: 'INT', wis: 'SAG', cha: 'CAR' };
-  let summary = `Livello ${currentLevel} → ${newLevel}. +${hpGain} PF (d${hitDie}).`;
+  let summary = `Livello ${currentLevel} → ${newLevel}.`;
 
+  // Applica l'ASI ai punteggi BASE prima di calcolare i PF
   if (isASILevel(newLevel)) {
     const mode = document.querySelector('input[name="asi-mode"]:checked')?.value;
     if (mode === 'plus2') {
       const a = document.getElementById('asi-ability-a').value;
       stats[a] = Math.min(20, (stats[a] || 10) + 2);
-      summary += ` ASI: +2 ${statLabels[a]}.`;
+      summary += ` ASI: +2 ${STAT_LABELS[a]}.`;
     } else if (mode === 'plus1') {
       const b = document.getElementById('asi-ability-b').value;
       const c = document.getElementById('asi-ability-c').value;
       if (b === c) { alert('Scegli due caratteristiche diverse per il +1/+1!'); return; }
       stats[b] = Math.min(20, (stats[b] || 10) + 1);
       stats[c] = Math.min(20, (stats[c] || 10) + 1);
-      summary += ` ASI: +1 ${statLabels[b]}, +1 ${statLabels[c]}.`;
+      summary += ` ASI: +1 ${STAT_LABELS[b]}, +1 ${STAT_LABELS[c]}.`;
     } else if (mode === 'feat') {
       const name = document.getElementById('asi-feat-name').value.trim();
       if (!name) { alert('Inserisci il nome del talento!'); return; }
@@ -1692,6 +1694,22 @@ window.submitLevelUpRequest = async function(charId) {
       summary += ` Talento: ${name}.`;
     }
   }
+
+  // PF: il nuovo livello usa il mod COS aggiornato; se il mod COS è salito,
+  // aumento retroattivo di +1 PF per ogni livello precedente.
+  const newConMod = calculateModifier(stats.con);
+  const deltaConMod = newConMod - oldConMod;
+  const hpGain = hpGainForLevel(hitDie, newConMod);
+  const retroHp = Math.max(0, deltaConMod) * (newLevel - 1);
+  const totalHp = hpGain + retroHp;
+
+  const prevHpCurrent = combat.hpCurrent !== undefined ? combat.hpCurrent : combat.hpMax;
+  combat.hpMax = (combat.hpMax || 0) + totalHp;
+  combat.hpCurrent = prevHpCurrent + totalHp;
+
+  summary += ` +${hpGain} PF (d${hitDie})`;
+  if (retroHp > 0) summary += `, +${retroHp} PF retroattivi (COS +${deltaConMod})`;
+  summary += '.';
 
   const newData = {
     level: newLevel,
@@ -1789,6 +1807,70 @@ window.dmGrantFeat = async function(charId) {
     hideLoading();
     console.error('Errore assegnazione talento:', error);
     alert('Errore nell\'assegnazione');
+  }
+};
+
+// === STRUMENTI DM: EFFETTI DA OGGETTI MAGICI SULLE CARATTERISTICHE ===
+window.dmAddItemEffect = async function(charId) {
+  if (currentUserRole !== 'dm') { alert('Solo i DM possono gestire gli oggetti magici!'); return; }
+  const char = currentCharacters.find(c => c.id === charId);
+  if (!char) return;
+
+  const name = prompt('Nome oggetto magico (es. Manuale dei Golem, Cintura di Forza del Gigante):');
+  if (!name || !name.trim()) return;
+
+  const ability = (prompt('Su quale caratteristica? (str/dex/con/int/wis/cha)') || '').trim().toLowerCase();
+  if (!(ability in STAT_LABELS)) {
+    alert('Caratteristica non valida! Usa: str, dex, con, int, wis, cha');
+    return;
+  }
+
+  const modeInput = (prompt('Tipo effetto: "set" (imposta il punteggio a) oppure "bonus" (aggiunge)?', 'set') || '').trim().toLowerCase();
+  const mode = modeInput === 'bonus' ? 'bonus' : 'set';
+
+  const value = parseInt(prompt(mode === 'set' ? 'Imposta il punteggio a: (es. 19)' : 'Bonus da aggiungere: (es. 2 o -2)', mode === 'set' ? '19' : '2'));
+  if (isNaN(value)) return;
+
+  const itemEffects = Array.isArray(char.itemEffects) ? char.itemEffects.slice() : [];
+  itemEffects.push({ name: name.trim(), ability, mode, value });
+
+  try {
+    showLoading();
+    await updateDoc(doc(db, 'characters', charId), { itemEffects });
+    hideLoading();
+    hideCharacterDetail();
+    loadCharacters();
+    alert('Effetto oggetto magico applicato!');
+  } catch (error) {
+    hideLoading();
+    console.error('Errore effetto oggetto:', error);
+    alert('Errore nell\'applicazione');
+  }
+};
+
+window.dmRemoveItemEffect = async function(charId, index) {
+  if (currentUserRole !== 'dm') { alert('Solo i DM possono rimuovere gli oggetti magici!'); return; }
+  const char = currentCharacters.find(c => c.id === charId);
+  if (!char || !Array.isArray(char.itemEffects)) return;
+
+  const effect = char.itemEffects[index];
+  if (!effect) return;
+  if (!confirm(`Rimuovere l'effetto di "${effect.name}"?`)) return;
+
+  const itemEffects = char.itemEffects.slice();
+  itemEffects.splice(index, 1);
+
+  try {
+    showLoading();
+    await updateDoc(doc(db, 'characters', charId), { itemEffects });
+    hideLoading();
+    hideCharacterDetail();
+    loadCharacters();
+    alert('Effetto rimosso!');
+  } catch (error) {
+    hideLoading();
+    console.error('Errore rimozione effetto:', error);
+    alert('Errore nella rimozione');
   }
 };
 
@@ -2711,9 +2793,9 @@ window.showGuildCharacter = function(charId) {
   const char = guildCharacters.find(c => c.id === charId);
   if (!char) return;
 
-  const stats = char.stats || {};
+  const stats = effectiveStats(char);
   const combat = char.combat || {};
-  const statNames = { str: 'FOR', dex: 'DES', con: 'COS', int: 'INT', wis: 'SAG', cha: 'CAR' };
+  const statNames = STAT_LABELS;
 
   const statsGrid = Object.entries(statNames).map(([key, label]) => {
     const val = stats[key] || 10;
