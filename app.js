@@ -734,7 +734,7 @@ function hideLoading() {
 
 // === NAVIGATION ===
 window.showSection = function(sectionId) {
-  const sections = ['dashboard', 'characters', 'quests', 'archive', 'guild', 'market', 'profile', 'notifications', 'fallen', 'pending'];
+  const sections = ['dashboard', 'characters', 'quests', 'archive', 'guild', 'market', 'profile', 'notifications', 'audit', 'fallen', 'pending'];
   sections.forEach(id => hideElement(id));
 
   showElement(sectionId);
@@ -753,6 +753,8 @@ window.showSection = function(sectionId) {
     loadProfile();
   } else if (sectionId === 'notifications') {
     loadNotifications();
+  } else if (sectionId === 'audit') {
+    loadAudit();
   } else if (sectionId === 'fallen') {
     loadFallenHeroes();
   } else if (sectionId === 'pending') {
@@ -882,11 +884,13 @@ onAuthStateChanged(auth, async (user) => {
     if (currentUserRole === 'dm') {
       document.getElementById('pending-btn').style.display = 'flex';
       document.getElementById('notifications-btn').style.display = 'flex';
+      document.getElementById('audit-btn').style.display = 'flex';
       updatePendingCount();
       updateNotificationsCount();
     } else {
       document.getElementById('pending-btn').style.display = 'none';
       document.getElementById('notifications-btn').style.display = 'none';
+      document.getElementById('audit-btn').style.display = 'none';
     }
     
     hideElement('login');
@@ -1822,6 +1826,7 @@ window.dmGrantASI = async function(charId) {
   try {
     showLoading();
     await updateDoc(doc(db, 'characters', charId), { stats });
+    await logAudit({ charId, charName: char.name, action: 'dm-asi', message: `ASI extra dal DM: ${STAT_LABELS[key]} ${amount >= 0 ? '+' : ''}${amount}` });
     hideLoading();
     hideCharacterDetail();
     loadCharacters();
@@ -1848,6 +1853,7 @@ window.dmGrantFeat = async function(charId) {
   try {
     showLoading();
     await updateDoc(doc(db, 'characters', charId), { feats });
+    await logAudit({ charId, charName: char.name, action: 'dm-feat', message: `Talento assegnato dal DM: ${name.trim()}` });
     hideLoading();
     hideCharacterDetail();
     loadCharacters();
@@ -1985,6 +1991,7 @@ window.dmAddItemEffect = async function(charId) {
   try {
     showLoading();
     await updateDoc(doc(db, 'characters', charId), { itemEffects });
+    await logAudit({ charId, charName: char.name, action: 'dm-item', message: `Oggetto magico dal DM: ${describeItemEffect(effect)}` });
     hideLoading();
     hideCharacterDetail();
     loadCharacters();
@@ -2325,7 +2332,19 @@ window.approvePendingChange = async function(changeId) {
       approvedBy: currentUser.uid,
       approvedAt: serverTimestamp()
     });
-    
+
+    const auditMsg = change.type === 'loot' ? 'Bottino approvato'
+      : change.type === 'level_up' ? 'Passaggio di livello approvato'
+      : change.type === 'item_effect' ? 'Oggetto magico approvato'
+      : 'Modifica approvata';
+    await logAudit({
+      charId: change.characterId,
+      charName: change.characterName,
+      action: 'approve',
+      message: `${auditMsg}${change.summary ? ': ' + change.summary : ''}`,
+      gpDelta: change.type === 'loot' ? (change.grantGp || 0) : 0
+    });
+
     hideLoading();
     closePendingDetail();
     loadPendingChanges();
@@ -3316,6 +3335,7 @@ window.buyMarketItem = async function(itemId) {
     }
     const items = addItemToList(myChar.items || [], { name: item.name, qty, value: item.price, category: item.category });
     await updateDoc(doc(db, 'characters', myChar.id), { gp: gp - cost, items });
+    await logAudit({ charId: myChar.id, charName: myChar.name, action: 'buy', message: `Acquistato ${qty}× ${item.name} dal mercato`, gpDelta: -cost });
     hideLoading();
     alert(`Acquistato: ${qty}× ${item.name} per ${cost} gp.`);
     loadMarket();
@@ -3379,8 +3399,15 @@ window.dmGrantGold = async function(charId) {
   const amt = parseInt(prompt(`Oro da aggiungere a ${char.name} (negativo per togliere):`, '100'));
   if (isNaN(amt)) return;
   const gp = Math.max(0, (char.gp || 0) + amt);
-  try { showLoading(); await updateDoc(doc(db, 'characters', charId), { gp }); hideLoading(); hideCharacterDetail(); loadCharacters(); alert(`Oro aggiornato: ${gp} gp`); }
-  catch (e) { hideLoading(); console.error(e); alert('Errore'); }
+  try {
+    showLoading();
+    await updateDoc(doc(db, 'characters', charId), { gp });
+    await logAudit({ charId, charName: char.name, action: 'dm-gold', message: 'Oro modificato dal DM', gpDelta: amt });
+    hideLoading();
+    hideCharacterDetail();
+    loadCharacters();
+    alert(`Oro aggiornato: ${gp} gp`);
+  } catch (e) { hideLoading(); console.error(e); alert('Errore'); }
 };
 
 // ===================================================================
@@ -3411,6 +3438,7 @@ window.sellItem = async function() {
       status: 'active', createdAt: serverTimestamp()
     });
     await notifyDM(`🏷️ ${currentUsername} ha messo in vendita ${qty}× ${it.name} per ${price} gp.`, 'listing');
+    await logAudit({ charId: myChar.id, charName: myChar.name, action: 'sell-list', message: `Messo in vendita ${qty}× ${it.name} a ${price} gp` });
     hideLoading();
     alert('Oggetto messo in vendita!');
     loadMarket();
@@ -3439,6 +3467,8 @@ window.buyListing = async function(listingId) {
     batch.update(lref, { status: 'sold', buyerId: currentUser.uid, buyerName: currentUsername, soldAt: serverTimestamp() });
     await batch.commit();
     await notifyDM(`💰 ${currentUsername} ha comprato ${l.qty}× ${l.name} da ${l.sellerName} per ${cost} gp.`, 'sale');
+    await logAudit({ charId: myChar.id, charName: myChar.name, action: 'buy-listing', message: `Comprato ${l.qty}× ${l.name} da ${l.sellerName}`, gpDelta: -cost });
+    await logAudit({ charId: l.sellerCharId, charName: l.sellerCharName, action: 'sold', message: `Venduto ${l.qty}× ${l.name} a ${currentUsername}`, gpDelta: cost });
     hideLoading();
     alert('Acquisto completato!');
     loadMarket();
@@ -3592,6 +3622,8 @@ window.acceptTrade = async function(tradeId) {
     batch.update(tref, { status: 'accepted', resolvedAt: serverTimestamp() });
     await batch.commit();
     await notifyDM(`🔄 Scambio completato tra ${t.fromUserName} e ${t.toUserName}.`, 'trade');
+    await logAudit({ charId: t.fromCharId, charName: t.fromCharName, action: 'trade', message: `Scambio con ${t.toUserName}`, gpDelta: (t.wantGp || 0) - (t.giveGp || 0) });
+    await logAudit({ charId: t.toCharId, charName: t.toCharName, action: 'trade', message: `Scambio con ${t.fromUserName}`, gpDelta: (t.giveGp || 0) - (t.wantGp || 0) });
     hideLoading();
     alert('Scambio completato!');
     loadMarket();
@@ -3667,6 +3699,52 @@ window.markAllNotificationsRead = async function() {
     updateNotificationsCount();
   } catch (e) { hideLoading(); console.error(e); alert('Errore'); }
 };
+
+// ===================================================================
+// REGISTRO / AUDIT LOG
+// ===================================================================
+// Traccia ogni movimento di oro/oggetti/caratteristiche fatto TRAMITE l'app.
+// Serve al DM come libro mastro: se il valore di un pg non torna con la somma
+// dei movimenti registrati, qualcosa è stato aggirato fuori dall'app.
+async function logAudit(entry) {
+  try {
+    await addDoc(collection(db, 'audit_log'), {
+      charId: entry.charId || '',
+      charName: entry.charName || '',
+      actorId: currentUser.uid,
+      actorName: currentUsername,
+      action: entry.action || 'update',
+      message: entry.message || '',
+      gpDelta: entry.gpDelta || 0,
+      createdAt: serverTimestamp()
+    });
+  } catch (e) { console.error('Errore audit:', e); }
+}
+
+async function loadAudit() {
+  const el = document.getElementById('audit-list');
+  el.innerHTML = '<div class="loading"><div class="dice-spinner">🎲</div></div>';
+  try {
+    const snap = await getDocs(collection(db, 'audit_log'));
+    const entries = [];
+    snap.forEach(d => entries.push({ id: d.id, ...d.data() }));
+    entries.sort((a, b) => ((b.createdAt && b.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0));
+
+    if (entries.length === 0) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>Nessun movimento registrato.</p></div>';
+      return;
+    }
+
+    el.innerHTML = entries.slice(0, 200).map(e => {
+      const date = e.createdAt ? new Date(e.createdAt.seconds * 1000).toLocaleString('it-IT') : '';
+      const gp = e.gpDelta ? ` <strong style="color:${e.gpDelta >= 0 ? 'var(--success)' : 'var(--danger)'};">${e.gpDelta >= 0 ? '+' : ''}${e.gpDelta} gp</strong>` : '';
+      return `<div class="card"><p><strong>${e.charName || '—'}</strong> · ${e.message}${gp}</p><p style="color:var(--gray); font-size:0.85rem;">da ${e.actorName} · ${date}</p></div>`;
+    }).join('');
+  } catch (err) {
+    console.error(err);
+    el.innerHTML = '<div class="empty-state"><p>Errore nel caricamento del registro</p></div>';
+  }
+}
 
 // === FUNZIONE AGGIUNGI RIGA ARMA ===
 window.addWeaponRow = function() {

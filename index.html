@@ -140,6 +140,10 @@
             <span>Notifiche</span>
             <span class="pending-badge" id="notifications-count">0</span>
           </button>
+          <button class="nav-btn" id="audit-btn" onclick="showSection('audit')" style="display:none;">
+            <span class="nav-icon">📋</span>
+            <span>Registro</span>
+          </button>
           <button class="nav-btn" onclick="showSection('fallen')">
             <span class="nav-icon">☠️</span>
             <span>Fallen Heroes</span>
@@ -980,6 +984,23 @@
       </div>
     </section>
 
+    <!-- REGISTRO / AUDIT LOG (DM) -->
+    <section id="audit" class="hidden">
+      <div class="container">
+        <div class="section-header">
+          <button class="back-btn" onclick="showSection('dashboard')">← Indietro</button>
+          <h2>📋 Registro Movimenti</h2>
+        </div>
+        <p class="memorial-text">
+          Ogni movimento di oro, oggetti e caratteristiche passato per l'app.
+          Se un valore di un personaggio non torna col registro, qualcosa è stato aggirato.
+        </p>
+        <div id="audit-list" class="cards-grid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </section>
+
     <!-- FALLEN HEROES -->
     <section id="fallen" class="hidden">
       <div class="container">
@@ -1044,6 +1065,6 @@
   </div>
 
   <!-- Firebase SDK (modular) -->
-  <script type="module" src="app.js?v=9"></script>
+  <script type="module" src="app.js?v=10"></script>
 </body>
 </html>
