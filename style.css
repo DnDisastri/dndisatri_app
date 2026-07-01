@@ -1130,3 +1130,14 @@ button.add-btn:hover {
 .remove-spell-level:hover {
   background: #c92a2a;
 }
+
+/* === GILDA === */
+.guild-player {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(232, 213, 160, 0.2);
+}
+
+.guild-player > h3 {
+  color: var(--beige, #e8d5a0);
+}

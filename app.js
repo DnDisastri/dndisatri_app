@@ -51,6 +51,8 @@ let currentQuests = [];
 let fallenHeroes = [];
 let pendingChanges = [];
 let hasActiveCharacter = false;
+let guildCharacters = [];
+let levelUpCtx = null;
 
 // === UTILITY FUNCTIONS ===
 function calculateModifier(score) {
@@ -59,6 +61,20 @@ function calculateModifier(score) {
 
 function formatModifier(mod) {
   return mod >= 0 ? `+${mod}` : `${mod}`;
+}
+
+// === LEVEL UP / ASI / DADO VITA ===
+const ASI_LEVELS = [4, 8, 12, 16, 19];
+const HIT_DICE = [6, 8, 10, 12];
+
+function isASILevel(level) {
+  return ASI_LEVELS.includes(level);
+}
+
+// PF guadagnati salendo di UN livello (dal 2° in poi).
+// Metodo "media" 5e: (dado/2 + 1) + mod COS, minimo 1 per livello.
+function hpGainForLevel(hitDie, conMod) {
+  return Math.max(1, Math.floor(hitDie / 2) + 1 + conMod);
 }
 
 // ===================================================================
@@ -681,17 +697,19 @@ function hideLoading() {
 
 // === NAVIGATION ===
 window.showSection = function(sectionId) {
-  const sections = ['dashboard', 'characters', 'quests', 'archive', 'fallen', 'pending'];
+  const sections = ['dashboard', 'characters', 'quests', 'archive', 'guild', 'fallen', 'pending'];
   sections.forEach(id => hideElement(id));
-  
+
   showElement(sectionId);
-  
+
   if (sectionId === 'characters') {
     loadCharacters();
   } else if (sectionId === 'quests') {
     loadQuests();
   } else if (sectionId === 'archive') {
     loadArchivedQuests();
+  } else if (sectionId === 'guild') {
+    loadGuild();
   } else if (sectionId === 'fallen') {
     loadFallenHeroes();
   } else if (sectionId === 'pending') {
@@ -1030,6 +1048,8 @@ window.handleAddCharacter = async function(event) {
     race: document.getElementById('char-race').value.trim(),
     background: document.getElementById('char-background').value.trim(),
     level: level,
+    hitDie: parseInt(document.getElementById('char-hitdie').value) || 8,
+    feats: [],
     proficiencyBonus: calculateProficiencyBonus(level),
     stats: {
       str: parseInt(document.getElementById('char-str').value),
@@ -1127,10 +1147,19 @@ window.showCharacterDetail = function(charId) {
   // Players can edit their own characters (but changes need approval)
   const editButton = char.userId === currentUser.uid ?
     `<button onclick="showEditCharacter('${char.id}')" class="btn-info">✏️ Modifica</button>` : '';
-  
+
+  // Players can request a level up for their own (living) character; needs DM approval
+  const levelUpButton = (char.userId === currentUser.uid && !char.isDead && (char.level || 1) < 20) ?
+    `<button onclick="showLevelUpRequest('${char.id}')" class="btn-success">⬆️ Richiedi Passaggio di Livello</button>` : '';
+
   // DM can directly edit level
   const dmLevelButton = currentUserRole === 'dm' ?
     `<button onclick="dmEditLevel('${char.id}')" class="btn-warning">⬆️ Modifica Livello</button>` : '';
+
+  // DM can grant an extra ASI or a feat directly (house rules / class exceptions)
+  const dmGrantButtons = currentUserRole === 'dm' ?
+    `<button onclick="dmGrantASI('${char.id}')" class="btn-warning">➕ ASI Extra</button>
+     <button onclick="dmGrantFeat('${char.id}')" class="btn-warning">🏅 Assegna Talento</button>` : '';
   
   const detailContent = document.getElementById('character-detail-content');
   detailContent.innerHTML = `
@@ -1183,7 +1212,16 @@ window.showCharacterDetail = function(charId) {
       <p><strong>Punti Ferita Max:</strong> ${combat.hpMax || 10}</p>
       <p><strong>PF Attuali:</strong> ${combat.hpCurrent !== undefined ? combat.hpCurrent : (combat.hpMax || 10)}${combat.hpTemp ? ` <span style="color: var(--success);">(+${combat.hpTemp} temp)</span>` : ''}</p>
       <p><strong>Bonus Competenza:</strong> +${char.proficiencyBonus || calculateProficiencyBonus(char.level || 1)}</p>
-      
+      ${char.hitDie ? `<p><strong>Dado Vita:</strong> d${char.hitDie}</p>` : ''}
+
+      ${char.feats && char.feats.length > 0 ? `
+        <h4 style="margin-top: 1.5rem;">Talenti</h4>
+        ${char.feats.map(f => `
+          <p><strong>${f.name}</strong>${f.level ? ` <span style="color: var(--gray);">(liv. ${f.level})</span>` : ''}</p>
+          ${f.description ? `<p style="white-space: pre-wrap; margin-left: 1rem;">${f.description}</p>` : ''}
+        `).join('')}
+      ` : ''}
+
       ${char.weapons && char.weapons.length > 0 ? `
         <h4 style="margin-top: 1.5rem;">Armi</h4>
         ${char.weapons.map(weapon => {
@@ -1289,7 +1327,9 @@ window.showCharacterDetail = function(charId) {
     
     <div class="character-actions">
       ${editButton}
+      ${levelUpButton}
       ${dmLevelButton}
+      ${dmGrantButtons}
       ${killButton}
       <button onclick="exportToPDF('${char.id}')" class="btn-info">📄 Esporta PDF</button>
       <button onclick="hideCharacterDetail()" class="btn-secondary">Chiudi</button>
@@ -1512,6 +1552,246 @@ window.dmEditLevel = async function(charId) {
   }
 };
 
+// === RICHIESTA PASSAGGIO DI LIVELLO (PLAYER) ===
+window.showLevelUpRequest = function(charId) {
+  const char = currentCharacters.find(c => c.id === charId);
+  if (!char) return;
+  if (char.userId !== currentUser.uid) {
+    alert('Puoi richiedere il passaggio di livello solo per i tuoi personaggi!');
+    return;
+  }
+
+  const currentLevel = char.level || 1;
+  const newLevel = currentLevel + 1;
+  if (newLevel > 20) {
+    alert('Livello massimo (20) già raggiunto!');
+    return;
+  }
+
+  const stats = char.stats || {};
+  const conMod = calculateModifier(stats.con || 10);
+  const currentHitDie = char.hitDie || 8;
+  levelUpCtx = { conMod };
+
+  const abilityOptions = (selected) => [
+    ['str', 'FOR'], ['dex', 'DES'], ['con', 'COS'],
+    ['int', 'INT'], ['wis', 'SAG'], ['cha', 'CAR']
+  ].map(([k, l]) => `<option value="${k}"${k === selected ? ' selected' : ''}>${l}</option>`).join('');
+
+  const asiBlock = isASILevel(newLevel) ? `
+    <div class="form-section">
+      <h4>Miglioramento del livello ${newLevel} (ASI)</h4>
+      <p style="color: var(--gray);">A questo livello puoi aumentare le caratteristiche oppure prendere un talento.</p>
+      <label><input type="radio" name="asi-mode" value="plus2" checked onchange="onAsiModeChange()"> +2 a una caratteristica</label><br>
+      <label><input type="radio" name="asi-mode" value="plus1" onchange="onAsiModeChange()"> +1 a due caratteristiche</label><br>
+      <label><input type="radio" name="asi-mode" value="feat" onchange="onAsiModeChange()"> Talento</label>
+
+      <div id="asi-plus2" style="margin-top: 0.75rem;">
+        <label>Caratteristica (+2)</label>
+        <select id="asi-ability-a">${abilityOptions('con')}</select>
+      </div>
+      <div id="asi-plus1" style="margin-top: 0.75rem; display:none;">
+        <label>Prima caratteristica (+1)</label>
+        <select id="asi-ability-b">${abilityOptions('con')}</select>
+        <label>Seconda caratteristica (+1)</label>
+        <select id="asi-ability-c">${abilityOptions('dex')}</select>
+      </div>
+      <div id="asi-feat" style="margin-top: 0.75rem; display:none;">
+        <label>Nome talento</label>
+        <input type="text" id="asi-feat-name" placeholder="Es. Gladiatore, Esperto..." />
+        <label>Descrizione (opzionale)</label>
+        <textarea id="asi-feat-desc" rows="3" placeholder="Effetti del talento..."></textarea>
+      </div>
+    </div>
+  ` : '';
+
+  document.getElementById('levelup-content').innerHTML = `
+    <h3>⬆️ Richiesta Passaggio di Livello</h3>
+    <p><strong>${char.name}</strong>: livello ${currentLevel} → <strong>${newLevel}</strong></p>
+
+    <div class="form-section">
+      <h4>Punti Ferita</h4>
+      <label>Dado Vita</label>
+      <select id="levelup-hitdie" onchange="updateHpPreview()">
+        ${HIT_DICE.map(d => `<option value="${d}"${d === currentHitDie ? ' selected' : ''}>d${d}</option>`).join('')}
+      </select>
+      <p style="margin-top: 0.5rem;">PF guadagnati (media + COS): <strong id="hp-gain-preview"></strong></p>
+    </div>
+
+    ${asiBlock}
+
+    <div class="modal-buttons">
+      <button type="button" class="btn-success" onclick="submitLevelUpRequest('${char.id}')">Invia Richiesta</button>
+      <button type="button" onclick="hideLevelUpRequest()">Annulla</button>
+    </div>
+  `;
+
+  showElement('levelup-modal');
+  updateHpPreview();
+};
+
+window.hideLevelUpRequest = function() {
+  hideElement('levelup-modal');
+  levelUpCtx = null;
+};
+
+window.onAsiModeChange = function() {
+  const mode = document.querySelector('input[name="asi-mode"]:checked')?.value;
+  document.getElementById('asi-plus2').style.display = mode === 'plus2' ? 'block' : 'none';
+  document.getElementById('asi-plus1').style.display = mode === 'plus1' ? 'block' : 'none';
+  document.getElementById('asi-feat').style.display = mode === 'feat' ? 'block' : 'none';
+};
+
+window.updateHpPreview = function() {
+  if (!levelUpCtx) return;
+  const hitDie = parseInt(document.getElementById('levelup-hitdie').value) || 8;
+  const gain = hpGainForLevel(hitDie, levelUpCtx.conMod);
+  document.getElementById('hp-gain-preview').textContent = `+${gain} PF`;
+};
+
+window.submitLevelUpRequest = async function(charId) {
+  const char = currentCharacters.find(c => c.id === charId);
+  if (!char) return;
+
+  const currentLevel = char.level || 1;
+  const newLevel = currentLevel + 1;
+  const hitDie = parseInt(document.getElementById('levelup-hitdie').value) || 8;
+  const conMod = calculateModifier((char.stats && char.stats.con) || 10);
+  const hpGain = hpGainForLevel(hitDie, conMod);
+
+  // Cloni completi: updateDoc sostituisce interamente le mappe annidate
+  const stats = Object.assign({ str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 }, char.stats || {});
+  const combat = Object.assign({ ac: 10, initiative: 0, speed: 30, hpMax: 10, hpCurrent: 10, hpTemp: 0 }, char.combat || {});
+  const feats = Array.isArray(char.feats) ? char.feats.slice() : [];
+
+  const prevHpCurrent = combat.hpCurrent !== undefined ? combat.hpCurrent : combat.hpMax;
+  combat.hpMax = (combat.hpMax || 0) + hpGain;
+  combat.hpCurrent = prevHpCurrent + hpGain;
+
+  const statLabels = { str: 'FOR', dex: 'DES', con: 'COS', int: 'INT', wis: 'SAG', cha: 'CAR' };
+  let summary = `Livello ${currentLevel} → ${newLevel}. +${hpGain} PF (d${hitDie}).`;
+
+  if (isASILevel(newLevel)) {
+    const mode = document.querySelector('input[name="asi-mode"]:checked')?.value;
+    if (mode === 'plus2') {
+      const a = document.getElementById('asi-ability-a').value;
+      stats[a] = Math.min(20, (stats[a] || 10) + 2);
+      summary += ` ASI: +2 ${statLabels[a]}.`;
+    } else if (mode === 'plus1') {
+      const b = document.getElementById('asi-ability-b').value;
+      const c = document.getElementById('asi-ability-c').value;
+      if (b === c) { alert('Scegli due caratteristiche diverse per il +1/+1!'); return; }
+      stats[b] = Math.min(20, (stats[b] || 10) + 1);
+      stats[c] = Math.min(20, (stats[c] || 10) + 1);
+      summary += ` ASI: +1 ${statLabels[b]}, +1 ${statLabels[c]}.`;
+    } else if (mode === 'feat') {
+      const name = document.getElementById('asi-feat-name').value.trim();
+      if (!name) { alert('Inserisci il nome del talento!'); return; }
+      const desc = document.getElementById('asi-feat-desc').value.trim();
+      feats.push({ name, description: desc, level: newLevel, source: 'ASI' });
+      summary += ` Talento: ${name}.`;
+    }
+  }
+
+  const newData = {
+    level: newLevel,
+    proficiencyBonus: calculateProficiencyBonus(newLevel),
+    hitDie: hitDie,
+    stats: stats,
+    combat: combat,
+    feats: feats
+  };
+
+  try {
+    showLoading();
+    await addDoc(collection(db, 'pending_changes'), {
+      type: 'level_up',
+      characterId: charId,
+      characterName: char.name,
+      requestedBy: currentUser.uid,
+      requestedByName: currentUsername,
+      summary: summary,
+      oldData: {
+        level: currentLevel,
+        hitDie: char.hitDie || null,
+        stats: char.stats || {},
+        combat: char.combat || {},
+        feats: char.feats || []
+      },
+      newData: newData,
+      status: 'pending',
+      createdAt: serverTimestamp()
+    });
+    hideLoading();
+    hideLevelUpRequest();
+    hideCharacterDetail();
+    alert('Richiesta di passaggio di livello inviata! Il DM la esaminerà presto.');
+  } catch (error) {
+    hideLoading();
+    console.error('Errore invio richiesta livello:', error);
+    alert('Errore nell\'invio della richiesta');
+  }
+};
+
+// === STRUMENTI DM: ASI EXTRA E TALENTI DIRETTI ===
+window.dmGrantASI = async function(charId) {
+  if (currentUserRole !== 'dm') { alert('Solo i DM possono concedere un ASI extra!'); return; }
+  const char = currentCharacters.find(c => c.id === charId);
+  if (!char) return;
+
+  const ability = prompt('Quale caratteristica aumentare? (str/dex/con/int/wis/cha)');
+  if (!ability) return;
+  const key = ability.trim().toLowerCase();
+  if (!['str', 'dex', 'con', 'int', 'wis', 'cha'].includes(key)) {
+    alert('Caratteristica non valida! Usa: str, dex, con, int, wis, cha');
+    return;
+  }
+  const amount = parseInt(prompt('Di quanto aumentarla? (es. 1 o 2)', '2'));
+  if (isNaN(amount) || amount === 0) return;
+
+  const stats = Object.assign({}, char.stats || {});
+  stats[key] = Math.min(30, Math.max(1, (stats[key] || 10) + amount));
+
+  try {
+    showLoading();
+    await updateDoc(doc(db, 'characters', charId), { stats });
+    hideLoading();
+    hideCharacterDetail();
+    loadCharacters();
+    alert('Caratteristica aggiornata!');
+  } catch (error) {
+    hideLoading();
+    console.error('Errore ASI extra:', error);
+    alert('Errore nell\'aggiornamento');
+  }
+};
+
+window.dmGrantFeat = async function(charId) {
+  if (currentUserRole !== 'dm') { alert('Solo i DM possono assegnare talenti!'); return; }
+  const char = currentCharacters.find(c => c.id === charId);
+  if (!char) return;
+
+  const name = prompt('Nome del talento:');
+  if (!name || !name.trim()) return;
+  const description = (prompt('Descrizione (opzionale):') || '').trim();
+
+  const feats = Array.isArray(char.feats) ? char.feats.slice() : [];
+  feats.push({ name: name.trim(), description, level: char.level || null, source: 'DM' });
+
+  try {
+    showLoading();
+    await updateDoc(doc(db, 'characters', charId), { feats });
+    hideLoading();
+    hideCharacterDetail();
+    loadCharacters();
+    alert('Talento assegnato!');
+  } catch (error) {
+    hideLoading();
+    console.error('Errore assegnazione talento:', error);
+    alert('Errore nell\'assegnazione');
+  }
+};
+
 window.killCharacter = async function(charId) {
   if (currentUserRole !== 'dm') {
     alert('Solo i Dungeon Master possono dichiarare morti i personaggi!');
@@ -1595,11 +1875,13 @@ function renderPendingChanges() {
       new Date(change.createdAt.seconds * 1000).toLocaleDateString('it-IT') : 
       'Data sconosciuta';
     
+    const typeLabel = change.type === 'level_up' ? '⬆️ Passaggio di Livello' : 'Modifica Personaggio';
     return `
       <div class="card pending-card" onclick="showPendingDetail('${change.id}')">
-        <span class="change-type">Modifica Personaggio</span>
+        <span class="change-type">${typeLabel}</span>
         <h3>${change.characterName}</h3>
         <p class="requester"><strong>Richiesta da:</strong> ${change.requestedByName}</p>
+        ${change.summary ? `<p>${change.summary}</p>` : ''}
         <p><strong>Data:</strong> ${date}</p>
         <span class="card-status status-pending">⏳ In Attesa</span>
       </div>
@@ -1637,6 +1919,38 @@ window.showPendingDetail = function(changeId) {
     }
   });
   
+  // Level / Dado Vita (soprattutto per le richieste di passaggio di livello)
+  if (old.level !== undefined && old.level !== newData.level && newData.level !== undefined) {
+    diffHtml += `
+      <div class="change-diff">
+        <strong>Livello:</strong>
+        <span class="old-value">${old.level}</span> → <span class="new-value">${newData.level}</span>
+      </div>
+    `;
+  }
+  if (old.hitDie !== newData.hitDie && newData.hitDie !== undefined) {
+    diffHtml += `
+      <div class="change-diff">
+        <strong>Dado Vita:</strong>
+        <span class="old-value">${old.hitDie ? 'd' + old.hitDie : '(non impostato)'}</span> → <span class="new-value">d${newData.hitDie}</span>
+      </div>
+    `;
+  }
+
+  // Talenti aggiunti
+  if (newData.feats) {
+    const oldCount = (old.feats || []).length;
+    const added = newData.feats.slice(oldCount);
+    if (added.length > 0) {
+      diffHtml += `
+        <div class="change-diff">
+          <strong>Talenti aggiunti:</strong><br>
+          ${added.map(f => `<span class="new-value">+ ${f.name}${f.description ? ` — ${f.description}` : ''}</span>`).join('<br>')}
+        </div>
+      `;
+    }
+  }
+
   // Stats comparison
   if (old.stats && newData.stats) {
     const statNames = { str: 'FOR', dex: 'DES', con: 'COS', int: 'INT', wis: 'SAG', cha: 'CAR' };
@@ -1698,9 +2012,10 @@ window.showPendingDetail = function(changeId) {
   }
   
   const modalContent = `
-    <h3>Richiesta Modifica: ${change.characterName}</h3>
+    <h3>${change.type === 'level_up' ? '⬆️ Passaggio di Livello' : 'Richiesta Modifica'}: ${change.characterName}</h3>
     <p><strong>Richiesta da:</strong> ${change.requestedByName}</p>
-    
+    ${change.summary ? `<p><em>${change.summary}</em></p>` : ''}
+
     <h4 style="margin-top: 1.5rem;">Modifiche Proposte:</h4>
     ${diffHtml}
     
@@ -2320,6 +2635,126 @@ function renderFallenHeroes() {
     `;
   }).join('');
 }
+
+// === GILDA (tutti i giocatori e i loro eroi) ===
+async function loadGuild() {
+  const listEl = document.getElementById('guild-list');
+  listEl.innerHTML = '<div class="loading"><div class="dice-spinner">🎲</div></div>';
+
+  try {
+    const [usersSnap, charsSnap] = await Promise.all([
+      getDocs(collection(db, 'users')),
+      getDocs(collection(db, 'characters'))
+    ]);
+
+    const usersById = {};
+    usersSnap.forEach(d => { usersById[d.id] = d.data(); });
+
+    guildCharacters = [];
+    const charsByUser = {};
+    charsSnap.forEach(d => {
+      const char = { id: d.id, ...d.data() };
+      guildCharacters.push(char);
+      if (char.isDead) return; // i caduti stanno nella Hall of Fallen Heroes
+      (charsByUser[char.userId] = charsByUser[char.userId] || []).push(char);
+    });
+
+    renderGuild(usersById, charsByUser);
+  } catch (error) {
+    console.error('Errore caricamento gilda:', error);
+    listEl.innerHTML = '<div class="empty-state"><p>Errore nel caricamento</p></div>';
+  }
+}
+
+function renderGuild(usersById, charsByUser) {
+  const listEl = document.getElementById('guild-list');
+
+  const uids = Object.keys(usersById);
+  if (uids.length === 0) {
+    listEl.innerHTML = '<div class="empty-state"><p>Nessun avventuriero nella gilda.</p></div>';
+    return;
+  }
+
+  // Ordina: prima i DM, poi per nome
+  uids.sort((a, b) => {
+    const ua = usersById[a], ub = usersById[b];
+    if ((ub.role === 'dm') - (ua.role === 'dm') !== 0) return (ub.role === 'dm') - (ua.role === 'dm');
+    return (ua.username || '').localeCompare(ub.username || '');
+  });
+
+  listEl.innerHTML = uids.map(uid => {
+    const user = usersById[uid];
+    const chars = charsByUser[uid] || [];
+    const roleBadge = user.role === 'dm' ? ' <span class="difficulty-badge difficulty-Epica">DM</span>' : '';
+    const isMe = uid === currentUser.uid ? ' (tu)' : '';
+
+    const charsHtml = chars.length > 0
+      ? chars.map(c => `
+          <div class="card" style="cursor:pointer;" onclick="showGuildCharacter('${c.id}')">
+            <h3>⚔️ ${c.name}</h3>
+            <p><strong>Classe:</strong> ${c.class}${c.subclass ? ` (${c.subclass})` : ''}</p>
+            <p><strong>Livello:</strong> ${c.level || 1} · <strong>Razza:</strong> ${c.race}</p>
+          </div>
+        `).join('')
+      : '<p style="color: var(--gray); margin-left: 0.5rem;">Nessun personaggio attivo.</p>';
+
+    return `
+      <div class="guild-player">
+        <h3 style="margin-bottom: 0.5rem;">🛡️ ${user.username || 'Avventuriero'}${roleBadge}${isMe}</h3>
+        <div class="cards-grid">${charsHtml}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+window.showGuildCharacter = function(charId) {
+  const char = guildCharacters.find(c => c.id === charId);
+  if (!char) return;
+
+  const stats = char.stats || {};
+  const combat = char.combat || {};
+  const statNames = { str: 'FOR', dex: 'DES', con: 'COS', int: 'INT', wis: 'SAG', cha: 'CAR' };
+
+  const statsGrid = Object.entries(statNames).map(([key, label]) => {
+    const val = stats[key] || 10;
+    return `
+      <div class="stat-box">
+        <span class="stat-label">${label}</span>
+        <span class="stat-value">${val}</span>
+        <span class="stat-modifier">${formatModifier(calculateModifier(val))}</span>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('character-detail-content').innerHTML = `
+    <h3>${char.name}</h3>
+    <div class="character-info">
+      <p><strong>Classe:</strong> ${char.class}${char.subclass ? ` (${char.subclass})` : ''}</p>
+      <p><strong>Livello:</strong> ${char.level || 1}</p>
+      <p><strong>Razza:</strong> ${char.race}</p>
+      ${char.background ? `<p><strong>Background:</strong> ${char.background}</p>` : ''}
+
+      <h4 style="margin-top: 1.5rem;">Caratteristiche</h4>
+      <div class="character-stats-grid">${statsGrid}</div>
+
+      <h4 style="margin-top: 1.5rem;">Combattimento</h4>
+      <p><strong>Classe Armatura:</strong> ${combat.ac || 10}</p>
+      <p><strong>Punti Ferita Max:</strong> ${combat.hpMax || 10}</p>
+      <p><strong>Bonus Competenza:</strong> +${char.proficiencyBonus || calculateProficiencyBonus(char.level || 1)}</p>
+
+      ${char.feats && char.feats.length > 0 ? `
+        <h4 style="margin-top: 1.5rem;">Talenti</h4>
+        ${char.feats.map(f => `<p><strong>${f.name}</strong>${f.description ? `: ${f.description}` : ''}</p>`).join('')}
+      ` : ''}
+    </div>
+
+    <div class="character-actions">
+      <button onclick="hideCharacterDetail()" class="btn-secondary">Chiudi</button>
+    </div>
+  `;
+
+  showElement('character-detail');
+};
 
 // === FUNZIONE AGGIUNGI RIGA ARMA ===
 window.addWeaponRow = function() {
