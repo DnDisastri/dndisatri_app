@@ -879,6 +879,7 @@
             <h3>Crea Nuova Quest</h3>
             <form onsubmit="handleAddQuest(event)">
               <input type="text" id="quest-title" placeholder="Titolo" required />
+              <input type="text" id="quest-giver" placeholder="Affidata da (personaggio che assegna la quest)" />
               <textarea id="quest-description" placeholder="Descrizione" rows="4" required></textarea>
               <textarea id="quest-setting" placeholder="Ambientazione (opzionale)" rows="3"></textarea>
               <textarea id="quest-rewards" placeholder="Ricompense (opzionale)" rows="2"></textarea>
@@ -1068,6 +1069,6 @@
   </div>
 
   <!-- Firebase SDK (modular) -->
-  <script type="module" src="app.js?v=11"></script>
+  <script type="module" src="app.js?v=12"></script>
 </body>
 </html>

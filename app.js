@@ -1296,7 +1296,7 @@ window.showCharacterDetail = function(charId) {
         ${currentUserRole === 'dm' ? `<button onclick="dmGrantGold('${char.id}')" class="btn-warning" style="padding: 0.1rem 0.5rem; margin-left: 0.5rem;">± gp</button>` : ''}
       </p>
       ${(char.items && char.items.length > 0)
-        ? char.items.map(it => `<p>• ${it.qty}× ${it.name}${it.value ? ` <span style="color: var(--gray);">(${it.value} gp)</span>` : ''}</p>`).join('')
+        ? char.items.map(it => `<p>• ${it.qty}× ${it.name}${it.value ? ` <span style="color: var(--gray);">(${it.value} gp)</span>` : ''}${it.details ? `<br><span style="color: var(--gray); font-size: 0.9rem; margin-left: 1rem;">${it.details}</span>` : ''}</p>`).join('')
         : '<p style="color: var(--gray);">Inventario oggetti vuoto.</p>'}
 
       ${char.weapons && char.weapons.length > 0 ? `
@@ -2469,6 +2469,7 @@ function renderQuests() {
     return `
       <div class="card" onclick="showQuestDetail('${quest.id}')">
         <h3>${quest.title}</h3>
+        ${quest.questGiver ? `<p><strong>Affidata da:</strong> ${quest.questGiver}</p>` : ''}
         <p>${quest.description.substring(0, 100)}${quest.description.length > 100 ? '...' : ''}</p>
         <span class="difficulty-badge difficulty-${quest.difficulty}">${quest.difficulty}</span>
         <p style="margin-top: 0.5rem;"><strong>Slot:</strong> ${participants.length}/${maxParticipants}</p>
@@ -2485,6 +2486,7 @@ window.showAddQuest = function() {
   }
   
   document.getElementById('quest-title').value = '';
+  document.getElementById('quest-giver').value = '';
   document.getElementById('quest-description').value = '';
   document.getElementById('quest-setting').value = '';
   document.getElementById('quest-rewards').value = '';
@@ -2503,6 +2505,7 @@ window.handleAddQuest = async function(event) {
   if (!currentUser) return;
   
   const title = document.getElementById('quest-title').value.trim();
+  const questGiver = document.getElementById('quest-giver').value.trim();
   const description = document.getElementById('quest-description').value.trim();
   const setting = document.getElementById('quest-setting').value.trim();
   const rewards = document.getElementById('quest-rewards').value.trim();
@@ -2515,6 +2518,7 @@ window.handleAddQuest = async function(event) {
     await addDoc(collection(db, 'quests'), {
       createdBy: currentUser.uid,
       title,
+      questGiver,
       description,
       setting,
       rewards,
@@ -2572,7 +2576,8 @@ window.showQuestDetail = function(questId) {
   const detailContent = document.getElementById('quest-detail-content');
   detailContent.innerHTML = `
     <h3>${quest.title}</h3>
-    
+    ${quest.questGiver ? `<p><strong>Affidata da:</strong> ${quest.questGiver}</p>` : ''}
+
     <div class="character-info">
       <p><strong>Descrizione:</strong></p>
       <p style="white-space: pre-wrap;">${quest.description}</p>
@@ -2818,6 +2823,7 @@ function renderArchivedQuests(quests) {
     return `
       <div class="card" onclick="showArchivedQuestDetail('${quest.id}')">
         <h3>${quest.title}</h3>
+        ${quest.questGiver ? `<p><strong>Affidata da:</strong> ${quest.questGiver}</p>` : ''}
         <p>${quest.description.substring(0, 100)}${quest.description.length > 100 ? '...' : ''}</p>
         <p><strong>Partecipanti (${participants.length}):</strong> ${names}</p>
         ${dateStr ? `<p><strong>${quest.isCompleted ? 'Completata il' : 'Chiusa il'}:</strong> ${dateStr}</p>` : ''}
@@ -2854,8 +2860,9 @@ window.showArchivedQuestDetail = function(questId) {
     const detailContent = document.getElementById('quest-detail-content');
     detailContent.innerHTML = `
       <h3>${quest.title}</h3>
+      ${quest.questGiver ? `<p><strong>Affidata da:</strong> ${quest.questGiver}</p>` : ''}
       <p><strong>Stato:</strong> ${status} ${dateStr ? `(${dateStr})` : ''}</p>
-      
+
       <div class="character-info">
         <p><strong>Descrizione:</strong></p>
         <p style="white-space: pre-wrap;">${quest.description}</p>
@@ -2966,60 +2973,50 @@ async function loadGuild() {
     usersSnap.forEach(d => { usersById[d.id] = d.data(); });
 
     guildCharacters = [];
-    const charsByUser = {};
+    const roster = [];
     charsSnap.forEach(d => {
       const char = { id: d.id, ...d.data() };
       guildCharacters.push(char);
       if (char.isDead) return; // i caduti stanno nella Hall of Fallen Heroes
-      (charsByUser[char.userId] = charsByUser[char.userId] || []).push(char);
+      roster.push({ char, user: usersById[char.userId] || {} });
     });
 
-    renderGuild(usersById, charsByUser);
+    renderGuild(roster);
   } catch (error) {
     console.error('Errore caricamento gilda:', error);
     listEl.innerHTML = '<div class="empty-state"><p>Errore nel caricamento</p></div>';
   }
 }
 
-function renderGuild(usersById, charsByUser) {
+function renderGuild(roster) {
   const listEl = document.getElementById('guild-list');
 
-  const uids = Object.keys(usersById);
-  if (uids.length === 0) {
-    listEl.innerHTML = '<div class="empty-state"><p>Nessun avventuriero nella gilda.</p></div>';
+  if (roster.length === 0) {
+    listEl.innerHTML = '<div class="empty-state"><p>Nessun personaggio nella gilda.</p></div>';
     return;
   }
 
-  // Ordina: prima i DM, poi per nome
-  uids.sort((a, b) => {
-    const ua = usersById[a], ub = usersById[b];
-    if ((ub.role === 'dm') - (ua.role === 'dm') !== 0) return (ub.role === 'dm') - (ua.role === 'dm');
-    return (ua.username || '').localeCompare(ub.username || '');
+  // Ordina: prima i personaggi dei DM, poi per nome PG
+  roster.sort((a, b) => {
+    const da = (a.user.role === 'dm') ? 1 : 0;
+    const db_ = (b.user.role === 'dm') ? 1 : 0;
+    if (db_ - da !== 0) return db_ - da;
+    return (a.char.name || '').localeCompare(b.char.name || '');
   });
 
-  listEl.innerHTML = uids.map(uid => {
-    const user = usersById[uid];
-    const chars = charsByUser[uid] || [];
+  listEl.innerHTML = roster.map(({ char, user }) => {
+    const c = char;
     const roleBadge = user.role === 'dm' ? ' <span class="difficulty-badge difficulty-Epica">DM</span>' : '';
-    const isMe = uid === currentUser.uid ? ' (tu)' : '';
+    const isMe = c.userId === currentUser.uid ? ' <span style="color: var(--gray);">(tu)</span>' : '';
     const avatar = user.photo
       ? `<img src="${user.photo}" class="avatar-small" alt="" />`
-      : `<span class="avatar-small avatar-placeholder">${(user.username || '?')[0].toUpperCase()}</span>`;
-
-    const charsHtml = chars.length > 0
-      ? chars.map(c => `
-          <div class="card" style="cursor:pointer;" onclick="showGuildCharacter('${c.id}')">
-            <h3>⚔️ ${c.name}</h3>
-            <p><strong>Classe:</strong> ${c.class}${c.subclass ? ` (${c.subclass})` : ''}</p>
-            <p><strong>Livello:</strong> ${c.level || 1} · <strong>Razza:</strong> ${c.race}</p>
-          </div>
-        `).join('')
-      : '<p style="color: var(--gray); margin-left: 0.5rem;">Nessun personaggio attivo.</p>';
+      : `<span class="avatar-small avatar-placeholder">${(c.name || '?')[0].toUpperCase()}</span>`;
 
     return `
-      <div class="guild-player">
-        <h3 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">${avatar} ${user.username || 'Avventuriero'}${roleBadge}${isMe}</h3>
-        <div class="cards-grid">${charsHtml}</div>
+      <div class="card" style="cursor:pointer;" onclick="showGuildCharacter('${c.id}')">
+        <h3 style="display: flex; align-items: center; gap: 0.5rem;">${avatar} ${c.name}${roleBadge}${isMe}</h3>
+        <p><strong>Classe:</strong> ${c.class}${c.subclass ? ` (${c.subclass})` : ''}</p>
+        <p><strong>Livello:</strong> ${c.level || 1} · <strong>Razza:</strong> ${c.race}</p>
       </div>
     `;
   }).join('');
@@ -3156,8 +3153,12 @@ async function fetchMyCharacter() {
 function addItemToList(items, entry) {
   const list = (items || []).map(i => ({ ...i }));
   const found = list.find(i => i.name === entry.name && (i.value || 0) === (entry.value || 0));
-  if (found) found.qty = (found.qty || 0) + entry.qty;
-  else list.push({ name: entry.name, qty: entry.qty, value: entry.value || 0, category: entry.category || '' });
+  if (found) {
+    found.qty = (found.qty || 0) + entry.qty;
+    if (entry.details && !found.details) found.details = entry.details;
+  } else {
+    list.push({ name: entry.name, qty: entry.qty, value: entry.value || 0, category: entry.category || '', details: entry.details || '' });
+  }
   return list;
 }
 
@@ -3174,37 +3175,37 @@ function removeItemFromList(items, name, qty) {
 // MERCATO
 // ===================================================================
 const DEFAULT_MARKET = [
-  { name: 'Pozione di Cura', category: 'Pozioni', price: 50, stock: null },
-  { name: 'Antitossina', category: 'Pozioni', price: 50, stock: null },
-  { name: 'Veleno Base (fiala)', category: 'Veleni', price: 100, stock: null },
-  { name: 'Pugnale', category: 'Armi', price: 2, stock: null },
-  { name: 'Spada Corta', category: 'Armi', price: 10, stock: null },
-  { name: 'Spada Lunga', category: 'Armi', price: 15, stock: null },
-  { name: 'Spadone', category: 'Armi', price: 50, stock: null },
-  { name: 'Ascia da Battaglia', category: 'Armi', price: 10, stock: null },
-  { name: 'Ascia Bipenne', category: 'Armi', price: 30, stock: null },
-  { name: 'Mazza', category: 'Armi', price: 5, stock: null },
-  { name: 'Martello da Guerra', category: 'Armi', price: 15, stock: null },
-  { name: 'Maglio', category: 'Armi', price: 10, stock: null },
-  { name: 'Lancia', category: 'Armi', price: 1, stock: null },
-  { name: 'Alabarda', category: 'Armi', price: 20, stock: null },
-  { name: 'Arco Corto', category: 'Armi', price: 25, stock: null },
-  { name: 'Arco Lungo', category: 'Armi', price: 50, stock: null },
-  { name: 'Balestra Leggera', category: 'Armi', price: 25, stock: null },
-  { name: 'Balestra Pesante', category: 'Armi', price: 50, stock: null },
-  { name: 'Armatura Imbottita', category: 'Armature', price: 5, stock: null },
-  { name: 'Armatura di Cuoio', category: 'Armature', price: 10, stock: null },
-  { name: 'Cuoio Borchiato', category: 'Armature', price: 45, stock: null },
-  { name: 'Corazza di Scaglie', category: 'Armature', price: 50, stock: null },
-  { name: 'Corpetto (Corazza a Bande)', category: 'Armature', price: 400, stock: null },
-  { name: 'Mezza Armatura', category: 'Armature', price: 750, stock: null },
-  { name: 'Cotta di Maglia', category: 'Armature', price: 75, stock: null },
-  { name: 'Armatura a Piastre', category: 'Armature', price: 1500, stock: null },
-  { name: 'Scudo', category: 'Armature', price: 10, stock: null },
-  { name: 'Pozione di Cura Superiore', category: 'Pozioni Rare', price: 150, stock: 5 },
-  { name: 'Arma +1', category: 'Oggetti Magici', price: 1000, stock: 2 },
-  { name: 'Armatura +1', category: 'Oggetti Magici', price: 1500, stock: 1 },
-  { name: 'Scudo +1', category: 'Oggetti Magici', price: 500, stock: 1 }
+  { name: 'Pozione di Cura', category: 'Pozioni', price: 50, stock: null, details: 'Recupera 2d4+2 punti ferita bevendola (azione).' },
+  { name: 'Antitossina', category: 'Pozioni', price: 50, stock: null, details: 'Vantaggio ai tiri salvezza contro il veleno per 1 ora.' },
+  { name: 'Veleno Base (fiala)', category: 'Veleni', price: 100, stock: null, details: 'Applicato a un\'arma: +1d4 danni da veleno per 1 minuto (TS Costituzione CD 10).' },
+  { name: 'Pugnale', category: 'Armi', price: 2, stock: null, details: 'Arma semplice. 1d4 perforante. Accurata, leggera, da lancio (6/18 m).' },
+  { name: 'Spada Corta', category: 'Armi', price: 10, stock: null, details: 'Arma da guerra. 1d6 perforante. Accurata, leggera.' },
+  { name: 'Spada Lunga', category: 'Armi', price: 15, stock: null, details: 'Arma da guerra. 1d8 tagliente (1d10 impugnata a due mani), versatile.' },
+  { name: 'Spadone', category: 'Armi', price: 50, stock: null, details: 'Arma da guerra a due mani. 2d6 tagliente, pesante.' },
+  { name: 'Ascia da Battaglia', category: 'Armi', price: 10, stock: null, details: 'Arma da guerra. 1d8 tagliente (1d10 a due mani), versatile.' },
+  { name: 'Ascia Bipenne', category: 'Armi', price: 30, stock: null, details: 'Arma da guerra a due mani. 1d12 tagliente, pesante.' },
+  { name: 'Mazza', category: 'Armi', price: 5, stock: null, details: 'Arma semplice. 1d6 contundente.' },
+  { name: 'Martello da Guerra', category: 'Armi', price: 15, stock: null, details: 'Arma da guerra. 1d8 contundente (1d10 a due mani), versatile.' },
+  { name: 'Maglio', category: 'Armi', price: 10, stock: null, details: 'Arma da guerra a due mani. 2d6 contundente, pesante.' },
+  { name: 'Lancia', category: 'Armi', price: 1, stock: null, details: 'Arma semplice. 1d6 perforante, da lancio (6/18 m), versatile.' },
+  { name: 'Alabarda', category: 'Armi', price: 20, stock: null, details: 'Arma da guerra a due mani. 1d10 tagliente, portata, pesante.' },
+  { name: 'Arco Corto', category: 'Armi', price: 25, stock: null, details: 'Arma semplice a distanza. 1d6 perforante (24/96 m).' },
+  { name: 'Arco Lungo', category: 'Armi', price: 50, stock: null, details: 'Arma da guerra a distanza. 1d8 perforante (45/180 m), pesante.' },
+  { name: 'Balestra Leggera', category: 'Armi', price: 25, stock: null, details: 'Arma semplice a distanza. 1d8 perforante (24/96 m), ricarica.' },
+  { name: 'Balestra Pesante', category: 'Armi', price: 50, stock: null, details: 'Arma da guerra a distanza. 1d10 perforante (30/120 m), pesante, ricarica.' },
+  { name: 'Armatura Imbottita', category: 'Armature', price: 5, stock: null, details: 'Leggera. CA 11 + mod. DES. Svantaggio a Furtività.' },
+  { name: 'Armatura di Cuoio', category: 'Armature', price: 10, stock: null, details: 'Leggera. CA 11 + mod. DES.' },
+  { name: 'Cuoio Borchiato', category: 'Armature', price: 45, stock: null, details: 'Leggera. CA 12 + mod. DES.' },
+  { name: 'Corazza di Scaglie', category: 'Armature', price: 50, stock: null, details: 'Media. CA 14 + mod. DES (max +2). Svantaggio a Furtività.' },
+  { name: 'Corpetto (Corazza a Bande)', category: 'Armature', price: 400, stock: null, details: 'Media. CA 14 + mod. DES (max +2).' },
+  { name: 'Mezza Armatura', category: 'Armature', price: 750, stock: null, details: 'Media. CA 15 + mod. DES (max +2). Svantaggio a Furtività.' },
+  { name: 'Cotta di Maglia', category: 'Armature', price: 75, stock: null, details: 'Pesante. CA 16. Richiede FOR 13. Svantaggio a Furtività.' },
+  { name: 'Armatura a Piastre', category: 'Armature', price: 1500, stock: null, details: 'Pesante. CA 18. Richiede FOR 15. Svantaggio a Furtività.' },
+  { name: 'Scudo', category: 'Armature', price: 10, stock: null, details: '+2 alla Classe Armatura.' },
+  { name: 'Pozione di Cura Superiore', category: 'Pozioni Rare', price: 150, stock: 5, details: 'Recupera 4d4+4 punti ferita bevendola (azione).' },
+  { name: 'Arma +1', category: 'Oggetti Magici', price: 1000, stock: 2, details: '+1 ai tiri per colpire e ai danni effettuati con quest\'arma.' },
+  { name: 'Armatura +1', category: 'Oggetti Magici', price: 1500, stock: 1, details: '+1 alla Classe Armatura fornita dall\'armatura.' },
+  { name: 'Scudo +1', category: 'Oggetti Magici', price: 500, stock: 1, details: '+3 alla Classe Armatura (scudo potenziato).' }
 ];
 
 function isInfinite(item) {
@@ -3263,7 +3264,10 @@ function renderMarket(myChar, listings, trades) {
           const soldout = !isInfinite(i) && (i.stock || 0) <= 0;
           return `
             <div class="market-row">
-              <div><strong>${i.name}</strong> — ${i.price} gp <span style="color: var(--gray);">· scorte: ${stockLabel}</span></div>
+              <div style="flex:1; min-width: 60%;">
+                <strong>${i.name}</strong> — ${i.price} gp <span style="color: var(--gray);">· scorte: ${stockLabel}</span>
+                ${i.details ? `<br><span style="color: var(--gray); font-size: 0.9rem;">${i.details}</span>` : ''}
+              </div>
               <div>
                 ${soldout ? '<span class="card-status status-dead">Esaurito</span>'
                   : (myChar ? `<button class="btn-success" onclick="buyMarketItem('${i.id}')">Compra</button>` : '')}
@@ -3311,8 +3315,8 @@ function renderMarket(myChar, listings, trades) {
 
   const dmControls = currentUserRole === 'dm' ? `
     <div class="character-actions" style="margin-bottom: 1rem;">
-      ${marketItems.length === 0 ? `<button class="btn-success" onclick="seedMarket()">🌱 Inizializza Catalogo Standard</button>` : ''}
-      <button class="btn-info" onclick="dmAddMarketItem()">+ Aggiungi Oggetto</button>
+      ${marketItems.length === 0 ? `<button class="btn-success btn-lg" onclick="seedMarket()">🌱 Inizializza Catalogo Standard</button>` : ''}
+      <button class="btn-info btn-lg" onclick="dmAddMarketItem()">➕ Aggiungi Oggetto</button>
     </div>` : '';
 
   el.innerHTML = `
@@ -3354,7 +3358,7 @@ window.buyMarketItem = async function(itemId) {
         tx.update(ref, { stock: stock - qty });
       });
     }
-    const items = addItemToList(myChar.items || [], { name: item.name, qty, value: item.price, category: item.category });
+    const items = addItemToList(myChar.items || [], { name: item.name, qty, value: item.price, category: item.category, details: item.details || '' });
     await updateDoc(doc(db, 'characters', myChar.id), { gp: gp - cost, items });
     await logAudit({ charId: myChar.id, charName: myChar.name, action: 'buy', message: `Acquistato ${qty}× ${item.name} dal mercato`, gpDelta: -cost });
     hideLoading();
@@ -3390,7 +3394,9 @@ window.dmAddMarketItem = async function() {
   if (isNaN(price)) return;
   const stockStr = prompt('Scorte? (numero, oppure "inf" per infinite):', 'inf');
   const stock = (stockStr && stockStr.trim().toLowerCase() === 'inf') ? null : (parseInt(stockStr) || 0);
-  try { showLoading(); await addDoc(collection(db, 'market_items'), { name: name.trim(), category, price, stock }); hideLoading(); loadMarket(); }
+  const details = (prompt('Dettagli/descrizione dell\'oggetto (es. "Recupera 2d4+2 PF"):', '') || '').trim();
+  if (!details) { alert('Inserisci una breve descrizione dell\'oggetto.'); return; }
+  try { showLoading(); await addDoc(collection(db, 'market_items'), { name: name.trim(), category, price, stock, details }); hideLoading(); loadMarket(); }
   catch (e) { hideLoading(); console.error(e); alert('Errore'); }
 };
 
@@ -3402,7 +3408,8 @@ window.dmEditMarketItem = async function(itemId) {
   if (isNaN(price)) return;
   const stockStr = prompt('Scorte (numero o "inf"):', isInfinite(item) ? 'inf' : String(item.stock));
   const stock = (stockStr && stockStr.trim().toLowerCase() === 'inf') ? null : (parseInt(stockStr) || 0);
-  try { showLoading(); await updateDoc(doc(db, 'market_items', itemId), { price, stock }); hideLoading(); loadMarket(); }
+  const details = (prompt('Dettagli/descrizione:', item.details || '') || '').trim();
+  try { showLoading(); await updateDoc(doc(db, 'market_items', itemId), { price, stock, details }); hideLoading(); loadMarket(); }
   catch (e) { hideLoading(); console.error(e); alert('Errore'); }
 };
 
@@ -3455,7 +3462,7 @@ window.sellItem = async function() {
     await addDoc(collection(db, 'market_listings'), {
       sellerId: currentUser.uid, sellerName: currentUsername,
       sellerCharId: myChar.id, sellerCharName: myChar.name,
-      name: it.name, qty, price, unitValue: it.value || 0, category: it.category || '',
+      name: it.name, qty, price, unitValue: it.value || 0, category: it.category || '', details: it.details || '',
       status: 'active', createdAt: serverTimestamp()
     });
     await notifyDM(`🏷️ ${currentUsername} ha messo in vendita ${qty}× ${it.name} per ${price} gp.`, 'listing');
@@ -3482,7 +3489,7 @@ window.buyListing = async function(listingId) {
     const scharRef = doc(db, 'characters', l.sellerCharId);
     const scharSnap = await getDoc(scharRef);
     const batch = writeBatch(db);
-    const buyerItems = addItemToList(myChar.items || [], { name: l.name, qty: l.qty, value: l.unitValue || 0, category: l.category || '' });
+    const buyerItems = addItemToList(myChar.items || [], { name: l.name, qty: l.qty, value: l.unitValue || 0, category: l.category || '', details: l.details || '' });
     batch.update(doc(db, 'characters', myChar.id), { gp: (myChar.gp || 0) - cost, items: buyerItems });
     if (scharSnap.exists()) batch.update(scharRef, { gp: (scharSnap.data().gp || 0) + cost });
     batch.update(lref, { status: 'sold', buyerId: currentUser.uid, buyerName: currentUsername, soldAt: serverTimestamp() });
@@ -3507,7 +3514,7 @@ window.cancelListing = async function(listingId) {
     const tSnap = await getDoc(doc(db, 'characters', data.sellerCharId));
     const batch = writeBatch(db);
     if (tSnap.exists()) {
-      const items = addItemToList(tSnap.data().items || [], { name: data.name, qty: data.qty, value: data.unitValue || 0, category: data.category || '' });
+      const items = addItemToList(tSnap.data().items || [], { name: data.name, qty: data.qty, value: data.unitValue || 0, category: data.category || '', details: data.details || '' });
       batch.update(doc(db, 'characters', data.sellerCharId), { items });
     }
     batch.update(doc(db, 'market_listings', listingId), { status: 'cancelled' });
@@ -3594,6 +3601,10 @@ window.submitTrade = async function() {
   const targetChar = ctx.charByUser[uid];
   const giveItems = collectCheckedItems('give-item', 'give-qty');
   const wantItems = collectCheckedItems('want-item', 'want-qty');
+  // Preserva i dettagli degli oggetti (dai personaggi di origine)
+  const detailsFor = (list, name) => ((list || []).find(x => x.name === name) || {}).details || '';
+  giveItems.forEach(it => { it.details = detailsFor(ctx.myChar.items, it.name); });
+  wantItems.forEach(it => { it.details = detailsFor(targetChar.items, it.name); });
   const giveGp = parseInt(document.getElementById('give-gp').value) || 0;
   const wantGp = parseInt(document.getElementById('want-gp').value) || 0;
   if (giveItems.length === 0 && wantItems.length === 0 && giveGp === 0 && wantGp === 0) { alert('Proposta vuota.'); return; }
@@ -3744,6 +3755,10 @@ async function logAudit(entry) {
 
 async function loadAudit() {
   const el = document.getElementById('audit-list');
+  if (currentUserRole !== 'dm') {
+    el.innerHTML = '<div class="empty-state"><p>Sezione riservata al Dungeon Master.</p></div>';
+    return;
+  }
   el.innerHTML = '<div class="loading"><div class="dice-spinner">🎲</div></div>';
   try {
     const snap = await getDocs(collection(db, 'audit_log'));
