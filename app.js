@@ -97,6 +97,18 @@ function effectiveStats(char) {
 
 const STAT_LABELS = { str: 'FOR', dex: 'DES', con: 'COS', int: 'INT', wis: 'SAG', cha: 'CAR' };
 
+// PF massimi EFFICACI: se un oggetto magico modifica la COS, i PF massimi
+// salgono/scendono di (Δmod COS) × livello finché l'oggetto è equipaggiato.
+// Non modifica il valore salvato (reversibile alla rimozione dell'oggetto).
+function effectiveHpMax(char) {
+  const combat = char.combat || {};
+  const baseHp = combat.hpMax || 0;
+  const level = char.level || 1;
+  const baseConMod = calculateModifier((char.stats && char.stats.con) || 10);
+  const effConMod = calculateModifier(effectiveStats(char).con);
+  return baseHp + (effConMod - baseConMod) * level;
+}
+
 // ===================================================================
 // PATCH PER APP.JS - Aggiungere dopo le funzioni utility esistenti
 // ===================================================================
@@ -256,7 +268,7 @@ async function exportCharacterToPDF(char) {
   doc.text(`CA: ${combat.ac || 10}`, 15, y);
   doc.text(`Iniziativa: ${formatModifier(combat.initiative || 0)}`, 55, y);
   doc.text(`Velocità: ${combat.speed || 30} ft`, 110, y);
-  doc.text(`PF Max: ${combat.hpMax || 10}`, 155, y);
+  doc.text(`PF Max: ${effectiveHpMax(char)}`, 155, y);
   y += lineHeight;
   doc.text(`Bonus Competenza: +${profBonus}`, 15, y);
   y += lineHeight + 3;
@@ -1166,6 +1178,10 @@ window.showCharacterDetail = function(charId) {
   const levelUpButton = (char.userId === currentUser.uid && !char.isDead && (char.level || 1) < 20) ?
     `<button onclick="showLevelUpRequest('${char.id}')" class="btn-success">⬆️ Richiedi Passaggio di Livello</button>` : '';
 
+  // Players can request a magic item effect on their own character; needs DM approval
+  const itemEffectRequestButton = (char.userId === currentUser.uid && !char.isDead) ?
+    `<button onclick="requestItemEffect('${char.id}')" class="btn-info">🔮 Richiedi Oggetto Magico</button>` : '';
+
   // DM can directly edit level
   const dmLevelButton = currentUserRole === 'dm' ?
     `<button onclick="dmEditLevel('${char.id}')" class="btn-warning">⬆️ Modifica Livello</button>` : '';
@@ -1214,7 +1230,7 @@ window.showCharacterDetail = function(charId) {
       <p><strong>Classe Armatura:</strong> ${combat.ac || 10}</p>
       <p><strong>Iniziativa:</strong> ${formatModifier(combat.initiative || 0)}</p>
       <p><strong>Velocità:</strong> ${combat.speed || 30} ft</p>
-      <p><strong>Punti Ferita Max:</strong> ${combat.hpMax || 10}</p>
+      <p><strong>Punti Ferita Max:</strong> ${effectiveHpMax(char)}${effectiveHpMax(char) !== (combat.hpMax || 0) ? ' <span title="Modificato da oggetto magico (COS)" style="color: var(--success);">🔮</span>' : ''}</p>
       <p><strong>PF Attuali:</strong> ${combat.hpCurrent !== undefined ? combat.hpCurrent : (combat.hpMax || 10)}${combat.hpTemp ? ` <span style="color: var(--success);">(+${combat.hpTemp} temp)</span>` : ''}</p>
       <p><strong>Bonus Competenza:</strong> +${char.proficiencyBonus || calculateProficiencyBonus(char.level || 1)}</p>
       ${char.hitDie ? `<p><strong>Dado Vita:</strong> d${char.hitDie}</p>` : ''}
@@ -1333,6 +1349,7 @@ window.showCharacterDetail = function(charId) {
     <div class="character-actions">
       ${editButton}
       ${levelUpButton}
+      ${itemEffectRequestButton}
       ${dmLevelButton}
       ${dmGrantButtons}
       ${killButton}
@@ -1810,29 +1827,79 @@ window.dmGrantFeat = async function(charId) {
   }
 };
 
-// === STRUMENTI DM: EFFETTI DA OGGETTI MAGICI SULLE CARATTERISTICHE ===
-window.dmAddItemEffect = async function(charId) {
-  if (currentUserRole !== 'dm') { alert('Solo i DM possono gestire gli oggetti magici!'); return; }
-  const char = currentCharacters.find(c => c.id === charId);
-  if (!char) return;
-
-  const name = prompt('Nome oggetto magico (es. Manuale dei Golem, Cintura di Forza del Gigante):');
-  if (!name || !name.trim()) return;
+// === RICHIESTA OGGETTO MAGICO (PLAYER → APPROVAZIONE DM) ===
+function promptItemEffect() {
+  const name = prompt('Nome oggetto magico (es. Cintura di Forza del Gigante):');
+  if (!name || !name.trim()) return null;
 
   const ability = (prompt('Su quale caratteristica? (str/dex/con/int/wis/cha)') || '').trim().toLowerCase();
   if (!(ability in STAT_LABELS)) {
     alert('Caratteristica non valida! Usa: str, dex, con, int, wis, cha');
-    return;
+    return null;
   }
 
   const modeInput = (prompt('Tipo effetto: "set" (imposta il punteggio a) oppure "bonus" (aggiunge)?', 'set') || '').trim().toLowerCase();
   const mode = modeInput === 'bonus' ? 'bonus' : 'set';
 
   const value = parseInt(prompt(mode === 'set' ? 'Imposta il punteggio a: (es. 19)' : 'Bonus da aggiungere: (es. 2 o -2)', mode === 'set' ? '19' : '2'));
-  if (isNaN(value)) return;
+  if (isNaN(value)) return null;
+
+  return { name: name.trim(), ability, mode, value };
+}
+
+function describeItemEffect(e) {
+  return `${e.name} (${STAT_LABELS[e.ability] || e.ability} ${e.mode === 'set' ? `= ${e.value}` : `${e.value >= 0 ? '+' : ''}${e.value}`})`;
+}
+
+window.requestItemEffect = async function(charId) {
+  const char = currentCharacters.find(c => c.id === charId);
+  if (!char) return;
+  if (char.userId !== currentUser.uid) {
+    alert('Puoi richiedere oggetti magici solo per i tuoi personaggi!');
+    return;
+  }
+
+  const effect = promptItemEffect();
+  if (!effect) return;
+
+  const existing = Array.isArray(char.itemEffects) ? char.itemEffects.slice() : [];
+  const itemEffects = existing.concat([effect]);
+
+  try {
+    showLoading();
+    await addDoc(collection(db, 'pending_changes'), {
+      type: 'item_effect',
+      characterId: charId,
+      characterName: char.name,
+      requestedBy: currentUser.uid,
+      requestedByName: currentUsername,
+      summary: `Oggetto magico: ${describeItemEffect(effect)}`,
+      oldData: { itemEffects: existing },
+      newData: { itemEffects: itemEffects },
+      status: 'pending',
+      createdAt: serverTimestamp()
+    });
+    hideLoading();
+    hideCharacterDetail();
+    alert('Richiesta oggetto magico inviata! Il DM la esaminerà presto.');
+  } catch (error) {
+    hideLoading();
+    console.error('Errore richiesta oggetto:', error);
+    alert('Errore nell\'invio della richiesta');
+  }
+};
+
+// === STRUMENTI DM: EFFETTI DA OGGETTI MAGICI SULLE CARATTERISTICHE ===
+window.dmAddItemEffect = async function(charId) {
+  if (currentUserRole !== 'dm') { alert('Solo i DM possono gestire gli oggetti magici!'); return; }
+  const char = currentCharacters.find(c => c.id === charId);
+  if (!char) return;
+
+  const effect = promptItemEffect();
+  if (!effect) return;
 
   const itemEffects = Array.isArray(char.itemEffects) ? char.itemEffects.slice() : [];
-  itemEffects.push({ name: name.trim(), ability, mode, value });
+  itemEffects.push(effect);
 
   try {
     showLoading();
@@ -1957,7 +2024,9 @@ function renderPendingChanges() {
       new Date(change.createdAt.seconds * 1000).toLocaleDateString('it-IT') : 
       'Data sconosciuta';
     
-    const typeLabel = change.type === 'level_up' ? '⬆️ Passaggio di Livello' : 'Modifica Personaggio';
+    const typeLabel = change.type === 'level_up' ? '⬆️ Passaggio di Livello'
+      : change.type === 'item_effect' ? '🔮 Oggetto Magico'
+      : 'Modifica Personaggio';
     return `
       <div class="card pending-card" onclick="showPendingDetail('${change.id}')">
         <span class="change-type">${typeLabel}</span>
@@ -2033,6 +2102,20 @@ window.showPendingDetail = function(changeId) {
     }
   }
 
+  // Oggetti magici aggiunti (effetti sulle caratteristiche)
+  if (newData.itemEffects) {
+    const oldCount = (old.itemEffects || []).length;
+    const added = newData.itemEffects.slice(oldCount);
+    if (added.length > 0) {
+      diffHtml += `
+        <div class="change-diff">
+          <strong>Oggetti magici aggiunti:</strong><br>
+          ${added.map(e => `<span class="new-value">+ ${describeItemEffect(e)}</span>`).join('<br>')}
+        </div>
+      `;
+    }
+  }
+
   // Stats comparison
   if (old.stats && newData.stats) {
     const statNames = { str: 'FOR', dex: 'DES', con: 'COS', int: 'INT', wis: 'SAG', cha: 'CAR' };
@@ -2094,7 +2177,7 @@ window.showPendingDetail = function(changeId) {
   }
   
   const modalContent = `
-    <h3>${change.type === 'level_up' ? '⬆️ Passaggio di Livello' : 'Richiesta Modifica'}: ${change.characterName}</h3>
+    <h3>${change.type === 'level_up' ? '⬆️ Passaggio di Livello' : change.type === 'item_effect' ? '🔮 Oggetto Magico' : 'Richiesta Modifica'}: ${change.characterName}</h3>
     <p><strong>Richiesta da:</strong> ${change.requestedByName}</p>
     ${change.summary ? `<p><em>${change.summary}</em></p>` : ''}
 
@@ -2821,7 +2904,7 @@ window.showGuildCharacter = function(charId) {
 
       <h4 style="margin-top: 1.5rem;">Combattimento</h4>
       <p><strong>Classe Armatura:</strong> ${combat.ac || 10}</p>
-      <p><strong>Punti Ferita Max:</strong> ${combat.hpMax || 10}</p>
+      <p><strong>Punti Ferita Max:</strong> ${effectiveHpMax(char)}</p>
       <p><strong>Bonus Competenza:</strong> +${char.proficiencyBonus || calculateProficiencyBonus(char.level || 1)}</p>
 
       ${char.feats && char.feats.length > 0 ? `
