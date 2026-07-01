@@ -118,6 +118,141 @@ function effectiveHpMax(char) {
   return baseHp + (effConMod - baseConMod) * level;
 }
 
+// === CLASSI E SOTTOCLASSI UFFICIALI (D&D 5e) ===
+const CLASSES = {
+  'Barbaro': { caster: 'none', subclasses: ['Cammino del Berserker', 'Cammino del Totem Guerriero'] },
+  'Bardo': { caster: 'full', subclasses: ['Collegio della Sapienza', 'Collegio del Valore'] },
+  'Chierico': { caster: 'full', subclasses: ['Dominio della Conoscenza', 'Dominio della Vita', 'Dominio della Guerra', 'Dominio della Tempesta', "Dominio dell'Inganno", 'Dominio della Luce', 'Dominio della Natura'] },
+  'Druido': { caster: 'full', subclasses: ['Circolo della Terra', 'Circolo della Luna'] },
+  'Guerriero': { caster: 'none', subclasses: ['Campione', 'Maestro di Battaglia', 'Cavaliere Mistico'] },
+  'Ladro': { caster: 'none', subclasses: ['Ladro', 'Assassino', 'Furfante Arcano'] },
+  'Mago': { caster: 'full', subclasses: ['Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'] },
+  'Monaco': { caster: 'none', subclasses: ['Via della Mano Aperta', "Via dell'Ombra", 'Via dei Quattro Elementi'] },
+  'Paladino': { caster: 'half', subclasses: ['Giuramento di Devozione', 'Giuramento degli Antichi', 'Giuramento di Vendetta'] },
+  'Ranger': { caster: 'half', subclasses: ['Cacciatore', 'Signore delle Bestie'] },
+  'Stregone': { caster: 'full', subclasses: ['Discendenza Draconica', 'Magia Selvaggia'] },
+  'Warlock': { caster: 'pact', subclasses: ["Patrono: l'Immondo", "Patrono: l'Arcifata", 'Patrono: il Grande Antico'] }
+};
+
+// Sottoclassi che rendono incantatori 1/3 Guerrieri e Ladri
+const THIRD_CASTER_SUBCLASSES = ['Cavaliere Mistico', 'Furfante Arcano'];
+
+function casterType(cls, subclass) {
+  const c = CLASSES[cls];
+  if (!c) return 'none';
+  if (c.caster === 'none') return THIRD_CASTER_SUBCLASSES.includes(subclass) ? 'third' : 'none';
+  return c.caster;
+}
+
+// Tabelle slot: [slot liv.1, liv.2, ...] indicizzate per livello del personaggio
+const FULL_CASTER_SLOTS = {
+  1: [2], 2: [3], 3: [4, 2], 4: [4, 3], 5: [4, 3, 2], 6: [4, 3, 3], 7: [4, 3, 3, 1], 8: [4, 3, 3, 2],
+  9: [4, 3, 3, 3, 1], 10: [4, 3, 3, 3, 2], 11: [4, 3, 3, 3, 2, 1], 12: [4, 3, 3, 3, 2, 1],
+  13: [4, 3, 3, 3, 2, 1, 1], 14: [4, 3, 3, 3, 2, 1, 1], 15: [4, 3, 3, 3, 2, 1, 1, 1], 16: [4, 3, 3, 3, 2, 1, 1, 1],
+  17: [4, 3, 3, 3, 2, 1, 1, 1, 1], 18: [4, 3, 3, 3, 3, 1, 1, 1, 1], 19: [4, 3, 3, 3, 3, 2, 1, 1, 1], 20: [4, 3, 3, 3, 3, 2, 2, 1, 1]
+};
+const HALF_CASTER_SLOTS = {
+  2: [2], 3: [3], 4: [3], 5: [4, 2], 6: [4, 2], 7: [4, 3], 8: [4, 3], 9: [4, 3, 2], 10: [4, 3, 2],
+  11: [4, 3, 3], 12: [4, 3, 3], 13: [4, 3, 3, 1], 14: [4, 3, 3, 1], 15: [4, 3, 3, 2], 16: [4, 3, 3, 2],
+  17: [4, 3, 3, 3, 1], 18: [4, 3, 3, 3, 1], 19: [4, 3, 3, 3, 2], 20: [4, 3, 3, 3, 2]
+};
+const THIRD_CASTER_SLOTS = {
+  3: [2], 4: [3], 5: [3], 6: [3], 7: [4, 2], 8: [4, 2], 9: [4, 2], 10: [4, 3], 11: [4, 3], 12: [4, 3],
+  13: [4, 3, 2], 14: [4, 3, 2], 15: [4, 3, 2], 16: [4, 3, 3], 17: [4, 3, 3], 18: [4, 3, 3], 19: [4, 3, 3, 1], 20: [4, 3, 3, 1]
+};
+// Warlock Pact Magic: [numero slot, livello slot] per livello del warlock
+const WARLOCK_SLOTS = {
+  1: [1, 1], 2: [2, 1], 3: [2, 2], 4: [2, 2], 5: [2, 3], 6: [2, 3], 7: [2, 4], 8: [2, 4], 9: [2, 5], 10: [2, 5],
+  11: [3, 5], 12: [3, 5], 13: [3, 5], 14: [3, 5], 15: [3, 5], 16: [3, 5], 17: [4, 5], 18: [4, 5], 19: [4, 5], 20: [4, 5]
+};
+
+// Restituisce le info sugli slot del personaggio, o null se non è un incantatore.
+function spellSlotsForCharacter(char) {
+  const type = casterType(char.class, char.subclass);
+  const level = char.level || 1;
+  if (type === 'none') return null;
+  if (type === 'pact') {
+    const w = WARLOCK_SLOTS[level] || WARLOCK_SLOTS[1];
+    return { pact: true, pactCount: w[0], pactLevel: w[1] };
+  }
+  const table = type === 'full' ? FULL_CASTER_SLOTS : type === 'half' ? HALF_CASTER_SLOTS : THIRD_CASTER_SLOTS;
+  const arr = table[level];
+  if (!arr) return { pact: false, slots: {} };
+  const slots = {};
+  arr.forEach((n, i) => { if (n > 0) slots[i + 1] = n; });
+  return { pact: false, slots };
+}
+
+function populateClassSelect(selectId, selected) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Seleziona classe</option>' +
+    Object.keys(CLASSES).map(c => `<option value="${c}"${c === selected ? ' selected' : ''}>${c}</option>`).join('');
+}
+
+function populateSubclassSelect(classSelectId, subclassSelectId, selectedSub) {
+  const cls = document.getElementById(classSelectId).value;
+  const sub = document.getElementById(subclassSelectId);
+  if (!sub) return;
+  const subs = (CLASSES[cls] && CLASSES[cls].subclasses) || [];
+  sub.innerHTML = '<option value="">— nessuna —</option>' +
+    subs.map(s => `<option value="${s}"${s === selectedSub ? ' selected' : ''}>${s}</option>`).join('');
+}
+
+window.onClassChange = function(classSelectId, subclassSelectId) {
+  populateSubclassSelect(classSelectId, subclassSelectId);
+};
+
+// === TRACKER SLOT INCANTESIMO ===
+async function persistSlots(charId, used) {
+  try {
+    showLoading();
+    await updateDoc(doc(db, 'characters', charId), { spellSlotsUsed: used });
+    const char = currentCharacters.find(c => c.id === charId);
+    if (char) char.spellSlotsUsed = used;
+    hideLoading();
+    showCharacterDetail(charId);
+  } catch (e) { hideLoading(); console.error(e); alert('Errore aggiornamento slot'); }
+}
+
+window.useSpellSlot = async function(charId, key) {
+  const char = currentCharacters.find(c => c.id === charId);
+  if (!char) return;
+  const info = spellSlotsForCharacter(char);
+  if (!info) return;
+  const used = Object.assign({}, char.spellSlotsUsed || {});
+  const usedKey = key === 'pact' ? 'pact' : 'level' + key;
+  const max = key === 'pact' ? info.pactCount : ((info.slots || {})[key] || 0);
+  const cur = used[usedKey] || 0;
+  if (cur >= max) { alert('Nessuno slot disponibile a questo livello.'); return; }
+  used[usedKey] = cur + 1;
+  await persistSlots(charId, used);
+};
+
+window.recoverSpellSlot = async function(charId, key) {
+  const char = currentCharacters.find(c => c.id === charId);
+  if (!char) return;
+  const used = Object.assign({}, char.spellSlotsUsed || {});
+  const usedKey = key === 'pact' ? 'pact' : 'level' + key;
+  const cur = used[usedKey] || 0;
+  if (cur <= 0) return;
+  used[usedKey] = cur - 1;
+  await persistSlots(charId, used);
+};
+
+window.restLong = async function(charId) {
+  if (!confirm('Riposo lungo: recuperare tutti gli slot incantesimo?')) return;
+  await persistSlots(charId, {});
+};
+
+window.restShort = async function(charId) {
+  const char = currentCharacters.find(c => c.id === charId);
+  if (!char) return;
+  const used = Object.assign({}, char.spellSlotsUsed || {});
+  delete used.pact;
+  await persistSlots(charId, used);
+};
+
 // ===================================================================
 // PATCH PER APP.JS - Aggiungere dopo le funzioni utility esistenti
 // ===================================================================
@@ -1035,8 +1170,8 @@ window.showAddCharacter = function() {
   
   // Reset form
   document.getElementById('char-name').value = '';
-  document.getElementById('char-class').value = '';
-  document.getElementById('char-subclass').value = '';
+  populateClassSelect('char-class', '');
+  populateSubclassSelect('char-class', 'char-subclass', '');
   document.getElementById('char-race').value = '';
   document.getElementById('char-background').value = '';
   document.getElementById('char-str').value = '10';
@@ -1368,9 +1503,9 @@ window.showCharacterDetail = function(charId) {
         <p style="white-space: pre-wrap;">${char.inventory}</p>
       ` : ''}
       
-      ${char.spellcasting && char.spellcasting.ability ? `
+      ${((char.spellcasting && char.spellcasting.ability) || spellSlotsForCharacter(char)) ? `
         <h4 style="margin-top: 1.5rem;">Incantesimi</h4>
-        ${(() => {
+        ${(char.spellcasting && char.spellcasting.ability) ? (() => {
           const abilityNames = { int: 'Intelligenza', wis: 'Saggezza', cha: 'Carisma' };
           const abilityName = abilityNames[char.spellcasting.ability] || char.spellcasting.ability;
           const profBonus = char.proficiencyBonus || calculateProficiencyBonus(char.level || 1);
@@ -1381,16 +1516,43 @@ window.showCharacterDetail = function(charId) {
             <p><strong>CD Tiro Salvezza:</strong> ${spellDC}</p>
             <p><strong>Bonus Attacco Incantesimi:</strong> +${spellAttack}</p>
           `;
+        })() : ''}
+        ${(() => {
+          const slotInfo = spellSlotsForCharacter(char);
+          if (!slotInfo) return '';
+          const used = char.spellSlotsUsed || {};
+          const canManage = char.userId === currentUser.uid || currentUserRole === 'dm';
+          const pips = (max, u) => '●'.repeat(Math.max(0, max - u)) + '○'.repeat(Math.max(0, Math.min(max, u)));
+          const mgmt = (key) => canManage ? `<button class="btn-warning" style="padding:0.1rem 0.5rem; margin-left:0.4rem;" onclick="useSpellSlot('${char.id}','${key}')">Usa</button><button class="btn-info" style="padding:0.1rem 0.5rem;" onclick="recoverSpellSlot('${char.id}','${key}')">+</button>` : '';
+          if (slotInfo.pact) {
+            const u = used.pact || 0;
+            return `
+              <h4 style="margin-top:1rem;">Slot Incantesimo (Pact Magic)</h4>
+              <p>Livello ${slotInfo.pactLevel}: <span style="letter-spacing:2px; color:var(--red);">${pips(slotInfo.pactCount, u)}</span> ${slotInfo.pactCount - u}/${slotInfo.pactCount}${mgmt('pact')}</p>
+              ${canManage ? `<div class="character-actions"><button class="btn-info" onclick="restShort('${char.id}')">☀️ Riposo Breve</button><button class="btn-info" onclick="restLong('${char.id}')">🌙 Riposo Lungo</button></div>` : ''}
+            `;
+          }
+          const levels = Object.keys(slotInfo.slots || {});
+          if (levels.length === 0) return '';
+          return `
+            <h4 style="margin-top:1rem;">Slot Incantesimo</h4>
+            ${levels.map(L => {
+              const max = slotInfo.slots[L];
+              const u = used['level' + L] || 0;
+              return `<p>Livello ${L}: <span style="letter-spacing:2px; color:var(--red);">${pips(max, u)}</span> ${max - u}/${max}${mgmt(L)}</p>`;
+            }).join('')}
+            ${canManage ? `<div class="character-actions"><button class="btn-info" onclick="restLong('${char.id}')">🌙 Riposo Lungo (recupera tutti)</button></div>` : ''}
+          `;
         })()}
-        ${char.spellcasting.cantrips ? `
+        ${(char.spellcasting && char.spellcasting.cantrips) ? `
           <p style="margin-top: 0.5rem;"><strong>Trucchetti:</strong></p>
           <p style="white-space: pre-wrap; margin-left: 1rem;">${char.spellcasting.cantrips}</p>
         ` : ''}
         ${[1,2,3,4,5,6,7,8,9].map(level => {
-          const levelData = char.spellcasting[`level${level}`];
+          const levelData = (char.spellcasting || {})[`level${level}`];
           if (levelData && levelData.spells) {
             return `
-              <p style="margin-top: 0.5rem;"><strong>Livello ${level} (Slot: ${levelData.slots || 0}):</strong></p>
+              <p style="margin-top: 0.5rem;"><strong>Incantesimi di Livello ${level}:</strong></p>
               <p style="white-space: pre-wrap; margin-left: 1rem;">${levelData.spells}</p>
             `;
           }
@@ -1440,8 +1602,8 @@ window.showEditCharacter = function(charId) {
   // Populate form
   document.getElementById('edit-char-id').value = char.id;
   document.getElementById('edit-char-name').value = char.name;
-  document.getElementById('edit-char-class').value = char.class;
-  document.getElementById('edit-char-subclass').value = char.subclass || '';
+  populateClassSelect('edit-char-class', char.class);
+  populateSubclassSelect('edit-char-class', 'edit-char-subclass', char.subclass || '');
   document.getElementById('edit-char-race').value = char.race;
   document.getElementById('edit-char-background').value = char.background || '';
   document.getElementById('edit-char-level').value = char.level || 1;
