@@ -127,6 +127,19 @@
             <span class="nav-icon">🛡️</span>
             <span>Gilda</span>
           </button>
+          <button class="nav-btn" onclick="showSection('market')">
+            <span class="nav-icon">🪙</span>
+            <span>Mercato</span>
+          </button>
+          <button class="nav-btn" onclick="showSection('profile')">
+            <span class="nav-icon">👤</span>
+            <span>Profilo</span>
+          </button>
+          <button class="nav-btn" id="notifications-btn" onclick="showSection('notifications')" style="display:none;">
+            <span class="nav-icon">🔔</span>
+            <span>Notifiche</span>
+            <span class="pending-badge" id="notifications-count">0</span>
+          </button>
           <button class="nav-btn" onclick="showSection('fallen')">
             <span class="nav-icon">☠️</span>
             <span>Fallen Heroes</span>
@@ -163,7 +176,37 @@
                 <input type="text" id="char-name" placeholder="Nome Personaggio" required />
                 <input type="text" id="char-class" placeholder="Classe (es. Guerriero)" required />
                 <input type="text" id="char-subclass" placeholder="Sottoclasse (opzionale)" />
-                <input type="text" id="char-race" placeholder="Razza (es. Umano)" required />
+                <input type="text" id="char-race" placeholder="Razza (es. Umano)" list="races-list" required />
+                <datalist id="races-list">
+                  <option value="Umano"></option>
+                  <option value="Elfo"></option>
+                  <option value="Nano"></option>
+                  <option value="Halfling"></option>
+                  <option value="Gnomo"></option>
+                  <option value="Mezzelfo"></option>
+                  <option value="Mezzorco"></option>
+                  <option value="Dragonide"></option>
+                  <option value="Tiefling"></option>
+                  <option value="Aasimar"></option>
+                  <option value="Goliath"></option>
+                  <option value="Tabaxi"></option>
+                  <option value="Tritone"></option>
+                  <option value="Genasi"></option>
+                  <option value="Firbolg"></option>
+                  <option value="Bugbear"></option>
+                  <option value="Goblin"></option>
+                  <option value="Hobgoblin"></option>
+                  <option value="Kenku"></option>
+                  <option value="Kobold"></option>
+                  <option value="Lucertoloide"></option>
+                  <option value="Orco"></option>
+                  <option value="Yuan-ti"></option>
+                  <option value="Aarakocra"></option>
+                  <option value="Centauro"></option>
+                  <option value="Warforged"></option>
+                  <option value="Shifter"></option>
+                  <option value="Minotauro"></option>
+                </datalist>
                 <input type="text" id="char-background" placeholder="Background (opzionale)" />
               </div>
 
@@ -481,7 +524,7 @@
                 <input type="text" id="edit-char-name" placeholder="Nome Personaggio" required />
                 <input type="text" id="edit-char-class" placeholder="Classe" required />
                 <input type="text" id="edit-char-subclass" placeholder="Sottoclasse" />
-                <input type="text" id="edit-char-race" placeholder="Razza" required />
+                <input type="text" id="edit-char-race" placeholder="Razza" list="races-list" required />
                 <input type="text" id="edit-char-background" placeholder="Background" />
                 <div>
                   <label>Livello (Solo DM può modificare direttamente)</label>
@@ -898,6 +941,45 @@
       </div>
     </section>
 
+    <!-- PROFILO -->
+    <section id="profile" class="hidden">
+      <div class="container">
+        <div class="section-header">
+          <button class="back-btn" onclick="showSection('dashboard')">← Indietro</button>
+          <h2>👤 Profilo</h2>
+        </div>
+        <div id="profile-content">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- MERCATO -->
+    <section id="market" class="hidden">
+      <div class="container">
+        <div class="section-header">
+          <button class="back-btn" onclick="showSection('dashboard')">← Indietro</button>
+          <h2>🪙 Mercato della Gilda</h2>
+        </div>
+        <div id="market-content">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- NOTIFICHE (DM) -->
+    <section id="notifications" class="hidden">
+      <div class="container">
+        <div class="section-header">
+          <button class="back-btn" onclick="showSection('dashboard')">← Indietro</button>
+          <h2>🔔 Notifiche</h2>
+        </div>
+        <div id="notifications-list" class="cards-grid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </section>
+
     <!-- FALLEN HEROES -->
     <section id="fallen" class="hidden">
       <div class="container">
@@ -947,9 +1029,21 @@
         </div>
       </div>
     </div>
+
+    <!-- Generic Modal (mercato, scambi) -->
+    <div id="generic-modal" class="modal hidden">
+      <div class="modal-content large-modal">
+        <div id="generic-content">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden avatar file input -->
+    <input type="file" id="avatar-input" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)" />
   </div>
 
   <!-- Firebase SDK (modular) -->
-  <script type="module" src="app.js?v=7"></script>
+  <script type="module" src="app.js?v=8"></script>
 </body>
 </html>

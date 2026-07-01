@@ -24,7 +24,9 @@ import {
   serverTimestamp,
   onSnapshot,
   arrayUnion,
-  arrayRemove
+  arrayRemove,
+  runTransaction,
+  writeBatch
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // Firebase config
@@ -53,6 +55,9 @@ let pendingChanges = [];
 let hasActiveCharacter = false;
 let guildCharacters = [];
 let levelUpCtx = null;
+let currentUserPhoto = '';
+let marketItems = [];
+let notifications = [];
 
 // === UTILITY FUNCTIONS ===
 function calculateModifier(score) {
@@ -729,7 +734,7 @@ function hideLoading() {
 
 // === NAVIGATION ===
 window.showSection = function(sectionId) {
-  const sections = ['dashboard', 'characters', 'quests', 'archive', 'guild', 'fallen', 'pending'];
+  const sections = ['dashboard', 'characters', 'quests', 'archive', 'guild', 'market', 'profile', 'notifications', 'fallen', 'pending'];
   sections.forEach(id => hideElement(id));
 
   showElement(sectionId);
@@ -742,6 +747,12 @@ window.showSection = function(sectionId) {
     loadArchivedQuests();
   } else if (sectionId === 'guild') {
     loadGuild();
+  } else if (sectionId === 'market') {
+    loadMarket();
+  } else if (sectionId === 'profile') {
+    loadProfile();
+  } else if (sectionId === 'notifications') {
+    loadNotifications();
   } else if (sectionId === 'fallen') {
     loadFallenHeroes();
   } else if (sectionId === 'pending') {
@@ -850,26 +861,32 @@ onAuthStateChanged(auth, async (user) => {
         const userData = userDoc.data();
         currentUserRole = userData.role || 'player';
         currentUsername = userData.username || user.displayName || user.email.split('@')[0];
+        currentUserPhoto = userData.photo || '';
       } else {
         // User document doesn't exist yet (edge case)
         currentUserRole = 'player';
         currentUsername = user.displayName || user.email.split('@')[0];
+        currentUserPhoto = '';
       }
     } catch (error) {
       console.error('Error fetching user role:', error);
       currentUserRole = 'player';
       currentUsername = user.displayName || user.email.split('@')[0];
+      currentUserPhoto = '';
     }
-    
+
     const roleText = currentUserRole === 'dm' ? ' (DM)' : '';
     document.getElementById('user-name').textContent = currentUsername + roleText;
-    
+
     // Show/hide pending button for DMs
     if (currentUserRole === 'dm') {
       document.getElementById('pending-btn').style.display = 'flex';
+      document.getElementById('notifications-btn').style.display = 'flex';
       updatePendingCount();
+      updateNotificationsCount();
     } else {
       document.getElementById('pending-btn').style.display = 'none';
+      document.getElementById('notifications-btn').style.display = 'none';
     }
     
     hideElement('login');
@@ -1082,6 +1099,8 @@ window.handleAddCharacter = async function(event) {
     level: level,
     hitDie: parseInt(document.getElementById('char-hitdie').value) || 8,
     feats: [],
+    gp: 0,
+    items: [],
     proficiencyBonus: calculateProficiencyBonus(level),
     stats: {
       str: parseInt(document.getElementById('char-str').value),
@@ -1242,6 +1261,14 @@ window.showCharacterDetail = function(charId) {
           ${f.description ? `<p style="white-space: pre-wrap; margin-left: 1rem;">${f.description}</p>` : ''}
         `).join('')}
       ` : ''}
+
+      <h4 style="margin-top: 1.5rem;">Borsa</h4>
+      <p><strong>Oro:</strong> ${char.gp || 0} gp
+        ${currentUserRole === 'dm' ? `<button onclick="dmGrantGold('${char.id}')" class="btn-warning" style="padding: 0.1rem 0.5rem; margin-left: 0.5rem;">± gp</button>` : ''}
+      </p>
+      ${(char.items && char.items.length > 0)
+        ? char.items.map(it => `<p>• ${it.qty}× ${it.name}${it.value ? ` <span style="color: var(--gray);">(${it.value} gp)</span>` : ''}</p>`).join('')
+        : '<p style="color: var(--gray);">Inventario oggetti vuoto.</p>'}
 
       ${char.weapons && char.weapons.length > 0 ? `
         <h4 style="margin-top: 1.5rem;">Armi</h4>
@@ -2665,12 +2692,16 @@ function renderArchivedQuests(quests) {
     const date = quest.completedAt || quest.closedAt;
     const dateStr = date ? new Date(date.seconds * 1000).toLocaleDateString('it-IT') : '';
     
+    const names = participants.length > 0
+      ? participants.map(p => p.username).join(', ')
+      : 'Nessuno';
+
     return `
       <div class="card" onclick="showArchivedQuestDetail('${quest.id}')">
         <h3>${quest.title}</h3>
         <p>${quest.description.substring(0, 100)}${quest.description.length > 100 ? '...' : ''}</p>
-        <p><strong>Partecipanti:</strong> ${participants.length}</p>
-        ${dateStr ? `<p><strong>Data:</strong> ${dateStr}</p>` : ''}
+        <p><strong>Partecipanti (${participants.length}):</strong> ${names}</p>
+        ${dateStr ? `<p><strong>${quest.isCompleted ? 'Completata il' : 'Chiusa il'}:</strong> ${dateStr}</p>` : ''}
         <span class="difficulty-badge difficulty-${quest.difficulty}">${quest.difficulty}</span>
         ${status}
       </div>
@@ -2852,6 +2883,9 @@ function renderGuild(usersById, charsByUser) {
     const chars = charsByUser[uid] || [];
     const roleBadge = user.role === 'dm' ? ' <span class="difficulty-badge difficulty-Epica">DM</span>' : '';
     const isMe = uid === currentUser.uid ? ' (tu)' : '';
+    const avatar = user.photo
+      ? `<img src="${user.photo}" class="avatar-small" alt="" />`
+      : `<span class="avatar-small avatar-placeholder">${(user.username || '?')[0].toUpperCase()}</span>`;
 
     const charsHtml = chars.length > 0
       ? chars.map(c => `
@@ -2865,7 +2899,7 @@ function renderGuild(usersById, charsByUser) {
 
     return `
       <div class="guild-player">
-        <h3 style="margin-bottom: 0.5rem;">🛡️ ${user.username || 'Avventuriero'}${roleBadge}${isMe}</h3>
+        <h3 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">${avatar} ${user.username || 'Avventuriero'}${roleBadge}${isMe}</h3>
         <div class="cards-grid">${charsHtml}</div>
       </div>
     `;
@@ -2919,6 +2953,640 @@ window.showGuildCharacter = function(charId) {
   `;
 
   showElement('character-detail');
+};
+
+// ===================================================================
+// PROFILO + FOTO
+// ===================================================================
+function loadProfile() {
+  const el = document.getElementById('profile-content');
+  const avatar = currentUserPhoto
+    ? `<img src="${currentUserPhoto}" class="avatar-large" alt="avatar" />`
+    : `<div class="avatar-large avatar-placeholder">${(currentUsername[0] || '?').toUpperCase()}</div>`;
+  el.innerHTML = `
+    <div class="profile-box">
+      ${avatar}
+      <h3>${currentUsername}${currentUserRole === 'dm' ? ' <span class="difficulty-badge difficulty-Epica">DM</span>' : ''}</h3>
+      <p style="color: var(--gray);">${currentUser.email}</p>
+      <div class="character-actions">
+        <button class="btn-info" onclick="document.getElementById('avatar-input').click()">📷 Cambia Foto</button>
+        ${currentUserPhoto ? `<button class="btn-danger" onclick="removeAvatar()">🗑️ Rimuovi Foto</button>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+window.handleAvatarUpload = function(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = async () => {
+      const size = 256;
+      const min = Math.min(img.width, img.height);
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, (img.width - min) / 2, (img.height - min) / 2, min, min, 0, 0, size, size);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      try {
+        showLoading();
+        await updateDoc(doc(db, 'users', currentUser.uid), { photo: dataUrl });
+        currentUserPhoto = dataUrl;
+        hideLoading();
+        loadProfile();
+      } catch (err) {
+        hideLoading();
+        console.error('Errore salvataggio foto:', err);
+        alert('Errore nel salvataggio della foto');
+      }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+};
+
+window.removeAvatar = async function() {
+  if (!confirm('Rimuovere la foto profilo?')) return;
+  try {
+    showLoading();
+    await updateDoc(doc(db, 'users', currentUser.uid), { photo: '' });
+    currentUserPhoto = '';
+    hideLoading();
+    loadProfile();
+  } catch (e) {
+    hideLoading();
+    console.error(e);
+    alert('Errore');
+  }
+};
+
+// ===================================================================
+// HELPER INVENTARIO / PERSONAGGIO ATTIVO
+// ===================================================================
+async function fetchMyCharacter() {
+  const snap = await getDocs(query(collection(db, 'characters'), where('userId', '==', currentUser.uid)));
+  const chars = [];
+  snap.forEach(d => chars.push({ id: d.id, ...d.data() }));
+  return chars.find(c => !c.isDead) || null;
+}
+
+function addItemToList(items, entry) {
+  const list = (items || []).map(i => ({ ...i }));
+  const found = list.find(i => i.name === entry.name && (i.value || 0) === (entry.value || 0));
+  if (found) found.qty = (found.qty || 0) + entry.qty;
+  else list.push({ name: entry.name, qty: entry.qty, value: entry.value || 0, category: entry.category || '' });
+  return list;
+}
+
+function removeItemFromList(items, name, qty) {
+  const list = (items || []).map(i => ({ ...i }));
+  const idx = list.findIndex(i => i.name === name);
+  if (idx === -1 || (list[idx].qty || 0) < qty) return null;
+  list[idx].qty -= qty;
+  if (list[idx].qty <= 0) list.splice(idx, 1);
+  return list;
+}
+
+// ===================================================================
+// MERCATO
+// ===================================================================
+const DEFAULT_MARKET = [
+  { name: 'Pozione di Cura', category: 'Pozioni', price: 50, stock: null },
+  { name: 'Antitossina', category: 'Pozioni', price: 50, stock: null },
+  { name: 'Veleno Base (fiala)', category: 'Veleni', price: 100, stock: null },
+  { name: 'Pugnale', category: 'Armi', price: 2, stock: null },
+  { name: 'Spada Corta', category: 'Armi', price: 10, stock: null },
+  { name: 'Spada Lunga', category: 'Armi', price: 15, stock: null },
+  { name: 'Spadone', category: 'Armi', price: 50, stock: null },
+  { name: 'Ascia da Battaglia', category: 'Armi', price: 10, stock: null },
+  { name: 'Ascia Bipenne', category: 'Armi', price: 30, stock: null },
+  { name: 'Mazza', category: 'Armi', price: 5, stock: null },
+  { name: 'Martello da Guerra', category: 'Armi', price: 15, stock: null },
+  { name: 'Maglio', category: 'Armi', price: 10, stock: null },
+  { name: 'Lancia', category: 'Armi', price: 1, stock: null },
+  { name: 'Alabarda', category: 'Armi', price: 20, stock: null },
+  { name: 'Arco Corto', category: 'Armi', price: 25, stock: null },
+  { name: 'Arco Lungo', category: 'Armi', price: 50, stock: null },
+  { name: 'Balestra Leggera', category: 'Armi', price: 25, stock: null },
+  { name: 'Balestra Pesante', category: 'Armi', price: 50, stock: null },
+  { name: 'Armatura Imbottita', category: 'Armature', price: 5, stock: null },
+  { name: 'Armatura di Cuoio', category: 'Armature', price: 10, stock: null },
+  { name: 'Cuoio Borchiato', category: 'Armature', price: 45, stock: null },
+  { name: 'Corazza di Scaglie', category: 'Armature', price: 50, stock: null },
+  { name: 'Corpetto (Corazza a Bande)', category: 'Armature', price: 400, stock: null },
+  { name: 'Mezza Armatura', category: 'Armature', price: 750, stock: null },
+  { name: 'Cotta di Maglia', category: 'Armature', price: 75, stock: null },
+  { name: 'Armatura a Piastre', category: 'Armature', price: 1500, stock: null },
+  { name: 'Scudo', category: 'Armature', price: 10, stock: null },
+  { name: 'Pozione di Cura Superiore', category: 'Pozioni Rare', price: 150, stock: 5 },
+  { name: 'Arma +1', category: 'Oggetti Magici', price: 1000, stock: 2 },
+  { name: 'Armatura +1', category: 'Oggetti Magici', price: 1500, stock: 1 },
+  { name: 'Scudo +1', category: 'Oggetti Magici', price: 500, stock: 1 }
+];
+
+function isInfinite(item) {
+  return item.stock === null || item.stock === undefined;
+}
+
+async function loadMarket() {
+  const el = document.getElementById('market-content');
+  el.innerHTML = '<div class="loading"><div class="dice-spinner">🎲</div></div>';
+  try {
+    const catSnap = await getDocs(collection(db, 'market_items'));
+    marketItems = [];
+    catSnap.forEach(d => marketItems.push({ id: d.id, ...d.data() }));
+
+    const lsnap = await getDocs(collection(db, 'market_listings'));
+    const listings = [];
+    lsnap.forEach(d => {
+      const l = { id: d.id, ...d.data() };
+      if (l.status === 'active') listings.push(l);
+    });
+
+    // Scambi che mi coinvolgono (query a campo singolo per non richiedere indici)
+    const [tTo, tFrom] = await Promise.all([
+      getDocs(query(collection(db, 'trades'), where('toUserId', '==', currentUser.uid))),
+      getDocs(query(collection(db, 'trades'), where('fromUserId', '==', currentUser.uid)))
+    ]);
+    const trades = [];
+    const seen = {};
+    [tTo, tFrom].forEach(snap => snap.forEach(d => {
+      if (seen[d.id]) return;
+      const t = { id: d.id, ...d.data() };
+      if (t.status === 'pending') { trades.push(t); seen[d.id] = true; }
+    }));
+
+    const myChar = await fetchMyCharacter();
+    renderMarket(myChar, listings, trades);
+  } catch (e) {
+    console.error('Errore mercato:', e);
+    el.innerHTML = '<div class="empty-state"><p>Errore nel caricamento del mercato</p></div>';
+  }
+}
+
+function renderMarket(myChar, listings, trades) {
+  const el = document.getElementById('market-content');
+  const gp = myChar ? (myChar.gp || 0) : 0;
+
+  const cats = {};
+  marketItems.forEach(i => { (cats[i.category || 'Altro'] = cats[i.category || 'Altro'] || []).push(i); });
+
+  const catalogHtml = marketItems.length === 0
+    ? '<p style="color: var(--gray);">Il mercato è vuoto.</p>'
+    : Object.keys(cats).sort().map(cat => `
+        <h4 style="margin-top: 1rem;">${cat}</h4>
+        ${cats[cat].map(i => {
+          const stockLabel = isInfinite(i) ? '∞' : i.stock;
+          const soldout = !isInfinite(i) && (i.stock || 0) <= 0;
+          return `
+            <div class="market-row">
+              <div><strong>${i.name}</strong> — ${i.price} gp <span style="color: var(--gray);">· scorte: ${stockLabel}</span></div>
+              <div>
+                ${soldout ? '<span class="card-status status-dead">Esaurito</span>'
+                  : (myChar ? `<button class="btn-success" onclick="buyMarketItem('${i.id}')">Compra</button>` : '')}
+                ${currentUserRole === 'dm' ? `<button class="btn-warning" onclick="dmEditMarketItem('${i.id}')">✏️</button><button class="btn-danger" onclick="dmDeleteMarketItem('${i.id}')">✕</button>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      `).join('');
+
+  const listingsHtml = listings.length === 0
+    ? '<p style="color: var(--gray);">Nessun oggetto in vendita dai giocatori.</p>'
+    : listings.map(l => {
+        const mine = l.sellerId === currentUser.uid;
+        return `
+          <div class="market-row">
+            <div><strong>${l.qty}× ${l.name}</strong> — ${l.price} gp <span style="color: var(--gray);">· da ${l.sellerName}</span></div>
+            <div>
+              ${mine || currentUserRole === 'dm' ? `<button class="btn-warning" onclick="cancelListing('${l.id}')">Ritira</button>` : ''}
+              ${!mine && myChar ? `<button class="btn-success" onclick="buyListing('${l.id}')">Compra</button>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+  const tradesHtml = trades.length === 0
+    ? '<p style="color: var(--gray);">Nessuno scambio in sospeso.</p>'
+    : trades.map(t => {
+        const incoming = t.toUserId === currentUser.uid;
+        const giveStr = [...t.giveItems.map(i => `${i.qty}× ${i.name}`), t.giveGp ? `${t.giveGp} gp` : ''].filter(Boolean).join(', ') || 'niente';
+        const wantStr = [...t.wantItems.map(i => `${i.qty}× ${i.name}`), t.wantGp ? `${t.wantGp} gp` : ''].filter(Boolean).join(', ') || 'niente';
+        return `
+          <div class="card">
+            <p><strong>${t.fromUserName}</strong> → <strong>${t.toUserName}</strong></p>
+            <p>Offre: ${giveStr}</p>
+            <p>Chiede: ${wantStr}</p>
+            <div class="character-actions">
+              ${incoming
+                ? `<button class="btn-success" onclick="acceptTrade('${t.id}')">Accetta</button><button class="btn-danger" onclick="rejectTrade('${t.id}')">Rifiuta</button>`
+                : `<button class="btn-warning" onclick="cancelTrade('${t.id}')">Annulla</button>`}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+  const dmControls = currentUserRole === 'dm' ? `
+    <div class="character-actions" style="margin-bottom: 1rem;">
+      ${marketItems.length === 0 ? `<button class="btn-success" onclick="seedMarket()">🌱 Inizializza Catalogo Standard</button>` : ''}
+      <button class="btn-info" onclick="dmAddMarketItem()">+ Aggiungi Oggetto</button>
+    </div>` : '';
+
+  el.innerHTML = `
+    <div class="profile-box" style="margin-bottom:1rem;">
+      <p><strong>Il tuo oro:</strong> ${gp} gp ${myChar ? `(${myChar.name})` : '(nessun personaggio attivo)'}</p>
+      ${myChar ? `<div class="character-actions"><button class="btn-info" onclick="sellItem()">🏷️ Vendi un Oggetto</button><button class="btn-info" onclick="openTradeForm()">🔄 Proponi Scambio</button></div>` : ''}
+    </div>
+    ${dmControls}
+    <h3>🏪 Catalogo della Gilda</h3>
+    ${catalogHtml}
+    <h3 style="margin-top: 1.5rem;">🤝 Bacheca Giocatori</h3>
+    ${listingsHtml}
+    <h3 style="margin-top: 1.5rem;">🔄 Scambi in Sospeso</h3>
+    ${tradesHtml}
+  `;
+}
+
+window.buyMarketItem = async function(itemId) {
+  const item = marketItems.find(i => i.id === itemId);
+  if (!item) return;
+  const myChar = await fetchMyCharacter();
+  if (!myChar) { alert('Devi avere un personaggio attivo per comprare.'); return; }
+  const qty = parseInt(prompt(`Quante unità di "${item.name}"? (${item.price} gp l'una)`, '1'));
+  if (isNaN(qty) || qty < 1) return;
+  const cost = item.price * qty;
+  const gp = myChar.gp || 0;
+  if (gp < cost) { alert(`Oro insufficiente! Hai ${gp} gp, servono ${cost} gp.`); return; }
+  const finite = !isInfinite(item);
+  if (finite && (item.stock || 0) < qty) { alert(`Scorte insufficienti! Disponibili: ${item.stock}.`); return; }
+
+  try {
+    showLoading();
+    if (finite) {
+      await runTransaction(db, async (tx) => {
+        const ref = doc(db, 'market_items', itemId);
+        const snap = await tx.get(ref);
+        const stock = (snap.data() || {}).stock || 0;
+        if (stock < qty) throw new Error('OUT_OF_STOCK');
+        tx.update(ref, { stock: stock - qty });
+      });
+    }
+    const items = addItemToList(myChar.items || [], { name: item.name, qty, value: item.price, category: item.category });
+    await updateDoc(doc(db, 'characters', myChar.id), { gp: gp - cost, items });
+    hideLoading();
+    alert(`Acquistato: ${qty}× ${item.name} per ${cost} gp.`);
+    loadMarket();
+  } catch (err) {
+    hideLoading();
+    if (err.message === 'OUT_OF_STOCK') alert('Scorte esaurite nel frattempo!');
+    else { console.error(err); alert('Errore nell\'acquisto'); }
+    loadMarket();
+  }
+};
+
+window.seedMarket = async function() {
+  if (currentUserRole !== 'dm') { alert('Solo i DM!'); return; }
+  if (!confirm('Inizializzare il catalogo con gli oggetti standard?')) return;
+  try {
+    showLoading();
+    const batch = writeBatch(db);
+    DEFAULT_MARKET.forEach(it => batch.set(doc(collection(db, 'market_items')), it));
+    await batch.commit();
+    hideLoading();
+    loadMarket();
+  } catch (e) { hideLoading(); console.error(e); alert('Errore'); }
+};
+
+window.dmAddMarketItem = async function() {
+  if (currentUserRole !== 'dm') return;
+  const name = prompt('Nome oggetto:');
+  if (!name || !name.trim()) return;
+  const category = (prompt('Categoria (es. Pozioni, Armi, Armature):', 'Altro') || 'Altro').trim();
+  const price = parseInt(prompt('Prezzo in gp:', '10'));
+  if (isNaN(price)) return;
+  const stockStr = prompt('Scorte? (numero, oppure "inf" per infinite):', 'inf');
+  const stock = (stockStr && stockStr.trim().toLowerCase() === 'inf') ? null : (parseInt(stockStr) || 0);
+  try { showLoading(); await addDoc(collection(db, 'market_items'), { name: name.trim(), category, price, stock }); hideLoading(); loadMarket(); }
+  catch (e) { hideLoading(); console.error(e); alert('Errore'); }
+};
+
+window.dmEditMarketItem = async function(itemId) {
+  if (currentUserRole !== 'dm') return;
+  const item = marketItems.find(i => i.id === itemId);
+  if (!item) return;
+  const price = parseInt(prompt('Nuovo prezzo (gp):', String(item.price)));
+  if (isNaN(price)) return;
+  const stockStr = prompt('Scorte (numero o "inf"):', isInfinite(item) ? 'inf' : String(item.stock));
+  const stock = (stockStr && stockStr.trim().toLowerCase() === 'inf') ? null : (parseInt(stockStr) || 0);
+  try { showLoading(); await updateDoc(doc(db, 'market_items', itemId), { price, stock }); hideLoading(); loadMarket(); }
+  catch (e) { hideLoading(); console.error(e); alert('Errore'); }
+};
+
+window.dmDeleteMarketItem = async function(itemId) {
+  if (currentUserRole !== 'dm') return;
+  if (!confirm('Eliminare questo oggetto dal catalogo?')) return;
+  try { showLoading(); await deleteDoc(doc(db, 'market_items', itemId)); hideLoading(); loadMarket(); }
+  catch (e) { hideLoading(); console.error(e); alert('Errore'); }
+};
+
+window.dmGrantGold = async function(charId) {
+  if (currentUserRole !== 'dm') { alert('Solo i DM!'); return; }
+  const char = currentCharacters.find(c => c.id === charId);
+  if (!char) return;
+  const amt = parseInt(prompt(`Oro da aggiungere a ${char.name} (negativo per togliere):`, '100'));
+  if (isNaN(amt)) return;
+  const gp = Math.max(0, (char.gp || 0) + amt);
+  try { showLoading(); await updateDoc(doc(db, 'characters', charId), { gp }); hideLoading(); hideCharacterDetail(); loadCharacters(); alert(`Oro aggiornato: ${gp} gp`); }
+  catch (e) { hideLoading(); console.error(e); alert('Errore'); }
+};
+
+// ===================================================================
+// VENDITE TRA GIOCATORI (LISTINGS)
+// ===================================================================
+window.sellItem = async function() {
+  const myChar = await fetchMyCharacter();
+  if (!myChar) { alert('Serve un personaggio attivo.'); return; }
+  const items = myChar.items || [];
+  if (items.length === 0) { alert('Non hai oggetti da vendere.'); return; }
+  const list = items.map((it, i) => `${i + 1}) ${it.qty}× ${it.name}`).join('\n');
+  const choice = parseInt(prompt(`Quale oggetto vendere?\n${list}`, '1'));
+  if (isNaN(choice) || choice < 1 || choice > items.length) return;
+  const it = items[choice - 1];
+  const qty = parseInt(prompt(`Quante unità? (hai ${it.qty})`, '1'));
+  if (isNaN(qty) || qty < 1 || qty > it.qty) { alert('Quantità non valida.'); return; }
+  const price = parseInt(prompt(`Prezzo totale in gp per ${qty}× ${it.name}:`, String((it.value || 0) * qty)));
+  if (isNaN(price) || price < 0) return;
+  const newItems = removeItemFromList(items, it.name, qty);
+  if (!newItems) { alert('Errore quantità.'); return; }
+  try {
+    showLoading();
+    await updateDoc(doc(db, 'characters', myChar.id), { items: newItems });
+    await addDoc(collection(db, 'market_listings'), {
+      sellerId: currentUser.uid, sellerName: currentUsername,
+      sellerCharId: myChar.id, sellerCharName: myChar.name,
+      name: it.name, qty, price, unitValue: it.value || 0, category: it.category || '',
+      status: 'active', createdAt: serverTimestamp()
+    });
+    await notifyDM(`🏷️ ${currentUsername} ha messo in vendita ${qty}× ${it.name} per ${price} gp.`, 'listing');
+    hideLoading();
+    alert('Oggetto messo in vendita!');
+    loadMarket();
+  } catch (e) { hideLoading(); console.error(e); alert('Errore'); }
+};
+
+window.buyListing = async function(listingId) {
+  const myChar = await fetchMyCharacter();
+  if (!myChar) { alert('Serve un personaggio attivo.'); return; }
+  const lref = doc(db, 'market_listings', listingId);
+  const lsnap = await getDoc(lref);
+  if (!lsnap.exists() || lsnap.data().status !== 'active') { alert('Offerta non più disponibile.'); loadMarket(); return; }
+  const l = lsnap.data();
+  if (l.sellerId === currentUser.uid) { alert('Non puoi comprare un tuo oggetto.'); return; }
+  const cost = l.price;
+  if ((myChar.gp || 0) < cost) { alert(`Oro insufficiente! Hai ${myChar.gp || 0} gp, servono ${cost}.`); return; }
+  if (!confirm(`Comprare ${l.qty}× ${l.name} per ${cost} gp da ${l.sellerName}?`)) return;
+  try {
+    showLoading();
+    const scharRef = doc(db, 'characters', l.sellerCharId);
+    const scharSnap = await getDoc(scharRef);
+    const batch = writeBatch(db);
+    const buyerItems = addItemToList(myChar.items || [], { name: l.name, qty: l.qty, value: l.unitValue || 0, category: l.category || '' });
+    batch.update(doc(db, 'characters', myChar.id), { gp: (myChar.gp || 0) - cost, items: buyerItems });
+    if (scharSnap.exists()) batch.update(scharRef, { gp: (scharSnap.data().gp || 0) + cost });
+    batch.update(lref, { status: 'sold', buyerId: currentUser.uid, buyerName: currentUsername, soldAt: serverTimestamp() });
+    await batch.commit();
+    await notifyDM(`💰 ${currentUsername} ha comprato ${l.qty}× ${l.name} da ${l.sellerName} per ${cost} gp.`, 'sale');
+    hideLoading();
+    alert('Acquisto completato!');
+    loadMarket();
+  } catch (e) { hideLoading(); console.error(e); alert('Errore nell\'acquisto'); }
+};
+
+window.cancelListing = async function(listingId) {
+  const lsnap = await getDoc(doc(db, 'market_listings', listingId));
+  if (!lsnap.exists()) return;
+  const data = lsnap.data();
+  if (data.sellerId !== currentUser.uid && currentUserRole !== 'dm') { alert('Non puoi ritirare questa offerta.'); return; }
+  if (!confirm('Ritirare l\'offerta e riprendere l\'oggetto?')) return;
+  try {
+    showLoading();
+    const tSnap = await getDoc(doc(db, 'characters', data.sellerCharId));
+    const batch = writeBatch(db);
+    if (tSnap.exists()) {
+      const items = addItemToList(tSnap.data().items || [], { name: data.name, qty: data.qty, value: data.unitValue || 0, category: data.category || '' });
+      batch.update(doc(db, 'characters', data.sellerCharId), { items });
+    }
+    batch.update(doc(db, 'market_listings', listingId), { status: 'cancelled' });
+    await batch.commit();
+    hideLoading();
+    loadMarket();
+  } catch (e) { hideLoading(); console.error(e); alert('Errore'); }
+};
+
+// ===================================================================
+// SCAMBI TRA GIOCATORI (TRADES)
+// ===================================================================
+window.hideGeneric = function() { hideElement('generic-modal'); };
+
+window.openTradeForm = async function() {
+  const myChar = await fetchMyCharacter();
+  if (!myChar) { alert('Serve un personaggio attivo per scambiare.'); return; }
+  const [usnap, csnap] = await Promise.all([getDocs(collection(db, 'users')), getDocs(collection(db, 'characters'))]);
+  const users = {};
+  usnap.forEach(d => users[d.id] = d.data());
+  const charByUser = {};
+  csnap.forEach(d => { const c = { id: d.id, ...d.data() }; if (!c.isDead) charByUser[c.userId] = c; });
+  const targets = Object.keys(charByUser).filter(uid => uid !== currentUser.uid);
+  if (targets.length === 0) { alert('Nessun altro giocatore con un personaggio attivo.'); return; }
+
+  window._tradeCtx = { myChar, charByUser, users };
+  const targetOptions = targets.map(uid => `<option value="${uid}">${users[uid] ? users[uid].username : '?'} (${charByUser[uid].name})</option>`).join('');
+  const myItems = myChar.items || [];
+  const giveItemsHtml = myItems.length ? myItems.map(it => `
+    <label style="display:block; margin:0.25rem 0;"><input type="checkbox" class="give-item" data-name="${it.name}" data-value="${it.value || 0}" data-category="${it.category || ''}"> ${it.name} (hai ${it.qty}) — <input type="number" class="give-qty" min="1" max="${it.qty}" value="1" style="width:60px;"></label>
+  `).join('') : '<p style="color:var(--gray);">Nessun oggetto.</p>';
+
+  document.getElementById('generic-content').innerHTML = `
+    <h3>🔄 Proponi Scambio</h3>
+    <div class="form-section">
+      <label>Con chi?</label>
+      <select id="trade-target" onchange="renderTradeWant()">${targetOptions}</select>
+    </div>
+    <div class="form-section">
+      <h4>Offri (tu → loro)</h4>
+      ${giveItemsHtml}
+      <label>Oro offerto: <input type="number" id="give-gp" min="0" value="0" style="width:90px;"></label>
+    </div>
+    <div class="form-section">
+      <h4>Richiedi (loro → tu)</h4>
+      <div id="trade-want-items"></div>
+      <label>Oro richiesto: <input type="number" id="want-gp" min="0" value="0" style="width:90px;"></label>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn-success" onclick="submitTrade()">Invia Proposta</button>
+      <button onclick="hideGeneric()">Annulla</button>
+    </div>
+  `;
+  renderTradeWant();
+  showElement('generic-modal');
+};
+
+window.renderTradeWant = function() {
+  const ctx = window._tradeCtx;
+  if (!ctx) return;
+  const uid = document.getElementById('trade-target').value;
+  const char = ctx.charByUser[uid];
+  const items = char.items || [];
+  document.getElementById('trade-want-items').innerHTML = items.length ? items.map(it => `
+    <label style="display:block; margin:0.25rem 0;"><input type="checkbox" class="want-item" data-name="${it.name}" data-value="${it.value || 0}" data-category="${it.category || ''}"> ${it.name} (ha ${it.qty}) — <input type="number" class="want-qty" min="1" max="${it.qty}" value="1" style="width:60px;"></label>
+  `).join('') : '<p style="color:var(--gray);">Nessun oggetto.</p>';
+};
+
+function collectCheckedItems(cbClass, qtyClass) {
+  const out = [];
+  document.querySelectorAll('.' + cbClass).forEach(cb => {
+    if (cb.checked) {
+      const qtyInput = cb.parentElement.querySelector('.' + qtyClass);
+      out.push({ name: cb.dataset.name, qty: parseInt(qtyInput.value) || 1, value: parseInt(cb.dataset.value) || 0, category: cb.dataset.category || '' });
+    }
+  });
+  return out;
+}
+
+window.submitTrade = async function() {
+  const ctx = window._tradeCtx;
+  if (!ctx) return;
+  const uid = document.getElementById('trade-target').value;
+  const targetChar = ctx.charByUser[uid];
+  const giveItems = collectCheckedItems('give-item', 'give-qty');
+  const wantItems = collectCheckedItems('want-item', 'want-qty');
+  const giveGp = parseInt(document.getElementById('give-gp').value) || 0;
+  const wantGp = parseInt(document.getElementById('want-gp').value) || 0;
+  if (giveItems.length === 0 && wantItems.length === 0 && giveGp === 0 && wantGp === 0) { alert('Proposta vuota.'); return; }
+  try {
+    showLoading();
+    await addDoc(collection(db, 'trades'), {
+      fromUserId: currentUser.uid, fromUserName: currentUsername, fromCharId: ctx.myChar.id, fromCharName: ctx.myChar.name,
+      toUserId: uid, toUserName: ctx.users[uid] ? ctx.users[uid].username : '?', toCharId: targetChar.id, toCharName: targetChar.name,
+      giveItems, giveGp, wantItems, wantGp, status: 'pending', createdAt: serverTimestamp()
+    });
+    hideLoading();
+    hideGeneric();
+    alert('Proposta di scambio inviata!');
+    loadMarket();
+  } catch (e) { hideLoading(); console.error(e); alert('Errore'); }
+};
+
+window.acceptTrade = async function(tradeId) {
+  const tref = doc(db, 'trades', tradeId);
+  const tsnap = await getDoc(tref);
+  if (!tsnap.exists()) return;
+  const t = tsnap.data();
+  if (t.toUserId !== currentUser.uid) { alert('Non sei il destinatario.'); return; }
+  if (t.status !== 'pending') { alert('Scambio non più valido.'); loadMarket(); return; }
+  if (!confirm('Accettare lo scambio?')) return;
+  try {
+    showLoading();
+    const [fromSnap, toSnap] = await Promise.all([getDoc(doc(db, 'characters', t.fromCharId)), getDoc(doc(db, 'characters', t.toCharId))]);
+    if (!fromSnap.exists() || !toSnap.exists()) throw new Error('personaggio mancante');
+    const fromC = fromSnap.data();
+    const toC = toSnap.data();
+    let fromItems = fromC.items || [];
+    let toItems = toC.items || [];
+    let fromGp = fromC.gp || 0;
+    let toGp = toC.gp || 0;
+    if (fromGp < t.giveGp) throw new Error('oro insufficiente del proponente');
+    if (toGp < t.wantGp) throw new Error('il tuo oro è insufficiente');
+    for (const it of t.giveItems) { const r = removeItemFromList(fromItems, it.name, it.qty); if (!r) throw new Error(`il proponente non ha più ${it.name}`); fromItems = r; }
+    for (const it of t.wantItems) { const r = removeItemFromList(toItems, it.name, it.qty); if (!r) throw new Error(`non hai più ${it.name}`); toItems = r; }
+    for (const it of t.giveItems) toItems = addItemToList(toItems, it);
+    for (const it of t.wantItems) fromItems = addItemToList(fromItems, it);
+    fromGp = fromGp - t.giveGp + t.wantGp;
+    toGp = toGp - t.wantGp + t.giveGp;
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'characters', t.fromCharId), { items: fromItems, gp: fromGp });
+    batch.update(doc(db, 'characters', t.toCharId), { items: toItems, gp: toGp });
+    batch.update(tref, { status: 'accepted', resolvedAt: serverTimestamp() });
+    await batch.commit();
+    await notifyDM(`🔄 Scambio completato tra ${t.fromUserName} e ${t.toUserName}.`, 'trade');
+    hideLoading();
+    alert('Scambio completato!');
+    loadMarket();
+  } catch (e) { hideLoading(); console.error(e); alert('Scambio fallito: ' + e.message); loadMarket(); }
+};
+
+window.rejectTrade = async function(tradeId) {
+  if (!confirm('Rifiutare lo scambio?')) return;
+  try { showLoading(); await updateDoc(doc(db, 'trades', tradeId), { status: 'rejected', resolvedAt: serverTimestamp() }); hideLoading(); loadMarket(); }
+  catch (e) { hideLoading(); console.error(e); alert('Errore'); }
+};
+
+window.cancelTrade = async function(tradeId) {
+  if (!confirm('Annullare la proposta?')) return;
+  try { showLoading(); await updateDoc(doc(db, 'trades', tradeId), { status: 'cancelled', resolvedAt: serverTimestamp() }); hideLoading(); loadMarket(); }
+  catch (e) { hideLoading(); console.error(e); alert('Errore'); }
+};
+
+// ===================================================================
+// NOTIFICHE (DM)
+// ===================================================================
+async function notifyDM(message, type) {
+  try {
+    await addDoc(collection(db, 'notifications'), { forRole: 'dm', type: type || 'info', message, createdAt: serverTimestamp(), read: false });
+  } catch (e) { console.error('Errore notifica:', e); }
+}
+
+async function updateNotificationsCount() {
+  if (currentUserRole !== 'dm') return;
+  try {
+    const snap = await getDocs(collection(db, 'notifications'));
+    let count = 0;
+    snap.forEach(d => { if (!d.data().read) count++; });
+    const el = document.getElementById('notifications-count');
+    el.textContent = count;
+    el.style.display = count > 0 ? 'flex' : 'none';
+  } catch (e) { console.error(e); }
+}
+
+async function loadNotifications() {
+  const el = document.getElementById('notifications-list');
+  el.innerHTML = '<div class="loading"><div class="dice-spinner">🎲</div></div>';
+  try {
+    const snap = await getDocs(collection(db, 'notifications'));
+    notifications = [];
+    snap.forEach(d => notifications.push({ id: d.id, ...d.data() }));
+    notifications.sort((a, b) => ((b.createdAt && b.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0));
+
+    if (notifications.length === 0) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔔</div><p>Nessuna notifica.</p></div>';
+      return;
+    }
+
+    el.innerHTML = `<div class="character-actions" style="margin-bottom:1rem;"><button class="btn-info" onclick="markAllNotificationsRead()">Segna tutte come lette</button></div>` +
+      notifications.map(n => {
+        const date = n.createdAt ? new Date(n.createdAt.seconds * 1000).toLocaleString('it-IT') : '';
+        return `<div class="card${n.read ? '' : ' pending-card'}"><p>${n.message}</p><p style="color:var(--gray); font-size:0.85rem;">${date}${n.read ? '' : ' · <strong>NUOVA</strong>'}</p></div>`;
+      }).join('');
+  } catch (e) {
+    console.error(e);
+    el.innerHTML = '<div class="empty-state"><p>Errore nel caricamento</p></div>';
+  }
+}
+
+window.markAllNotificationsRead = async function() {
+  try {
+    showLoading();
+    const batch = writeBatch(db);
+    notifications.filter(n => !n.read).forEach(n => batch.update(doc(db, 'notifications', n.id), { read: true }));
+    await batch.commit();
+    hideLoading();
+    loadNotifications();
+    updateNotificationsCount();
+  } catch (e) { hideLoading(); console.error(e); alert('Errore'); }
 };
 
 // === FUNZIONE AGGIUNGI RIGA ARMA ===

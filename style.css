@@ -1141,3 +1141,67 @@ button.add-btn:hover {
 .guild-player > h3 {
   color: var(--beige, #e8d5a0);
 }
+
+/* === AVATAR === */
+.avatar-small {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary, #2c3e6e);
+  color: #fff;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.avatar-large {
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary, #2c3e6e);
+  color: #fff;
+  font-size: 3rem;
+  font-weight: bold;
+  margin: 0 auto 1rem;
+}
+
+.avatar-placeholder {
+  border: 2px solid rgba(232, 213, 160, 0.4);
+}
+
+/* === PROFILO === */
+.profile-box {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(232, 213, 160, 0.2);
+  border-radius: 10px;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+/* === MERCATO === */
+.market-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(232, 213, 160, 0.15);
+  border-radius: 8px;
+  padding: 0.6rem 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.market-row .btn-success,
+.market-row .btn-warning,
+.market-row .btn-danger {
+  padding: 0.3rem 0.7rem;
+  margin-left: 0.25rem;
+}

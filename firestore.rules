@@ -29,15 +29,57 @@ service cloud.firestore {
       allow create: if isAuthenticated() && 
                       request.resource.data.userId == request.auth.uid;
       
-      // Update: DMs can update anything, players can update their own (except isDead and level)
+      // Update: DMs can update anything, players can update their own (except isDead and level).
+      // Any authenticated user may change ONLY gp/items of any character (marketplace & trades).
       allow update: if isDM() ||
-                      (isAuthenticated() && 
+                      (isAuthenticated() &&
                        resource.data.userId == request.auth.uid &&
                        request.resource.data.isDead == resource.data.isDead &&
-                       request.resource.data.level == resource.data.level);
-      
+                       request.resource.data.level == resource.data.level) ||
+                      (isAuthenticated() &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['gp', 'items']));
+
       // Delete: only DMs
       allow delete: if isDM();
+    }
+
+    // Market catalog (guild shop)
+    match /market_items/{itemId} {
+      allow read: if isAuthenticated();
+      allow create, delete: if isDM();
+      // DM edits anything; players may only decrement stock when buying
+      allow update: if isDM() ||
+                      (isAuthenticated() &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock']));
+    }
+
+    // Player-to-player sale listings
+    match /market_listings/{listingId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+                      request.resource.data.sellerId == request.auth.uid;
+      // Buyer marks sold, seller/DM cancels: keep to authenticated (friends' group)
+      allow update: if isAuthenticated();
+      allow delete: if isDM();
+    }
+
+    // Player-to-player trades
+    match /trades/{tradeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+                      request.resource.data.fromUserId == request.auth.uid;
+      // The two involved parties (and DM) can resolve the trade
+      allow update: if isAuthenticated() &&
+                      (request.auth.uid == resource.data.fromUserId ||
+                       request.auth.uid == resource.data.toUserId || isDM());
+      allow delete: if isDM();
+    }
+
+    // DM notification feed
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isDM();
     }
     
     // Pending Changes collection
