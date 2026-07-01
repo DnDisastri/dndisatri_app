@@ -97,6 +97,12 @@ service cloud.firestore {
       allow create, update, delete: if isDM();
     }
 
+    // Spell descriptions (DM-editable library overrides)
+    match /spell_descriptions/{spellId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isDM();
+    }
+
     // Audit log / ledger (read: DM only; append-only for players; DM can prune)
     match /audit_log/{entryId} {
       allow read: if isDM();

@@ -112,10 +112,10 @@
       <div class="container">
         <p class="welcome-text">Benvenuto, <span id="user-name">Avventuriero</span>!</p>
 
-        <div class="nav-dropdown">
-          <select id="nav-select" onchange="navGo(this.value)">
-            <option value="">— Vai a… —</option>
-          </select>
+        <div id="quick-bells" class="quick-bells"></div>
+        <div class="app-menu">
+          <button class="app-menu-toggle" onclick="toggleMenu()">☰ Menu</button>
+          <div id="app-menu-panel" class="app-menu-panel hidden"></div>
         </div>
 
         <h2 style="margin-top: 1.5rem;">📣📣 Annunci di D&Disastri</h2>
@@ -1059,6 +1059,6 @@
   </div>
 
   <!-- Firebase SDK (modular) -->
-  <script type="module" src="app.js?v=17"></script>
+  <script type="module" src="app.js?v=18"></script>
 </body>
 </html>

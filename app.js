@@ -64,6 +64,7 @@ let currentCampaignId = null;
 let campaignsCache = [];
 let notifUnreadCount = 0;
 let pendingCount = 0;
+let spellDescOverrides = {};
 
 // === UTILITY FUNCTIONS ===
 function calculateModifier(score) {
@@ -253,6 +254,102 @@ window.restShort = async function(charId) {
   const used = Object.assign({}, char.spellSlotsUsed || {});
   delete used.pact;
   await persistSlots(charId, used);
+};
+
+// === LIBRERIA INCANTESIMI (sintesi originali, non testo ufficiale) ===
+function normalizeSpellName(name) {
+  return (name || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+}
+
+const SPELL_LIST = [
+  ['Dardo di Fuoco', 'Trucchetto di Evocazione. Azione, gittata 36 m. Tiro per colpire a distanza; 1d10 danni da fuoco (2d10 al 5°, 3d10 all\'11°, 4d10 al 17°). Può incendiare oggetti.'],
+  ['Fiamma Sacra', 'Trucchetto di Evocazione. Azione, 18 m. Il bersaglio effettua TS su Destrezza o subisce 1d8 danni radiosi (sale ai livelli superiori). Ignora la copertura.'],
+  ['Spruzzo Acido', 'Trucchetto di Evocazione. Azione, 18 m. Fino a due creature vicine tirano TS su Destrezza o subiscono 1d6 danni acidi.'],
+  ['Veleno Spettrale', 'Trucchetto di Necromanzia. Azione, 3 m. TS su Costituzione o 1d12 danni da veleno.'],
+  ['Mano Magica', 'Trucchetto di Evocazione. Azione, 9 m. Crea una mano spettrale che manipola oggetti leggeri (fino a 5 kg).'],
+  ['Luce', 'Trucchetto di Invocazione. Azione, tocco. Un oggetto emette luce intensa per 6 m (durata 1 ora).'],
+  ['Prestidigitazione', 'Trucchetto di Trasmutazione. Piccolo effetto innocuo: accendere/spegnere, pulire, creare un\'illusione sensoriale minore.'],
+  ['Illusione Minore', 'Trucchetto di Illusione. Crea un suono o un\'immagine statica per 1 minuto.'],
+  ['Guida', 'Trucchetto di Divinazione. Azione, tocco (concentrazione). Il bersaglio aggiunge 1d4 a una prova di caratteristica entro 1 minuto.'],
+  ['Raggio di Gelo', 'Trucchetto di Invocazione. Azione, 18 m. Attacco a distanza; 1d8 danni da freddo e -3 m alla velocità.'],
+  ['Tocco Gelido', 'Trucchetto di Necromanzia. Azione, 36 m. Attacco a distanza; 1d8 danni necrotici, il bersaglio non recupera PF fino al tuo prossimo turno.'],
+  ['Taumaturgia', 'Trucchetto di Trasmutazione. Piccola manifestazione di potere divino: voce amplificata, tremori, porte che sbattono.'],
+  ['Dardo Incantato', 'Evocazione, liv. 1. Azione, 36 m. Tre dardi di forza, 1d4+1 ciascuno; colpiscono automaticamente. +1 dardo per slot superiore.'],
+  ['Cura Ferite', 'Invocazione, liv. 1. Azione, tocco. Cura 1d8 + modificatore da incantatore. +1d8 per slot superiore.'],
+  ['Parola Guaritrice', 'Invocazione, liv. 1. Azione bonus, 18 m. Cura 1d4 + modificatore. +1d4 per slot superiore.'],
+  ['Scudo', 'Abiurazione, liv. 1. Reazione. +5 alla CA fino al tuo prossimo turno; annulla Dardo Incantato.'],
+  ['Armatura Magica', 'Abiurazione, liv. 1. Tocco. La CA base del bersaglio diventa 13 + mod. Destrezza per 8 ore.'],
+  ['Mani Brucianti', 'Evocazione, liv. 1. Azione, cono di 4,5 m. TS su Destrezza; 3d6 danni da fuoco (metà se supera).'],
+  ['Onda Tonante', 'Invocazione, liv. 1. Azione, cubo di 4,5 m. TS su Costituzione; 2d8 danni da tuono e spinta di 3 m.'],
+  ['Charme su Persone', 'Ammaliamento, liv. 1. Azione, 9 m. TS su Saggezza o il bersaglio ti considera amichevole per 1 ora.'],
+  ['Sonno', 'Ammaliamento, liv. 1. Azione, 27 m. Fa addormentare creature per un totale di 5d8 PF, partendo dalle più deboli.'],
+  ['Benedizione', 'Ammaliamento, liv. 1. Fino a 3 creature aggiungono 1d4 a tiri per colpire e TS (concentrazione, 1 min).'],
+  ['Comando', 'Ammaliamento, liv. 1. Azione, 18 m. TS su Saggezza o il bersaglio obbedisce a un ordine di una parola.'],
+  ['Individuazione del Magico', 'Divinazione, liv. 1. Percepisci presenza e scuola di magia entro 9 m (concentrazione).'],
+  ['Nube di Nebbia', 'Evocazione, liv. 1. Crea una sfera di nebbia di 6 m che oscura la vista (concentrazione).'],
+  ['Raggio Rovente', 'Evocazione, liv. 2. Azione, 36 m. Tre raggi, attacco a distanza ciascuno; 2d6 danni da fuoco per raggio.'],
+  ['Passo Velato', 'Evocazione, liv. 2. Azione bonus. Teletrasporto fino a 9 m in uno spazio visibile.'],
+  ['Invisibilità', 'Illusione, liv. 2. Tocco; il bersaglio diventa invisibile fino a 1 ora o finché attacca/lancia (concentrazione).'],
+  ['Immagine Speculare', 'Illusione, liv. 2. Crea 3 duplicati che possono far fallire gli attacchi diretti a te.'],
+  ['Blocca Persone', 'Ammaliamento, liv. 2. 18 m. TS su Saggezza o il bersaglio è paralizzato (concentrazione).'],
+  ['Ristorare Inferiore', 'Abiurazione, liv. 2. Tocco. Rimuove una malattia o una condizione (cieco, sordo, paralizzato, avvelenato).'],
+  ['Frantumare', 'Invocazione, liv. 2. 18 m, sfera di 3 m. TS su Costituzione; 3d8 danni da tuono.'],
+  ['Palla di Fuoco', 'Evocazione, liv. 3. Azione, 45 m, sfera di 6 m. TS su Destrezza; 8d6 danni da fuoco (metà se supera). +1d6 per slot superiore.'],
+  ['Fulmine', 'Invocazione, liv. 3. Linea di 30 m. TS su Destrezza; 8d6 danni da fulmine.'],
+  ['Controincantesimo', 'Abiurazione, liv. 3. Reazione, 18 m. Interrompe un incantesimo di livello 3 o inferiore (prova per quelli superiori).'],
+  ['Dissolvi Magie', 'Abiurazione, liv. 3. Termina effetti magici di livello 3 o inferiore (prova per i superiori).'],
+  ['Rivitalizzare', 'Necromanzia, liv. 3. Tocco. Riporta in vita una creatura morta da non più di 1 minuto, con 1 PF.'],
+  ['Volare', 'Trasmutazione, liv. 3. Tocco. Il bersaglio ottiene velocità di volo 18 m per 10 minuti (concentrazione).'],
+  ['Porta Dimensionale', 'Evocazione, liv. 4. Azione. Teletrasporto fino a 150 m, anche con un\'altra creatura consenziente.'],
+  ['Polimorfia', 'Trasmutazione, liv. 4. 18 m. TS su Saggezza o il bersaglio si trasforma in una bestia (concentrazione, 1 ora).'],
+  ['Cono di Freddo', 'Invocazione, liv. 5. Cono di 18 m. TS su Costituzione; 8d8 danni da freddo.'],
+  ['Rianimare Morti', 'Necromanzia, liv. 5. Riporta in vita una creatura morta da non più di 10 giorni.'],
+  ['Muro di Forza', 'Invocazione, liv. 5. Crea una barriera invisibile e quasi indistruttibile (concentrazione, 10 min).']
+];
+const SPELL_LIB = {};
+SPELL_LIST.forEach(([n, d]) => { SPELL_LIB[normalizeSpellName(n)] = d; });
+
+async function loadSpellOverrides() {
+  try {
+    const snap = await getDocs(collection(db, 'spell_descriptions'));
+    spellDescOverrides = {};
+    snap.forEach(d => { spellDescOverrides[d.id] = (d.data() || {}).description || ''; });
+  } catch (e) { console.error('Errore descrizioni incantesimi:', e); }
+}
+
+function renderSpellChips(str) {
+  return (str || '').split(',').map(s => s.trim()).filter(Boolean)
+    .map(name => `<span class="spell-chip" onclick="openSpellInfo('${encodeURIComponent(name)}')">${name}</span>`).join(' ');
+}
+
+window.openSpellInfo = function(encName) {
+  const name = decodeURIComponent(encName);
+  const key = normalizeSpellName(name);
+  const desc = spellDescOverrides[key] || SPELL_LIB[key];
+  document.getElementById('generic-content').innerHTML = `
+    <h3>${name}</h3>
+    ${desc ? `<p style="white-space:pre-wrap;">${desc}</p>` : '<p style="color:var(--gray);">Descrizione non ancora disponibile.</p>'}
+    <div class="modal-buttons">
+      ${currentUserRole === 'dm' ? `<button class="btn-info" onclick="dmEditSpellDescription('${encName}')">Modifica descrizione</button>` : ''}
+      <button onclick="hideGeneric()">Chiudi</button>
+    </div>`;
+  showElement('generic-modal');
+};
+
+window.dmEditSpellDescription = async function(encName) {
+  if (currentUserRole !== 'dm') return;
+  const name = decodeURIComponent(encName);
+  const key = normalizeSpellName(name);
+  const current = spellDescOverrides[key] || SPELL_LIB[key] || '';
+  const desc = prompt(`Descrizione per "${name}":`, current);
+  if (desc === null) return;
+  try {
+    showLoading();
+    await setDoc(doc(db, 'spell_descriptions', key), { name, description: desc.trim() });
+    spellDescOverrides[key] = desc.trim();
+    hideLoading();
+    openSpellInfo(encName);
+  } catch (e) { hideLoading(); console.error(e); alert('Errore nel salvataggio'); }
 };
 
 // ===================================================================
@@ -910,32 +1007,46 @@ window.showSection = function(sectionId) {
 
 // === MENU A TENDINA + DASHBOARD ===
 function renderNav() {
-  const sel = document.getElementById('nav-select');
-  if (!sel) return;
-  const opts = [
-    ['characters', 'I miei Personaggi'],
-    ['quests', 'Campagne'],
-    ['archive', 'Libro Mastro'],
-    ['guild', 'Gilda'],
-    ['maps', 'Mappe'],
-    ['market', 'Mercato'],
-    ['profile', 'Profilo'],
-    ['notifications', `Notifiche${notifUnreadCount > 0 ? ` (${notifUnreadCount})` : ''}`],
-    ['fallen', 'Fallen Heroes']
-  ];
-  if (currentUserRole === 'dm') {
-    opts.push(['pending', `Modifiche Pending${pendingCount > 0 ? ` (${pendingCount})` : ''}`]);
-    opts.push(['audit', 'Registro']);
+  const bells = document.getElementById('quick-bells');
+  if (bells) {
+    const badge = (n) => n > 0 ? ` <span class="pending-badge">${n}</span>` : '';
+    let html = `<button class="bell-btn" onclick="showSection('notifications')">🔔 Notifiche${badge(notifUnreadCount)}</button>`;
+    if (currentUserRole === 'dm') {
+      html += `<button class="bell-btn" onclick="showSection('pending')">⏳ Pending${badge(pendingCount)}</button>`;
+    }
+    bells.innerHTML = html;
   }
-  sel.innerHTML = '<option value="">— Vai a… —</option>' +
-    opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+
+  const panel = document.getElementById('app-menu-panel');
+  if (panel) {
+    const opts = [
+      ['characters', 'I miei Personaggi'],
+      ['quests', 'Campagne'],
+      ['archive', 'Libro Mastro'],
+      ['guild', 'Gilda'],
+      ['maps', 'Mappe'],
+      ['market', 'Mercato'],
+      ['profile', 'Profilo'],
+      ['notifications', 'Notifiche'],
+      ['fallen', 'Fallen Heroes']
+    ];
+    if (currentUserRole === 'dm') {
+      opts.push(['pending', 'Modifiche Pending']);
+      opts.push(['audit', 'Registro']);
+    }
+    panel.innerHTML = opts.map(([v, l]) => `<button class="menu-item" onclick="navGo('${v}')">${l}</button>`).join('');
+  }
 }
 
+window.toggleMenu = function() {
+  const panel = document.getElementById('app-menu-panel');
+  if (panel) panel.classList.toggle('hidden');
+};
+
 window.navGo = function(value) {
-  if (!value) return;
-  showSection(value);
-  const sel = document.getElementById('nav-select');
-  if (sel) sel.value = '';
+  const panel = document.getElementById('app-menu-panel');
+  if (panel) panel.classList.add('hidden');
+  if (value) showSection(value);
 };
 
 function loadDashboard() {
@@ -1159,6 +1270,7 @@ onAuthStateChanged(auth, async (user) => {
     showElement('dashboard');
     showElement('logout-btn');
     loadDashboard();
+    loadSpellOverrides();
     
   } else {
     currentUser = null;
@@ -1639,18 +1751,19 @@ window.showCharacterDetail = function(charId) {
         })()}
         ${(char.spellcasting && char.spellcasting.cantrips) ? `
           <p style="margin-top: 0.5rem;"><strong>Trucchetti:</strong></p>
-          <p style="white-space: pre-wrap; margin-left: 1rem;">${char.spellcasting.cantrips}</p>
+          <div style="margin-left: 1rem;">${renderSpellChips(char.spellcasting.cantrips)}</div>
         ` : ''}
         ${[1,2,3,4,5,6,7,8,9].map(level => {
           const levelData = (char.spellcasting || {})[`level${level}`];
           if (levelData && levelData.spells) {
             return `
               <p style="margin-top: 0.5rem;"><strong>Incantesimi di Livello ${level}:</strong></p>
-              <p style="white-space: pre-wrap; margin-left: 1rem;">${levelData.spells}</p>
+              <div style="margin-left: 1rem;">${renderSpellChips(levelData.spells)}</div>
             `;
           }
           return '';
         }).join('')}
+        <p style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">Tocca un incantesimo per vederne la descrizione.</p>
       ` : char.spells ? `
         <h4 style="margin-top: 1.5rem;">Incantesimi</h4>
         ${char.spellAbility ? `<p><strong>Caratteristica:</strong> ${char.spellAbility}</p>` : ''}
