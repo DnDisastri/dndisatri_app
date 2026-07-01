@@ -60,6 +60,8 @@ let levelUpCtx = null;
 let currentUserPhoto = '';
 let marketItems = [];
 let notifications = [];
+let currentCampaignId = null;
+let campaignsCache = [];
 
 // === UTILITY FUNCTIONS ===
 function calculateModifier(score) {
@@ -905,15 +907,16 @@ onAuthStateChanged(auth, async (user) => {
     document.getElementById('user-name').textContent = currentUsername + roleText;
 
     // Show/hide pending button for DMs
+    // Notifiche per tutti (player e DM)
+    document.getElementById('notifications-btn').style.display = 'flex';
+    updateNotificationsCount();
+
     if (currentUserRole === 'dm') {
       document.getElementById('pending-btn').style.display = 'flex';
-      document.getElementById('notifications-btn').style.display = 'flex';
       document.getElementById('audit-btn').style.display = 'flex';
       updatePendingCount();
-      updateNotificationsCount();
     } else {
       document.getElementById('pending-btn').style.display = 'none';
-      document.getElementById('notifications-btn').style.display = 'none';
       document.getElementById('audit-btn').style.display = 'none';
     }
     
@@ -2409,66 +2412,131 @@ window.rejectPendingChange = async function(changeId) {
   }
 };
 
-// === QUESTS ===
+// === CAMPAGNE & QUEST ===
+// Punto d'ingresso della sezione: elenco delle campagne.
 async function loadQuests() {
   if (!currentUser) return;
-  
+  currentCampaignId = null;
+
   const listEl = document.getElementById('quests-list');
   listEl.innerHTML = '<div class="loading"><div class="dice-spinner">🎲</div></div>';
-  
+
   try {
-    const snapshot = await getDocs(collection(db, 'quests'));
-    currentQuests = [];
-    
-    snapshot.forEach(doc => {
-      const questData = { id: doc.id, ...doc.data() };
-      // Show only active quests (not completed or closed)
-      if (!questData.isCompleted && !questData.isClosed) {
-        currentQuests.push(questData);
+    const [campSnap, questSnap] = await Promise.all([
+      getDocs(collection(db, 'campaigns')),
+      getDocs(collection(db, 'quests'))
+    ]);
+    campaignsCache = [];
+    campSnap.forEach(d => campaignsCache.push({ id: d.id, ...d.data() }));
+
+    const activeByCampaign = {};
+    questSnap.forEach(d => {
+      const q = d.data();
+      if (!q.isCompleted && !q.isClosed) {
+        const key = q.campaignId || '_none';
+        activeByCampaign[key] = (activeByCampaign[key] || 0) + 1;
       }
     });
-    
-    currentQuests.sort((a, b) => {
-      if (!a.createdAt || !b.createdAt) return 0;
-      return b.createdAt.seconds - a.createdAt.seconds;
-    });
-    
-    renderQuests();
+
+    campaignsCache.sort((a, b) => ((b.createdAt && b.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0));
+    renderCampaigns(activeByCampaign);
   } catch (error) {
-    console.error('Errore caricamento quest:', error);
-    listEl.innerHTML = '<div class="empty-state"><p>Errore nel caricamento delle quest</p></div>';
+    console.error('Errore caricamento campagne:', error);
+    listEl.innerHTML = '<div class="empty-state"><p>Errore nel caricamento delle campagne</p></div>';
   }
 }
 
-function renderQuests() {
+function renderCampaigns(activeByCampaign) {
   const listEl = document.getElementById('quests-list');
-  
-  // Show/hide add button based on DM role
-  const addBtn = document.querySelector('#quests .add-btn');
-  if (addBtn) {
-    if (currentUserRole === 'dm') {
-      addBtn.style.display = 'block';
-    } else {
-      addBtn.style.display = 'none';
-    }
-  }
-  
-  if (currentQuests.length === 0) {
-    listEl.innerHTML = `
+  const headerAdd = document.querySelector('#quests .add-btn');
+  if (headerAdd) headerAdd.style.display = 'none';
+
+  const addBtn = currentUserRole === 'dm'
+    ? `<div class="character-actions" style="margin-bottom:1rem;"><button class="btn-success btn-lg" onclick="showAddCampaign()">+ Nuova Campagna</button></div>`
+    : '';
+
+  if (campaignsCache.length === 0) {
+    listEl.innerHTML = addBtn + `
       <div class="empty-state">
         <div class="empty-state-icon">📜</div>
         <p>Nessuna campagna disponibile.</p>
         ${currentUserRole === 'dm' ? '<p>Inizia creando la tua prima campagna!</p>' : '<p>Il Dungeon Master creerà presto delle campagne!</p>'}
-      </div>
-    `;
+      </div>`;
     return;
   }
-  
-  listEl.innerHTML = currentQuests.map(quest => {
+
+  listEl.innerHTML = addBtn + `<div class="cards-grid">${campaignsCache.map(c => {
+    const n = activeByCampaign[c.id] || 0;
+    const ended = c.status === 'ended';
+    return `
+      <div class="card" style="cursor:pointer;" onclick="openCampaign('${c.id}')">
+        <h3>📖 ${c.title}</h3>
+        ${c.description ? `<p>${c.description.substring(0, 120)}${c.description.length > 120 ? '...' : ''}</p>` : ''}
+        <p style="margin-top:0.5rem;"><strong>Quest attive:</strong> ${n}</p>
+        <span class="card-status ${ended ? 'status-dead' : 'status-active'}">${ended ? 'Conclusa' : 'In corso'}</span>
+      </div>`;
+  }).join('')}</div>`;
+}
+
+window.showAddCampaign = async function() {
+  if (currentUserRole !== 'dm') { alert('Solo i DM possono creare campagne!'); return; }
+  const title = (prompt('Titolo della campagna:') || '').trim();
+  if (!title) return;
+  const description = (prompt('Descrizione (opzionale):') || '').trim();
+  try {
+    showLoading();
+    await addDoc(collection(db, 'campaigns'), {
+      title, description, createdBy: currentUser.uid, status: 'active', createdAt: serverTimestamp()
+    });
+    await notifyPlayers(`📜 Nuova campagna: "${title}"`, 'campaign');
+    hideLoading();
+    loadQuests();
+  } catch (e) { hideLoading(); console.error(e); alert('Errore'); }
+};
+
+window.openCampaign = async function(campaignId) {
+  currentCampaignId = campaignId;
+  const campaign = campaignsCache.find(c => c.id === campaignId) || { title: 'Campagna' };
+  const listEl = document.getElementById('quests-list');
+  listEl.innerHTML = '<div class="loading"><div class="dice-spinner">🎲</div></div>';
+  try {
+    const snapshot = await getDocs(collection(db, 'quests'));
+    currentQuests = [];
+    snapshot.forEach(d => {
+      const q = { id: d.id, ...d.data() };
+      if (q.campaignId === campaignId && !q.isCompleted && !q.isClosed) currentQuests.push(q);
+    });
+    currentQuests.sort((a, b) => ((b.createdAt && b.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0));
+    renderCampaignQuests(campaign);
+  } catch (e) {
+    console.error(e);
+    listEl.innerHTML = '<div class="empty-state"><p>Errore nel caricamento delle quest</p></div>';
+  }
+};
+
+function renderCampaignQuests(campaign) {
+  const listEl = document.getElementById('quests-list');
+  const dmControls = currentUserRole === 'dm'
+    ? `<button class="btn-success btn-lg" onclick="showAddQuest()">+ Nuova Quest</button>
+       ${campaign.status === 'ended' ? '' : `<button class="btn-warning" onclick="endCampaign('${currentCampaignId}')">Concludi Campagna</button>`}`
+    : '';
+  const header = `
+    <div class="character-actions" style="margin-bottom:1rem;">
+      <button class="btn-secondary" onclick="loadQuests()">← Tutte le Campagne</button>
+      ${dmControls}
+    </div>
+    <h3 style="margin-bottom:0.5rem;">📖 ${campaign.title}</h3>
+    ${campaign.description ? `<p style="color:var(--gray); margin-bottom:1rem;">${campaign.description}</p>` : ''}
+  `;
+
+  if (currentQuests.length === 0) {
+    listEl.innerHTML = header + `<div class="empty-state"><div class="empty-state-icon">🗺️</div><p>Nessuna quest attiva in questa campagna.</p></div>`;
+    return;
+  }
+
+  listEl.innerHTML = header + `<div class="cards-grid">${currentQuests.map(quest => {
     const participants = quest.participants || [];
     const maxParticipants = quest.maxParticipants || 4;
-    const slotsLeft = maxParticipants - participants.length;
-    
     return `
       <div class="card" onclick="showQuestDetail('${quest.id}')">
         <h3>${quest.title}</h3>
@@ -2477,17 +2545,37 @@ function renderQuests() {
         <span class="difficulty-badge difficulty-${quest.difficulty}">${quest.difficulty}</span>
         <p style="margin-top: 0.5rem;"><strong>Slot:</strong> ${participants.length}/${maxParticipants}</p>
         <span class="card-status status-active">Attiva</span>
-      </div>
-    `;
-  }).join('');
+      </div>`;
+  }).join('')}</div>`;
+}
+
+// Torna alla vista corretta dopo un'azione su una quest
+function refreshQuestView() {
+  if (currentCampaignId) openCampaign(currentCampaignId);
+  else loadQuests();
+}
+
+window.endCampaign = async function(campaignId) {
+  if (currentUserRole !== 'dm') return;
+  if (!confirm('Concludere la campagna? Le quest resteranno nel Libro Mastro.')) return;
+  try {
+    showLoading();
+    await updateDoc(doc(db, 'campaigns', campaignId), { status: 'ended', endedAt: serverTimestamp() });
+    hideLoading();
+    loadQuests();
+  } catch (e) { hideLoading(); console.error(e); alert('Errore'); }
 }
 
 window.showAddQuest = function() {
   if (currentUserRole !== 'dm') {
-    alert('Solo i Dungeon Master possono creare campagne!');
+    alert('Solo i Dungeon Master possono creare quest!');
     return;
   }
-  
+  if (!currentCampaignId) {
+    alert('Apri prima una campagna in cui inserire la quest.');
+    return;
+  }
+
   document.getElementById('quest-title').value = '';
   document.getElementById('quest-giver').value = '';
   document.getElementById('quest-description').value = '';
@@ -2527,15 +2615,20 @@ window.handleAddQuest = async function(event) {
       rewards,
       difficulty,
       maxParticipants,
+      campaignId: currentCampaignId || null,
+      campaignTitle: (campaignsCache.find(c => c.id === currentCampaignId) || {}).title || '',
       participants: [],
       isCompleted: false,
       isClosed: false,
       createdAt: serverTimestamp()
     });
-    
+
+    const campTitle = (campaignsCache.find(c => c.id === currentCampaignId) || {}).title || '';
+    await notifyPlayers(`🗺️ Nuova quest: "${title}"${campTitle ? ` (campagna: ${campTitle})` : ''}`, 'quest');
+
     hideLoading();
     hideAddQuest();
-    loadQuests();
+    refreshQuestView();
   } catch (error) {
     hideLoading();
     console.error('Errore creazione quest:', error);
@@ -2657,7 +2750,7 @@ window.joinQuest = async function(questId) {
     
     hideLoading();
     closeQuestDetail();
-    loadQuests();
+    refreshQuestView();
     alert('Ti sei iscritto alla quest con successo!');
     
   } catch (error) {
@@ -2692,7 +2785,7 @@ window.leaveQuest = async function(questId) {
     
     hideLoading();
     closeQuestDetail();
-    loadQuests();
+    refreshQuestView();
     alert('Hai abbandonato la quest.');
     
   } catch (error) {
@@ -2723,7 +2816,7 @@ window.completeQuest = async function(questId) {
     
     hideLoading();
     closeQuestDetail();
-    loadQuests();
+    refreshQuestView();
     alert('Quest completata! ✅');
     
   } catch (error) {
@@ -2754,7 +2847,7 @@ window.closeQuest = async function(questId) {
     
     hideLoading();
     closeQuestDetail();
-    loadQuests();
+    refreshQuestView();
     alert('Quest chiusa e archiviata! 🚫');
     
   } catch (error) {
@@ -2770,70 +2863,90 @@ async function loadArchivedQuests() {
   listEl.innerHTML = '<div class="loading"><div class="dice-spinner">🎲</div></div>';
   
   try {
-    const snapshot = await getDocs(collection(db, 'quests'));
+    const [qSnap, cSnap] = await Promise.all([
+      getDocs(collection(db, 'quests')),
+      getDocs(collection(db, 'campaigns'))
+    ]);
+    const campaigns = {};
+    cSnap.forEach(d => { campaigns[d.id] = d.data(); });
+
     const archivedQuests = [];
-    
-    snapshot.forEach(doc => {
-      const questData = { id: doc.id, ...doc.data() };
-      // Show only completed or closed quests
-      if (questData.isCompleted || questData.isClosed) {
-        archivedQuests.push(questData);
-      }
+    qSnap.forEach(d => {
+      const questData = { id: d.id, ...d.data() };
+      if (questData.isCompleted || questData.isClosed) archivedQuests.push(questData);
     });
-    
-    // Sort by completion/close date
+
     archivedQuests.sort((a, b) => {
       const dateA = a.completedAt || a.closedAt;
       const dateB = b.completedAt || b.closedAt;
-      if (!dateA || !dateB) return 0;
-      return dateB.seconds - dateA.seconds;
+      return ((dateB && dateB.seconds) || 0) - ((dateA && dateA.seconds) || 0);
     });
-    
-    renderArchivedQuests(archivedQuests);
+
+    renderArchivedQuests(archivedQuests, campaigns);
   } catch (error) {
-    console.error('Errore caricamento archivio:', error);
-    listEl.innerHTML = '<div class="empty-state"><p>Errore nel caricamento dell\'archivio</p></div>';
+    console.error('Errore caricamento libro mastro:', error);
+    listEl.innerHTML = '<div class="empty-state"><p>Errore nel caricamento del Libro Mastro</p></div>';
   }
 }
 
-function renderArchivedQuests(quests) {
+function questArchiveCard(quest) {
+  const participants = quest.participants || [];
+  const status = quest.isCompleted
+    ? '<span class="card-status status-completed">✅ Completata</span>'
+    : '<span class="card-status" style="background: var(--gray)">🚫 Chiusa</span>';
+  const date = quest.completedAt || quest.closedAt;
+  const dateStr = date ? new Date(date.seconds * 1000).toLocaleDateString('it-IT') : '';
+  const names = participants.length > 0 ? participants.map(p => p.username).join(', ') : 'Nessuno';
+  return `
+    <div class="card" onclick="showArchivedQuestDetail('${quest.id}')">
+      <h3>${quest.title}</h3>
+      ${quest.questGiver ? `<p><strong>Affidata da:</strong> ${quest.questGiver}</p>` : ''}
+      <p>${quest.description.substring(0, 100)}${quest.description.length > 100 ? '...' : ''}</p>
+      <p><strong>Partecipanti (${participants.length}):</strong> ${names}</p>
+      ${dateStr ? `<p><strong>${quest.isCompleted ? 'Completata il' : 'Chiusa il'}:</strong> ${dateStr}</p>` : ''}
+      <span class="difficulty-badge difficulty-${quest.difficulty}">${quest.difficulty}</span>
+      ${status}
+    </div>`;
+}
+
+function renderArchivedQuests(quests, campaigns) {
   const listEl = document.getElementById('archive-list');
-  
+
   if (quests.length === 0) {
     listEl.innerHTML = `
       <div class="empty-state">
-        <div class="empty-state-icon">📦</div>
-        <p>Nessuna campagna archiviata.</p>
-        <p>Le campagne completate o chiuse appariranno qui.</p>
-      </div>
-    `;
+        <div class="empty-state-icon">📖</div>
+        <p>Il Libro Mastro è vuoto.</p>
+        <p>Le sessioni completate o chiuse appariranno qui, divise per campagna.</p>
+      </div>`;
     return;
   }
-  
-  listEl.innerHTML = quests.map(quest => {
-    const participants = quest.participants || [];
-    const status = quest.isCompleted ? 
-      '<span class="card-status status-completed">✅ Completata</span>' :
-      '<span class="card-status" style="background: var(--gray)">🚫 Chiusa</span>';
-    
-    const date = quest.completedAt || quest.closedAt;
-    const dateStr = date ? new Date(date.seconds * 1000).toLocaleDateString('it-IT') : '';
-    
-    const names = participants.length > 0
-      ? participants.map(p => p.username).join(', ')
-      : 'Nessuno';
 
+  // Raggruppa per campagna
+  const groups = {};
+  quests.forEach(q => {
+    const key = q.campaignId || '_none';
+    (groups[key] = groups[key] || []).push(q);
+  });
+
+  const keys = Object.keys(groups).sort((a, b) => {
+    if (a === '_none') return 1;
+    if (b === '_none') return -1;
+    const ta = (campaigns[a] || {}).title || '';
+    const tb = (campaigns[b] || {}).title || '';
+    return ta.localeCompare(tb);
+  });
+
+  listEl.innerHTML = keys.map(key => {
+    const title = key === '_none'
+      ? 'Senza campagna'
+      : ((campaigns[key] || {}).title || groups[key][0].campaignTitle || 'Campagna');
+    const cards = groups[key].map(questArchiveCard).join('');
     return `
-      <div class="card" onclick="showArchivedQuestDetail('${quest.id}')">
-        <h3>${quest.title}</h3>
-        ${quest.questGiver ? `<p><strong>Affidata da:</strong> ${quest.questGiver}</p>` : ''}
-        <p>${quest.description.substring(0, 100)}${quest.description.length > 100 ? '...' : ''}</p>
-        <p><strong>Partecipanti (${participants.length}):</strong> ${names}</p>
-        ${dateStr ? `<p><strong>${quest.isCompleted ? 'Completata il' : 'Chiusa il'}:</strong> ${dateStr}</p>` : ''}
-        <span class="difficulty-badge difficulty-${quest.difficulty}">${quest.difficulty}</span>
-        ${status}
-      </div>
-    `;
+      <div class="guild-player">
+        <h3 style="margin-bottom:0.5rem;">📖 ${title}</h3>
+        <div class="cards-grid">${cards}</div>
+      </div>`;
   }).join('');
 }
 
@@ -3682,20 +3795,36 @@ window.cancelTrade = async function(tradeId) {
 };
 
 // ===================================================================
-// NOTIFICHE (DM)
+// NOTIFICHE (DM e Player)
 // ===================================================================
-async function notifyDM(message, type) {
-  try {
-    await addDoc(collection(db, 'notifications'), { forRole: 'dm', type: type || 'info', message, createdAt: serverTimestamp(), read: false });
-  } catch (e) { console.error('Errore notifica:', e); }
+// Una notifica ha un'audience: 'dm' | 'players' | 'all'. Lo stato di lettura
+// è per-utente (array readBy di uid).
+function audienceMatches(audience) {
+  const a = audience || 'dm';
+  if (a === 'all') return true;
+  return currentUserRole === 'dm' ? a === 'dm' : a === 'players';
 }
 
+async function notify(audience, message, type) {
+  try {
+    await addDoc(collection(db, 'notifications'), {
+      audience, type: type || 'info', message,
+      createdAt: serverTimestamp(), readBy: []
+    });
+  } catch (e) { console.error('Errore notifica:', e); }
+}
+async function notifyDM(message, type) { return notify('dm', message, type); }
+async function notifyPlayers(message, type) { return notify('players', message, type); }
+
 async function updateNotificationsCount() {
-  if (currentUserRole !== 'dm') return;
+  if (!currentUser) return;
   try {
     const snap = await getDocs(collection(db, 'notifications'));
     let count = 0;
-    snap.forEach(d => { if (!d.data().read) count++; });
+    snap.forEach(d => {
+      const n = d.data();
+      if (audienceMatches(n.audience) && !(n.readBy || []).includes(currentUser.uid)) count++;
+    });
     const el = document.getElementById('notifications-count');
     el.textContent = count;
     el.style.display = count > 0 ? 'flex' : 'none';
@@ -3708,7 +3837,10 @@ async function loadNotifications() {
   try {
     const snap = await getDocs(collection(db, 'notifications'));
     notifications = [];
-    snap.forEach(d => notifications.push({ id: d.id, ...d.data() }));
+    snap.forEach(d => {
+      const n = { id: d.id, ...d.data() };
+      if (audienceMatches(n.audience)) notifications.push(n);
+    });
     notifications.sort((a, b) => ((b.createdAt && b.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0));
 
     if (notifications.length === 0) {
@@ -3718,8 +3850,9 @@ async function loadNotifications() {
 
     el.innerHTML = `<div class="character-actions" style="margin-bottom:1rem;"><button class="btn-info" onclick="markAllNotificationsRead()">Segna tutte come lette</button></div>` +
       notifications.map(n => {
+        const unread = !(n.readBy || []).includes(currentUser.uid);
         const date = n.createdAt ? new Date(n.createdAt.seconds * 1000).toLocaleString('it-IT') : '';
-        return `<div class="card${n.read ? '' : ' pending-card'}"><p>${n.message}</p><p style="color:var(--gray); font-size:0.85rem;">${date}${n.read ? '' : ' · <strong>NUOVA</strong>'}</p></div>`;
+        return `<div class="card${unread ? ' pending-card' : ''}"><p>${n.message}</p><p style="color:var(--gray); font-size:0.85rem;">${date}${unread ? ' · <strong>NUOVA</strong>' : ''}</p></div>`;
       }).join('');
   } catch (e) {
     console.error(e);
@@ -3731,7 +3864,8 @@ window.markAllNotificationsRead = async function() {
   try {
     showLoading();
     const batch = writeBatch(db);
-    notifications.filter(n => !n.read).forEach(n => batch.update(doc(db, 'notifications', n.id), { read: true }));
+    notifications.filter(n => !(n.readBy || []).includes(currentUser.uid))
+      .forEach(n => batch.update(doc(db, 'notifications', n.id), { readBy: arrayUnion(currentUser.uid) }));
     await batch.commit();
     hideLoading();
     loadNotifications();

@@ -75,11 +75,20 @@ service cloud.firestore {
       allow delete: if isDM();
     }
 
-    // DM notification feed
+    // Campaigns (containers for quests)
+    match /campaigns/{campaignId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isDM();
+    }
+
+    // Notification feed (DM and players). Anyone can mark-as-read (readBy only).
     match /notifications/{notifId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update, delete: if isDM();
+      allow update: if isDM() ||
+                      (isAuthenticated() &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']));
+      allow delete: if isDM();
     }
 
     // Maps: everyone authenticated can read; only DM can upload/edit/delete
