@@ -1,0 +1,20 @@
+{
+  "name": "D&Disastri - Gestione Personaggi D&D",
+  "short_name": "D&Disastri",
+  "description": "Gestisci i tuoi personaggi D&D, quest e onora i caduti",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#111111",
+  "theme_color": "#2c3e6e",
+  "icons": [
+    {
+      "src": "logo.jpg",
+      "sizes": "1280x1280",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "entertainment"],
+  "lang": "it"
+}

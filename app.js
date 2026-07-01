@@ -1,0 +1,2521 @@
+// === FIREBASE CONFIGURATION ===
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { 
+  getAuth, 
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  updateProfile
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { 
+  getFirestore,
+  collection,
+  addDoc,
+  setDoc,
+  getDocs,
+  getDoc,
+  doc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  serverTimestamp,
+  onSnapshot,
+  arrayUnion,
+  arrayRemove
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyB5qd1oSlt1lWIFF2s1ahja2L2g0NHK7H0",
+  authDomain: "dndisastri-app.firebaseapp.com",
+  projectId: "dndisastri-app",
+  storageBucket: "dndisastri-app.firebasestorage.app",
+  messagingSenderId: "280100445917",
+  appId: "1:280100445917:web:5a3fccf91f1ba492754534"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// === GLOBAL STATE ===
+let currentUser = null;
+let currentUserRole = 'player';
+let currentUsername = '';
+let currentCharacters = [];
+let currentQuests = [];
+let fallenHeroes = [];
+let pendingChanges = [];
+let hasActiveCharacter = false;
+
+// === UTILITY FUNCTIONS ===
+function calculateModifier(score) {
+  return Math.floor((score - 10) / 2);
+}
+
+function formatModifier(mod) {
+  return mod >= 0 ? `+${mod}` : `${mod}`;
+}
+
+// ===================================================================
+// PATCH PER APP.JS - Aggiungere dopo le funzioni utility esistenti
+// ===================================================================
+
+// === CALCOLI BONUS COMPETENZA ===
+function getProficiencyBonus(level) {
+  if (level >= 17) return 6;
+  if (level >= 13) return 5;
+  if (level >= 9) return 4;
+  if (level >= 5) return 3;
+  return 2;
+}
+
+// === CALCOLI SPELL DC E BONUS ===
+function calculateSpellDC(spellAbility, profBonus, stats) {
+  if (!spellAbility || !stats) return 0;
+  const abilityMod = calculateModifier(stats[spellAbility] || 10);
+  return 8 + abilityMod + profBonus;
+}
+
+function calculateSpellAttackBonus(spellAbility, profBonus, stats) {
+  if (!spellAbility || !stats) return 0;
+  const abilityMod = calculateModifier(stats[spellAbility] || 10);
+  return abilityMod + profBonus;
+}
+
+// === CALCOLI WEAPON ATTACK BONUS ===
+function calculateWeaponAttackBonus(attackStat, weaponBonus, profBonus, stats) {
+  if (!attackStat || !stats) return 0;
+  const abilityMod = calculateModifier(stats[attackStat] || 10);
+  return abilityMod + profBonus + (weaponBonus || 0);
+}
+
+// === EXPORT PDF ===
+async function exportCharacterToPDF(char) {
+  // Carica jsPDF da CDN se non già caricato
+  if (!window.jspdf) {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    document.head.appendChild(script);
+    await new Promise(resolve => script.onload = resolve);
+  }
+  
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  
+  const stats = char.stats || {};
+  const combat = char.combat || {};
+  const weapons = char.weapons || [];
+  const skills = char.skills || {};
+  const savingThrows = char.savingThrows || {};
+  const profBonus = char.proficiencyBonus || calculateProficiencyBonus(char.level || 1);
+  
+  let y = 20;
+  const lineHeight = 6;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  
+  // === HEADER CON LOGO ===
+  try {
+    // Aggiungi logo (se disponibile)
+    const logoImg = new Image();
+    logoImg.src = '/logo.jpg';
+    await new Promise((resolve, reject) => {
+      logoImg.onload = resolve;
+      logoImg.onerror = () => resolve(); // Continua anche se logo fallisce
+      setTimeout(resolve, 1000); // Timeout dopo 1s
+    });
+    
+    if (logoImg.complete && logoImg.naturalHeight !== 0) {
+      doc.addImage(logoImg, 'JPEG', 10, 10, 30, 30);
+    }
+  } catch (e) {
+    console.log('Logo non caricato, continuo senza');
+  }
+  
+  // Titolo con box colorato
+  doc.setFillColor(212, 66, 62); // Rosso D&Disastri
+  doc.rect(45, 15, pageWidth - 55, 20, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(22);
+  doc.setFont(undefined, 'bold');
+  doc.text(char.name, pageWidth / 2, 27, { align: 'center' });
+  
+  // Reset colore
+  doc.setTextColor(0, 0, 0);
+  
+  y = 45;
+  doc.setFontSize(11);
+  doc.setFont(undefined, 'normal');
+  
+  // === INFORMAZIONI BASE ===
+  doc.setFontSize(14);
+  doc.setFont(undefined, 'bold');
+  doc.setTextColor(44, 62, 110);
+  doc.text('INFORMAZIONI BASE', 15, y);
+  y += 7;
+  
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'normal');
+  doc.setTextColor(0, 0, 0);
+  doc.text(`Classe: ${char.class}${char.subclass ? ' (' + char.subclass + ')' : ''}`, 15, y);
+  doc.text(`Livello: ${char.level || 1}`, 110, y);
+  y += lineHeight;
+  doc.text(`Razza: ${char.race}`, 15, y);
+  if (char.background) {
+    doc.text(`Background: ${char.background}`, 110, y);
+  }
+  y += lineHeight + 3;
+  
+  // === CARATTERISTICHE ===
+  doc.setFontSize(14);
+  doc.setFont(undefined, 'bold');
+  doc.setTextColor(44, 62, 110);
+  doc.text('CARATTERISTICHE', 15, y);
+  y += 7;
+  
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'normal');
+  doc.setTextColor(0, 0, 0);
+  
+  const statNames = { str: 'FOR', dex: 'DES', con: 'COS', int: 'INT', wis: 'SAG', cha: 'CAR' };
+  let statY = y;
+  let col = 0;
+  for (const [key, label] of Object.entries(statNames)) {
+    const value = stats[key] || 10;
+    const mod = calculateModifier(value);
+    const x = 15 + (col * 65);
+    
+    // Box per ogni caratteristica
+    doc.setDrawColor(212, 66, 62);
+    doc.rect(x, statY - 4, 30, 8);
+    doc.text(`${label}`, x + 2, statY);
+    doc.setFont(undefined, 'bold');
+    doc.text(`${value}`, x + 15, statY);
+    doc.setFont(undefined, 'normal');
+    doc.text(`(${formatModifier(mod)})`, x + 22, statY);
+    
+    col++;
+    if (col === 3) {
+      col = 0;
+      statY += 10;
+    }
+  }
+  y = statY + 5;
+  
+  // === COMBATTIMENTO ===
+  doc.setFontSize(14);
+  doc.setFont(undefined, 'bold');
+  doc.setTextColor(44, 62, 110);
+  doc.text('COMBATTIMENTO', 15, y);
+  y += 7;
+  
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'normal');
+  doc.setTextColor(0, 0, 0);
+  
+  doc.text(`CA: ${combat.ac || 10}`, 15, y);
+  doc.text(`Iniziativa: ${formatModifier(combat.initiative || 0)}`, 55, y);
+  doc.text(`Velocità: ${combat.speed || 30} ft`, 110, y);
+  doc.text(`PF Max: ${combat.hpMax || 10}`, 155, y);
+  y += lineHeight;
+  doc.text(`Bonus Competenza: +${profBonus}`, 15, y);
+  y += lineHeight + 3;
+  
+  // === TIRI SALVEZZA ===
+  doc.setFontSize(14);
+  doc.setFont(undefined, 'bold');
+  doc.setTextColor(44, 62, 110);
+  doc.text('TIRI SALVEZZA', 15, y);
+  y += 7;
+  
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'normal');
+  doc.setTextColor(0, 0, 0);
+  
+  let saveCol = 0;
+  let saveY = y;
+  for (const [ability, label] of Object.entries(statNames)) {
+    const isProficient = savingThrows[ability] || false;
+    const bonus = calculateSavingThrow(stats, ability, isProficient, profBonus);
+    const x = 15 + (saveCol * 65);
+    
+    if (isProficient) {
+      // Marker chiaro per competenza
+      doc.setFillColor(76, 175, 80); // Verde
+      doc.circle(x, saveY - 1.5, 1.5, 'F');
+    }
+    doc.text(`${label}: ${formatModifier(bonus)}`, x + 4, saveY);
+    
+    saveCol++;
+    if (saveCol === 3) {
+      saveCol = 0;
+      saveY += lineHeight;
+    }
+  }
+  y = saveY + 5;
+  
+  // === ARMI ===
+  if (weapons.length > 0) {
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(44, 62, 110);
+    doc.text('ARMI & ATTACCHI', 15, y);
+    y += 7;
+    
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(0, 0, 0);
+    
+    weapons.forEach(weapon => {
+      const attackBonus = calculateWeaponAttackBonus(
+        weapon.attackStat, weapon.weaponBonus, profBonus, stats
+      );
+      doc.text(`${weapon.name}`, 15, y);
+      doc.text(`Attacco: +${attackBonus}`, 80, y);
+      doc.text(`Danni: ${weapon.damage}`, 130, y);
+      y += lineHeight;
+    });
+    y += 3;
+  }
+  
+  // === ABILITÀ (SKILLS) ===
+  if (y > 220) {
+    doc.addPage();
+    y = 20;
+  }
+  
+  doc.setFontSize(14);
+  doc.setFont(undefined, 'bold');
+  doc.setTextColor(44, 62, 110);
+  doc.text('ABILITA (SKILLS)', 15, y);
+  y += 7;
+  
+  doc.setFontSize(9);
+  doc.setFont(undefined, 'normal');
+  doc.setTextColor(0, 0, 0);
+  
+  let skillCol = 0;
+  let skillY = y;
+  Object.keys(SKILLS_MAP).forEach(skill => {
+    const skillData = skills[skill] || { proficient: false, expertise: false };
+    const bonus = calculateSkillBonus(stats, skill, skillData.proficient, skillData.expertise, profBonus);
+    const x = 15 + (skillCol * 95);
+    
+    // Marker visibile per competenza/expertise
+    if (skillData.expertise) {
+      // Due pallini arancioni per expertise
+      doc.setFillColor(255, 152, 0);
+      doc.circle(x, skillY - 1.5, 1.2, 'F');
+      doc.circle(x + 3, skillY - 1.5, 1.2, 'F');
+      doc.text(`${SKILLS_ITALIAN[skill]}: ${formatModifier(bonus)}`, x + 7, skillY);
+    } else if (skillData.proficient) {
+      // Un pallino verde per competenza
+      doc.setFillColor(76, 175, 80);
+      doc.circle(x, skillY - 1.5, 1.2, 'F');
+      doc.text(`${SKILLS_ITALIAN[skill]}: ${formatModifier(bonus)}`, x + 4, skillY);
+    } else {
+      // Nessun marker
+      doc.text(`${SKILLS_ITALIAN[skill]}: ${formatModifier(bonus)}`, x, skillY);
+    }
+    
+    skillCol++;
+    if (skillCol === 2) {
+      skillCol = 0;
+      skillY += lineHeight;
+    }
+  });
+  y = skillY + 5;
+  
+  // === INCANTESIMI ===
+  const spellcasting = char.spellcasting || {};
+  
+  // Check se ha incantesimi (vecchio formato char.spells o nuovo spellcasting)
+  const hasSpells = char.spellAbility || char.spells || 
+                    spellcasting.ability || spellcasting.cantrips || 
+                    Object.keys(spellcasting).some(k => k.startsWith('level'));
+  
+  if (hasSpells) {
+    if (y > 230) {
+      doc.addPage();
+      y = 20;
+    }
+    
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(44, 62, 110);
+    doc.text('INCANTESIMI', 15, y);
+    y += 7;
+    
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(0, 0, 0);
+    
+    // Caratteristica incantesimi (vecchio o nuovo formato)
+    const spellAbility = char.spellAbility || spellcasting.ability;
+    
+    if (spellAbility) {
+      doc.text(`Caratteristica Incantesimi: ${spellAbility}`, 15, y);
+      y += lineHeight;
+      
+      // Calcola CD e Bonus Attacco se possibile
+      if (char.stats) {
+        const spellAbilityLower = spellAbility.toLowerCase();
+        let abilityKey = null;
+        
+        // Map ability name to key
+        const abilityMap = {
+          'intelligenza': 'int', 'int': 'int',
+          'saggezza': 'wis', 'sag': 'wis', 'wis': 'wis',
+          'carisma': 'cha', 'car': 'cha', 'cha': 'cha'
+        };
+        
+        abilityKey = abilityMap[spellAbilityLower];
+        
+        if (abilityKey && char.stats[abilityKey]) {
+          const abilityMod = calculateModifier(char.stats[abilityKey]);
+          const spellDC = 8 + profBonus + abilityMod;
+          const spellAttack = profBonus + abilityMod;
+          
+          doc.text(`CD Tiro Salvezza: ${spellDC}`, 15, y);
+          doc.text(`Bonus Attacco Incantesimi: ${formatModifier(spellAttack)}`, 100, y);
+          y += lineHeight;
+        }
+      }
+      y += 2;
+    }
+    
+    // Trucchetti
+    if (spellcasting.cantrips) {
+      doc.setFont(undefined, 'bold');
+      doc.text('Trucchetti:', 15, y);
+      y += lineHeight;
+      doc.setFont(undefined, 'normal');
+      
+      const cantripLines = doc.splitTextToSize(spellcasting.cantrips, 180);
+      doc.text(cantripLines, 15, y);
+      y += cantripLines.length * lineHeight + 3;
+    }
+    
+    // Incantesimi per livello
+    for (let i = 1; i <= 9; i++) {
+      const levelData = spellcasting[`level${i}`];
+      if (levelData && (levelData.spells || levelData.slots)) {
+        if (y > 250) {
+          doc.addPage();
+          y = 20;
+        }
+        
+        doc.setFont(undefined, 'bold');
+        doc.text(`Livello ${i}${levelData.slots ? ` (Slot: ${levelData.slots})` : ''}:`, 15, y);
+        y += lineHeight;
+        doc.setFont(undefined, 'normal');
+        
+        if (levelData.spells) {
+          const spellLines = doc.splitTextToSize(levelData.spells, 180);
+          doc.text(spellLines, 15, y);
+          y += spellLines.length * lineHeight + 3;
+        } else {
+          y += 3;
+        }
+      }
+    }
+    
+    // Vecchio formato (se presente)
+    if (char.spells && !spellcasting.cantrips) {
+      doc.setFont(undefined, 'bold');
+      doc.text('Incantesimi Conosciuti:', 15, y);
+      y += lineHeight;
+      doc.setFont(undefined, 'normal');
+      
+      const spellLines = doc.splitTextToSize(char.spells, 180);
+      doc.text(spellLines, 15, y);
+      y += spellLines.length * lineHeight + 5;
+    }
+  }
+  
+  // === ABILITÀ DI CLASSE ===
+  if (char.classFeatures) {
+    if (y > 240) {
+      doc.addPage();
+      y = 20;
+    }
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(44, 62, 110);
+    doc.text('ABILITA DI CLASSE', 15, y);
+    y += 7;
+    
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(0, 0, 0);
+    const lines = doc.splitTextToSize(char.classFeatures, 180);
+    doc.text(lines, 15, y);
+    y += lines.length * lineHeight + 5;
+  }
+  
+  // === INVENTARIO ===
+  if (char.inventory) {
+    if (y > 240) {
+      doc.addPage();
+      y = 20;
+    }
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(44, 62, 110);
+    doc.text('INVENTARIO', 15, y);
+    y += 7;
+    
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(0, 0, 0);
+    const lines = doc.splitTextToSize(char.inventory, 180);
+    doc.text(lines, 15, y);
+    y += lines.length * lineHeight + 5;
+  }
+  
+  // === NOTE ===
+  if (char.notes) {
+    if (y > 240) {
+      doc.addPage();
+      y = 20;
+    }
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(44, 62, 110);
+    doc.text('NOTE', 15, y);
+    y += 7;
+    
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(0, 0, 0);
+    const lines = doc.splitTextToSize(char.notes, 180);
+    doc.text(lines, 15, y);
+  }
+  
+  // Legenda sulla prima pagina
+  doc.setPage(1);
+  doc.setFontSize(7);
+  doc.setTextColor(100, 100, 100);
+  doc.text('Legenda: ', 15, 275);
+  
+  // Pallino verde
+  doc.setFillColor(76, 175, 80);
+  doc.circle(36, 274, 1, 'F');
+  doc.text('Competente', 39, 275);
+  
+  // Due pallini arancioni
+  doc.setFillColor(255, 152, 0);
+  doc.circle(65, 274, 1, 'F');
+  doc.circle(68, 274, 1, 'F');
+  doc.text('Esperto', 71, 275);
+  
+  // Footer con logo piccolo e data
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(128, 128, 128);
+    doc.text(`D&Disastri • Pagina ${i}/${pageCount} • ${new Date().toLocaleDateString('it-IT')}`, 
+             pageWidth / 2, 285, { align: 'center' });
+  }
+  
+  // Salva PDF
+  doc.save(`${char.name.replace(/\s+/g, '_')}_scheda.pdf`);
+}
+
+// Aggiungi questa funzione globale
+window.exportCharacterToPDF = exportCharacterToPDF;
+
+function calculateProficiencyBonus(level) {
+  return Math.floor((level - 1) / 4) + 2;
+}
+
+// Skills mapping to ability scores
+const SKILLS_MAP = {
+  athletics: 'str',
+  acrobatics: 'dex',
+  sleightOfHand: 'dex',
+  stealth: 'dex',
+  arcana: 'int',
+  history: 'int',
+  investigation: 'int',
+  nature: 'int',
+  religion: 'int',
+  animalHandling: 'wis',
+  insight: 'wis',
+  medicine: 'wis',
+  perception: 'wis',
+  survival: 'wis',
+  deception: 'cha',
+  intimidation: 'cha',
+  performance: 'cha',
+  persuasion: 'cha'
+};
+
+const SKILLS_ITALIAN = {
+  athletics: 'Atletica',
+  acrobatics: 'Acrobazia',
+  sleightOfHand: 'Rapidità di Mano',
+  stealth: 'Furtività',
+  arcana: 'Arcano',
+  history: 'Storia',
+  investigation: 'Indagare',
+  nature: 'Natura',
+  religion: 'Religione',
+  animalHandling: 'Addestrare Animali',
+  insight: 'Intuizione',
+  medicine: 'Medicina',
+  perception: 'Percezione',
+  survival: 'Sopravvivenza',
+  deception: 'Inganno',
+  intimidation: 'Intimidire',
+  performance: 'Intrattenere',
+  persuasion: 'Persuasione'
+};
+
+function calculateSkillBonus(stats, skill, proficient, expertise, proficiencyBonus) {
+  const ability = SKILLS_MAP[skill];
+  const abilityScore = stats[ability] || 10;
+  const abilityMod = calculateModifier(abilityScore);
+  
+  let bonus = abilityMod;
+  if (proficient) bonus += proficiencyBonus;
+  if (expertise) bonus += proficiencyBonus;
+  
+  return bonus;
+}
+
+function readSkillsFromForm(prefix = 'skill') {
+  const skills = {};
+  Object.keys(SKILLS_MAP).forEach(skill => {
+    const profElement = document.getElementById(`${prefix}-${skill}-prof`);
+    const expElement = document.getElementById(`${prefix}-${skill}-exp`);
+    skills[skill] = {
+      proficient: profElement ? profElement.checked : false,
+      expertise: expElement ? expElement.checked : false
+    };
+  });
+  return skills;
+}
+
+function populateSkillsForm(skills, prefix = 'skill') {
+  Object.keys(SKILLS_MAP).forEach(skill => {
+    const profElement = document.getElementById(`${prefix}-${skill}-prof`);
+    const expElement = document.getElementById(`${prefix}-${skill}-exp`);
+    if (profElement) profElement.checked = skills[skill]?.proficient || false;
+    if (expElement) expElement.checked = skills[skill]?.expertise || false;
+  });
+}
+
+// === SAVING THROWS ===
+const SAVE_NAMES = {
+  str: 'Forza',
+  dex: 'Destrezza',
+  con: 'Costituzione',
+  int: 'Intelligenza',
+  wis: 'Saggezza',
+  cha: 'Carisma'
+};
+
+function readSavingThrowsFromForm(prefix = 'save') {
+  const savingThrows = {};
+  ['str', 'dex', 'con', 'int', 'wis', 'cha'].forEach(ability => {
+    const element = document.getElementById(`${prefix}-${ability}`);
+    savingThrows[ability] = element ? element.checked : false;
+  });
+  return savingThrows;
+}
+
+function populateSavingThrowsForm(savingThrows, prefix = 'save') {
+  ['str', 'dex', 'con', 'int', 'wis', 'cha'].forEach(ability => {
+    const element = document.getElementById(`${prefix}-${ability}`);
+    if (element) element.checked = savingThrows?.[ability] || false;
+  });
+}
+
+function calculateSavingThrow(stats, ability, proficient, profBonus) {
+  const abilityScore = stats[ability] || 10;
+  const abilityMod = calculateModifier(abilityScore);
+  return abilityMod + (proficient ? profBonus : 0);
+}
+
+function resetSkillsForm(prefix = 'skill') {
+  Object.keys(SKILLS_MAP).forEach(skill => {
+    const profElement = document.getElementById(`${prefix}-${skill}-prof`);
+    const expElement = document.getElementById(`${prefix}-${skill}-exp`);
+    if (profElement) profElement.checked = false;
+    if (expElement) expElement.checked = false;
+  });
+}
+
+// === UI HELPERS ===
+function showElement(id) {
+  document.getElementById(id).classList.remove('hidden');
+}
+
+function hideElement(id) {
+  document.getElementById(id).classList.add('hidden');
+}
+
+function showError(elementId, message) {
+  const errorEl = document.getElementById(elementId);
+  if (errorEl) {
+    errorEl.textContent = message;
+    setTimeout(() => {
+      errorEl.textContent = '';
+    }, 5000);
+  }
+}
+
+function showLoading() {
+  showElement('loading');
+}
+
+function hideLoading() {
+  hideElement('loading');
+}
+
+// === NAVIGATION ===
+window.showSection = function(sectionId) {
+  const sections = ['dashboard', 'characters', 'quests', 'archive', 'fallen', 'pending'];
+  sections.forEach(id => hideElement(id));
+  
+  showElement(sectionId);
+  
+  if (sectionId === 'characters') {
+    loadCharacters();
+  } else if (sectionId === 'quests') {
+    loadQuests();
+  } else if (sectionId === 'archive') {
+    loadArchivedQuests();
+  } else if (sectionId === 'fallen') {
+    loadFallenHeroes();
+  } else if (sectionId === 'pending') {
+    loadPendingChanges();
+  }
+};
+
+window.showLogin = function() {
+  hideElement('registration');
+  showElement('login');
+};
+
+window.showRegistration = function() {
+  hideElement('login');
+  showElement('registration');
+};
+
+// === AUTH FUNCTIONS ===
+window.handleRegistration = async function(event) {
+  event.preventDefault();
+  
+  const username = document.getElementById('reg-username').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  
+  try {
+    showLoading();
+    
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    
+    await updateProfile(userCredential.user, {
+      displayName: username
+    });
+    
+    // Create user document with UID as document ID
+    await setDoc(doc(db, 'users', userCredential.user.uid), {
+      username: username,
+      email: email,
+      role: 'player',
+      createdAt: serverTimestamp()
+    });
+    
+    hideLoading();
+  } catch (error) {
+    hideLoading();
+    let errorMessage = 'Errore durante la registrazione';
+    
+    if (error.code === 'auth/email-already-in-use') {
+      errorMessage = 'Email già in uso';
+    } else if (error.code === 'auth/weak-password') {
+      errorMessage = 'Password troppo debole';
+    } else if (error.code === 'auth/invalid-email') {
+      errorMessage = 'Email non valida';
+    }
+    
+    showError('reg-error', errorMessage);
+  }
+};
+
+window.handleLogin = async function(event) {
+  event.preventDefault();
+  
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  
+  try {
+    showLoading();
+    await signInWithEmailAndPassword(auth, email, password);
+    hideLoading();
+  } catch (error) {
+    hideLoading();
+    let errorMessage = 'Errore durante l\'accesso';
+    
+    if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+      errorMessage = 'Email o password errati';
+    } else if (error.code === 'auth/invalid-email') {
+      errorMessage = 'Email non valida';
+    } else if (error.code === 'auth/too-many-requests') {
+      errorMessage = 'Troppi tentativi. Riprova più tardi';
+    }
+    
+    showError('login-error', errorMessage);
+  }
+};
+
+window.handleLogout = async function() {
+  try {
+    await signOut(auth);
+  } catch (error) {
+    console.error('Errore logout:', error);
+  }
+};
+
+// === AUTH STATE OBSERVER ===
+onAuthStateChanged(auth, async (user) => {
+  hideLoading();
+  
+  if (user) {
+    currentUser = user;
+    
+    try {
+      // Get user document directly using UID
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        currentUserRole = userData.role || 'player';
+        currentUsername = userData.username || user.displayName || user.email.split('@')[0];
+      } else {
+        // User document doesn't exist yet (edge case)
+        currentUserRole = 'player';
+        currentUsername = user.displayName || user.email.split('@')[0];
+      }
+    } catch (error) {
+      console.error('Error fetching user role:', error);
+      currentUserRole = 'player';
+      currentUsername = user.displayName || user.email.split('@')[0];
+    }
+    
+    const roleText = currentUserRole === 'dm' ? ' (DM)' : '';
+    document.getElementById('user-name').textContent = currentUsername + roleText;
+    
+    // Show/hide pending button for DMs
+    if (currentUserRole === 'dm') {
+      document.getElementById('pending-btn').style.display = 'flex';
+      updatePendingCount();
+    } else {
+      document.getElementById('pending-btn').style.display = 'none';
+    }
+    
+    hideElement('login');
+    hideElement('registration');
+    showElement('dashboard');
+    showElement('logout-btn');
+    
+  } else {
+    currentUser = null;
+    currentUserRole = 'player';
+    currentUsername = '';
+    
+    hideElement('dashboard');
+    hideElement('characters');
+    hideElement('quests');
+    hideElement('fallen');
+    hideElement('pending');
+    hideElement('logout-btn');
+    showElement('login');
+  }
+});
+
+// === PENDING CHANGES COUNT ===
+async function updatePendingCount() {
+  if (currentUserRole !== 'dm') return;
+  
+  try {
+    const q = query(
+      collection(db, 'pending_changes'),
+      where('status', '==', 'pending')
+    );
+    const snapshot = await getDocs(q);
+    const count = snapshot.size;
+    
+    document.getElementById('pending-count').textContent = count;
+    
+    if (count > 0) {
+      document.getElementById('pending-count').style.display = 'flex';
+    } else {
+      document.getElementById('pending-count').style.display = 'none';
+    }
+  } catch (error) {
+    console.error('Error counting pending changes:', error);
+  }
+}
+
+// === CHARACTERS ===
+async function loadCharacters() {
+  if (!currentUser) return;
+  
+  const listEl = document.getElementById('characters-list');
+  listEl.innerHTML = '<div class="loading"><div class="dice-spinner">🎲</div></div>';
+  
+  try {
+    const q = query(
+      collection(db, 'characters'),
+      where('userId', '==', currentUser.uid)
+    );
+    
+    const snapshot = await getDocs(q);
+    currentCharacters = [];
+    hasActiveCharacter = false;
+    
+    snapshot.forEach(doc => {
+      const charData = { id: doc.id, ...doc.data() };
+      if (!charData.isDead) {
+        currentCharacters.push(charData);
+        hasActiveCharacter = true;
+      }
+    });
+    
+    currentCharacters.sort((a, b) => {
+      if (!a.createdAt || !b.createdAt) return 0;
+      return b.createdAt.seconds - a.createdAt.seconds;
+    });
+    
+    renderCharacters();
+  } catch (error) {
+    console.error('Errore caricamento personaggi:', error);
+    listEl.innerHTML = '<div class="empty-state"><p>Errore nel caricamento dei personaggi</p></div>';
+  }
+}
+
+function renderCharacters() {
+  const listEl = document.getElementById('characters-list');
+  
+  if (currentCharacters.length === 0) {
+    listEl.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">⚔️</div>
+        <p>Non hai ancora personaggi.</p>
+        <p>Crea il tuo primo eroe!</p>
+      </div>
+    `;
+    return;
+  }
+  
+  listEl.innerHTML = currentCharacters.map(char => `
+    <div class="card" onclick="showCharacterDetail('${char.id}')">
+      <h3>${char.name}</h3>
+      <p><strong>Classe:</strong> ${char.class}${char.subclass ? ` (${char.subclass})` : ''}</p>
+      <p><strong>Livello:</strong> ${char.level}</p>
+      <p><strong>Razza:</strong> ${char.race}</p>
+      <span class="card-status status-alive">⚔️ Vivo</span>
+    </div>
+  `).join('');
+}
+
+window.showAddCharacter = function() {
+  // Players can only have one active character at a time
+  if (currentUserRole === 'player' && hasActiveCharacter) {
+    alert('Puoi avere solo un personaggio attivo alla volta!');
+    return;
+  }
+  
+  // Reset form
+  document.getElementById('char-name').value = '';
+  document.getElementById('char-class').value = '';
+  document.getElementById('char-subclass').value = '';
+  document.getElementById('char-race').value = '';
+  document.getElementById('char-background').value = '';
+  document.getElementById('char-str').value = '10';
+  document.getElementById('char-dex').value = '10';
+  document.getElementById('char-con').value = '10';
+  document.getElementById('char-int').value = '10';
+  document.getElementById('char-wis').value = '10';
+  document.getElementById('char-cha').value = '10';
+  document.getElementById('char-ac').value = '10';
+  document.getElementById('char-initiative').value = '0';
+  document.getElementById('char-speed').value = '30';
+  document.getElementById('char-hp-max').value = '10';
+  document.getElementById('char-class-features').value = '';
+  document.getElementById('char-subclass-features').value = '';
+  document.getElementById('char-inventory').value = '';
+  document.getElementById('char-notes').value = '';
+  
+  // Reset weapons (keep only one row)
+  const weaponsContainer = document.getElementById('weapons-container');
+  weaponsContainer.innerHTML = `
+    <div class="weapon-row">
+      <input type="text" placeholder="Nome arma" class="weapon-name" />
+      <select class="weapon-stat">
+        <option value="">Caratteristica</option>
+        <option value="str">FOR</option>
+        <option value="dex">DES</option>
+        <option value="cha">CAR</option>
+      </select>
+      <select class="weapon-bonus">
+        <option value="0">+0</option>
+        <option value="1">+1</option>
+        <option value="2">+2</option>
+        <option value="3">+3</option>
+      </select>
+      <input type="text" placeholder="Danni (es. 1d8+3)" class="weapon-damage" />
+    </div>
+  `;
+  
+  // Reset spellcasting
+  document.getElementById('char-spell-ability').value = '';
+  
+  // Reset trucchetti - lascia solo un input vuoto
+  const cantripsContainer = document.getElementById('cantrips-container');
+  cantripsContainer.innerHTML = '<input type="text" placeholder="Nome trucchetto" class="cantrip-input" style="width: 100%; margin-bottom: 0.5rem;" />';
+  
+  // Reset livelli incantesimi - svuota completamente
+  const spellLevelsContainer = document.getElementById('spell-levels-container');
+  spellLevelsContainer.innerHTML = '';
+  spellLevelCounter = 0;
+  
+  // Reset skills
+  resetSkillsForm('skill');
+  
+  showElement('add-character-form');
+};
+
+window.hideAddCharacter = function() {
+  hideElement('add-character-form');
+};
+
+window.handleAddCharacter = async function(event) {
+  event.preventDefault();
+  
+  if (!currentUser) return;
+  
+  const level = 1;
+  const skills = readSkillsFromForm('skill');
+  const savingThrows = readSavingThrowsFromForm('save');
+  
+  // Raccogli armi
+  const weapons = [];
+  document.querySelectorAll('.weapon-row').forEach(row => {
+    const name = row.querySelector('.weapon-name').value.trim();
+    if (name) {
+      weapons.push({
+        name,
+        attackStat: row.querySelector('.weapon-stat').value,
+        weaponBonus: parseInt(row.querySelector('.weapon-bonus').value) || 0,
+        damage: row.querySelector('.weapon-damage').value.trim()
+      });
+    }
+  });
+  
+  const characterData = {
+    userId: currentUser.uid,
+    name: document.getElementById('char-name').value.trim(),
+    class: document.getElementById('char-class').value.trim(),
+    subclass: document.getElementById('char-subclass').value.trim(),
+    race: document.getElementById('char-race').value.trim(),
+    background: document.getElementById('char-background').value.trim(),
+    level: level,
+    proficiencyBonus: calculateProficiencyBonus(level),
+    stats: {
+      str: parseInt(document.getElementById('char-str').value),
+      dex: parseInt(document.getElementById('char-dex').value),
+      con: parseInt(document.getElementById('char-con').value),
+      int: parseInt(document.getElementById('char-int').value),
+      wis: parseInt(document.getElementById('char-wis').value),
+      cha: parseInt(document.getElementById('char-cha').value)
+    },
+    combat: {
+      ac: parseInt(document.getElementById('char-ac').value),
+      initiative: parseInt(document.getElementById('char-initiative').value),
+      speed: parseInt(document.getElementById('char-speed').value),
+      hpMax: parseInt(document.getElementById('char-hp-max').value),
+      hpCurrent: parseInt(document.getElementById('char-hp-current').value) || parseInt(document.getElementById('char-hp-max').value),
+      hpTemp: parseInt(document.getElementById('char-hp-temp').value) || 0
+    },
+    savingThrows: savingThrows,
+    skills: skills,
+    weapons: weapons,
+    classFeatures: document.getElementById('char-class-features').value.trim(),
+    subclassFeatures: document.getElementById('char-subclass-features').value.trim(),
+    inventory: document.getElementById('char-inventory').value.trim(),
+    notes: document.getElementById('char-notes').value.trim(),
+    isDead: false,
+    createdAt: serverTimestamp()
+  };
+
+  // Raccogli incantesimi
+  const spellcasting = {
+    ability: document.getElementById('char-spell-ability').value
+  };
+  
+  // Raccogli trucchetti dal nuovo sistema dinamico
+  const cantripInputs = document.querySelectorAll('#cantrips-container .cantrip-input');
+  const cantrips = Array.from(cantripInputs)
+    .map(input => input.value.trim())
+    .filter(val => val !== '')
+    .join(', ');
+  if (cantrips) {
+    spellcasting.cantrips = cantrips;
+  }
+  
+  // Raccogli livelli incantesimi dal nuovo sistema dinamico
+  const spellLevelSections = document.querySelectorAll('#spell-levels-container .spell-level-section');
+  spellLevelSections.forEach(section => {
+    const level = parseInt(section.dataset.level);
+    const slots = parseInt(section.querySelector('.slots-input').value) || 0;
+    const spellInputs = section.querySelectorAll('.spell-input');
+    const spells = Array.from(spellInputs)
+      .map(input => input.value.trim())
+      .filter(val => val !== '')
+      .join(', ');
+    
+    if (spells || slots) {
+      spellcasting[`level${level}`] = { spells, slots };
+    }
+  });
+
+  // Aggiungere ai characterData
+  characterData.weapons = weapons;
+  characterData.spellcasting = spellcasting;
+
+  try {
+    showLoading();
+    await addDoc(collection(db, 'characters'), characterData);
+    hideLoading();
+    hideAddCharacter();
+    loadCharacters();
+  } catch (error) {
+    hideLoading();
+    console.error('Errore creazione personaggio:', error);
+    alert('Errore nella creazione del personaggio');
+  }
+};
+
+window.showCharacterDetail = function(charId) {
+  const char = currentCharacters.find(c => c.id === charId);
+  if (!char) return;
+  
+  const stats = char.stats || {};
+  const combat = char.combat || {};
+  
+  const strMod = calculateModifier(stats.str || 10);
+  const dexMod = calculateModifier(stats.dex || 10);
+  const conMod = calculateModifier(stats.con || 10);
+  const intMod = calculateModifier(stats.int || 10);
+  const wisMod = calculateModifier(stats.wis || 10);
+  const chaMod = calculateModifier(stats.cha || 10);
+  
+  // Only DMs can kill characters
+  const killButton = currentUserRole === 'dm' ? 
+    `<button onclick="killCharacter('${char.id}')" class="btn-danger">💀 Dichiara Morto</button>` : '';
+  
+  // Players can edit their own characters (but changes need approval)
+  const editButton = char.userId === currentUser.uid ?
+    `<button onclick="showEditCharacter('${char.id}')" class="btn-info">✏️ Modifica</button>` : '';
+  
+  // DM can directly edit level
+  const dmLevelButton = currentUserRole === 'dm' ?
+    `<button onclick="dmEditLevel('${char.id}')" class="btn-warning">⬆️ Modifica Livello</button>` : '';
+  
+  const detailContent = document.getElementById('character-detail-content');
+  detailContent.innerHTML = `
+    <h3>${char.name}</h3>
+    
+    <div class="character-info">
+      <p><strong>Classe:</strong> ${char.class}${char.subclass ? ` (${char.subclass})` : ''}</p>
+      <p><strong>Livello:</strong> ${char.level || 1}</p>
+      <p><strong>Razza:</strong> ${char.race}</p>
+      ${char.background ? `<p><strong>Background:</strong> ${char.background}</p>` : ''}
+      
+      <h4 style="margin-top: 1.5rem;">Caratteristiche</h4>
+      <div class="character-stats-grid">
+        <div class="stat-box">
+          <span class="stat-label">FOR</span>
+          <span class="stat-value">${stats.str || 10}</span>
+          <span class="stat-modifier">${formatModifier(strMod)}</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">DES</span>
+          <span class="stat-value">${stats.dex || 10}</span>
+          <span class="stat-modifier">${formatModifier(dexMod)}</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">COS</span>
+          <span class="stat-value">${stats.con || 10}</span>
+          <span class="stat-modifier">${formatModifier(conMod)}</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">INT</span>
+          <span class="stat-value">${stats.int || 10}</span>
+          <span class="stat-modifier">${formatModifier(intMod)}</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">SAG</span>
+          <span class="stat-value">${stats.wis || 10}</span>
+          <span class="stat-modifier">${formatModifier(wisMod)}</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">CAR</span>
+          <span class="stat-value">${stats.cha || 10}</span>
+          <span class="stat-modifier">${formatModifier(chaMod)}</span>
+        </div>
+      </div>
+      
+      <h4 style="margin-top: 1.5rem;">Combattimento</h4>
+      <p><strong>Classe Armatura:</strong> ${combat.ac || 10}</p>
+      <p><strong>Iniziativa:</strong> ${formatModifier(combat.initiative || 0)}</p>
+      <p><strong>Velocità:</strong> ${combat.speed || 30} ft</p>
+      <p><strong>Punti Ferita Max:</strong> ${combat.hpMax || 10}</p>
+      <p><strong>PF Attuali:</strong> ${combat.hpCurrent !== undefined ? combat.hpCurrent : (combat.hpMax || 10)}${combat.hpTemp ? ` <span style="color: var(--success);">(+${combat.hpTemp} temp)</span>` : ''}</p>
+      <p><strong>Bonus Competenza:</strong> +${char.proficiencyBonus || calculateProficiencyBonus(char.level || 1)}</p>
+      
+      ${char.weapons && char.weapons.length > 0 ? `
+        <h4 style="margin-top: 1.5rem;">Armi</h4>
+        ${char.weapons.map(weapon => {
+          const profBonus = char.proficiencyBonus || calculateProficiencyBonus(char.level || 1);
+          const attackBonus = calculateWeaponAttackBonus(weapon.attackStat, weapon.weaponBonus, profBonus, stats);
+          return `
+            <p><strong>${weapon.name}:</strong> 
+            Attacco +${attackBonus}, 
+            Danni ${weapon.damage}</p>
+          `;
+        }).join('')}
+      ` : ''}
+      
+      <h4 style="margin-top: 1.5rem;">Tiri Salvezza</h4>
+      <div class="saving-throws-display">
+        ${['str', 'dex', 'con', 'int', 'wis', 'cha'].map(ability => {
+          const profBonus = char.proficiencyBonus || calculateProficiencyBonus(char.level || 1);
+          const isProficient = char.savingThrows?.[ability] || false;
+          const bonus = calculateSavingThrow(stats, ability, isProficient, profBonus);
+          const profIndicator = isProficient ? '<span class="save-proficient">★</span>' : '';
+          
+          return `
+            <div class="save-item">
+              <span class="save-name">${SAVE_NAMES[ability]}${profIndicator}</span>
+              <span class="save-bonus">${formatModifier(bonus)}</span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      
+      <h4 style="margin-top: 1.5rem;">Abilità (Skills)</h4>
+      <div class="skills-display">
+        ${Object.keys(SKILLS_MAP).map(skill => {
+          const skillData = (char.skills && char.skills[skill]) || { proficient: false, expertise: false };
+          const profBonus = char.proficiencyBonus || calculateProficiencyBonus(char.level || 1);
+          const bonus = calculateSkillBonus(stats, skill, skillData.proficient, skillData.expertise, profBonus);
+          const profIndicator = skillData.expertise ? '<span class="skill-expertise">★★</span>' : 
+                                skillData.proficient ? '<span class="skill-proficient">★</span>' : '';
+          
+          return `
+            <div class="skill-item">
+              <span class="skill-name">${SKILLS_ITALIAN[skill]}${profIndicator}</span>
+              <span class="skill-bonus">${formatModifier(bonus)}</span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      
+      ${char.classFeatures ? `
+        <h4 style="margin-top: 1.5rem;">Abilità di Classe</h4>
+        <p style="white-space: pre-wrap;">${char.classFeatures}</p>
+      ` : ''}
+      
+      ${char.subclassFeatures ? `
+        <h4 style="margin-top: 1.5rem;">Abilità di Sottoclasse</h4>
+        <p style="white-space: pre-wrap;">${char.subclassFeatures}</p>
+      ` : ''}
+      
+      ${char.inventory ? `
+        <h4 style="margin-top: 1.5rem;">Inventario</h4>
+        <p style="white-space: pre-wrap;">${char.inventory}</p>
+      ` : ''}
+      
+      ${char.spellcasting && char.spellcasting.ability ? `
+        <h4 style="margin-top: 1.5rem;">Incantesimi</h4>
+        ${(() => {
+          const abilityNames = { int: 'Intelligenza', wis: 'Saggezza', cha: 'Carisma' };
+          const abilityName = abilityNames[char.spellcasting.ability] || char.spellcasting.ability;
+          const profBonus = char.proficiencyBonus || calculateProficiencyBonus(char.level || 1);
+          const spellDC = calculateSpellDC(char.spellcasting.ability, profBonus, stats);
+          const spellAttack = calculateSpellAttackBonus(char.spellcasting.ability, profBonus, stats);
+          return `
+            <p><strong>Caratteristica Incantatore:</strong> ${abilityName}</p>
+            <p><strong>CD Tiro Salvezza:</strong> ${spellDC}</p>
+            <p><strong>Bonus Attacco Incantesimi:</strong> +${spellAttack}</p>
+          `;
+        })()}
+        ${char.spellcasting.cantrips ? `
+          <p style="margin-top: 0.5rem;"><strong>Trucchetti:</strong></p>
+          <p style="white-space: pre-wrap; margin-left: 1rem;">${char.spellcasting.cantrips}</p>
+        ` : ''}
+        ${[1,2,3,4,5,6,7,8,9].map(level => {
+          const levelData = char.spellcasting[`level${level}`];
+          if (levelData && levelData.spells) {
+            return `
+              <p style="margin-top: 0.5rem;"><strong>Livello ${level} (Slot: ${levelData.slots || 0}):</strong></p>
+              <p style="white-space: pre-wrap; margin-left: 1rem;">${levelData.spells}</p>
+            `;
+          }
+          return '';
+        }).join('')}
+      ` : char.spells ? `
+        <h4 style="margin-top: 1.5rem;">Incantesimi</h4>
+        ${char.spellAbility ? `<p><strong>Caratteristica:</strong> ${char.spellAbility}</p>` : ''}
+        <p style="white-space: pre-wrap;">${char.spells}</p>
+      ` : ''}
+      
+      ${char.notes ? `
+        <h4 style="margin-top: 1.5rem;">Note</h4>
+        <p style="white-space: pre-wrap;">${char.notes}</p>
+      ` : ''}
+    </div>
+    
+    <div class="character-actions">
+      ${editButton}
+      ${dmLevelButton}
+      ${killButton}
+      <button onclick="exportToPDF('${char.id}')" class="btn-info">📄 Esporta PDF</button>
+      <button onclick="hideCharacterDetail()" class="btn-secondary">Chiudi</button>
+    </div>
+  `;
+  
+  showElement('character-detail');
+};
+
+window.hideCharacterDetail = function() {
+  hideElement('character-detail');
+};
+
+window.showEditCharacter = function(charId) {
+  const char = currentCharacters.find(c => c.id === charId);
+  if (!char) return;
+  
+  hideCharacterDetail();
+  
+  const stats = char.stats || {};
+  const combat = char.combat || {};
+  
+  // Populate form
+  document.getElementById('edit-char-id').value = char.id;
+  document.getElementById('edit-char-name').value = char.name;
+  document.getElementById('edit-char-class').value = char.class;
+  document.getElementById('edit-char-subclass').value = char.subclass || '';
+  document.getElementById('edit-char-race').value = char.race;
+  document.getElementById('edit-char-background').value = char.background || '';
+  document.getElementById('edit-char-level').value = char.level || 1;
+  document.getElementById('edit-char-str').value = stats.str || 10;
+  document.getElementById('edit-char-dex').value = stats.dex || 10;
+  document.getElementById('edit-char-con').value = stats.con || 10;
+  document.getElementById('edit-char-int').value = stats.int || 10;
+  document.getElementById('edit-char-wis').value = stats.wis || 10;
+  document.getElementById('edit-char-cha').value = stats.cha || 10;
+  document.getElementById('edit-char-ac').value = combat.ac || 10;
+  document.getElementById('edit-char-initiative').value = combat.initiative || 0;
+  document.getElementById('edit-char-speed').value = combat.speed || 30;
+  document.getElementById('edit-char-hp-max').value = combat.hpMax || 10;
+  document.getElementById('edit-char-hp-current').value = combat.hpCurrent !== undefined ? combat.hpCurrent : (combat.hpMax || 10);
+  document.getElementById('edit-char-hp-temp').value = combat.hpTemp || 0;
+  document.getElementById('edit-char-class-features').value = char.classFeatures || '';
+  document.getElementById('edit-char-subclass-features').value = char.subclassFeatures || '';
+  document.getElementById('edit-char-inventory').value = char.inventory || '';
+  
+  // Populate weapons (TODO: add weapons UI to edit form)
+  // For now, weapons can only be added during character creation
+  
+  // Populate spellcasting
+  const spellcasting = char.spellcasting || {};
+  document.getElementById('edit-char-spell-ability').value = spellcasting.ability || '';
+  document.getElementById('edit-char-cantrips').value = spellcasting.cantrips || '';
+  
+  for (let i = 1; i <= 9; i++) {
+    const levelData = spellcasting[`level${i}`];
+    const spellListElem = document.querySelector(`.edit-spell-list[data-level="${i}"]`);
+    const spellSlotsElem = document.querySelector(`.edit-spell-slots[data-level="${i}"]`);
+    if (spellListElem && spellSlotsElem) {
+      spellListElem.value = (levelData && levelData.spells) || '';
+      spellSlotsElem.value = (levelData && levelData.slots) || '';
+    }
+  }
+  
+  document.getElementById('edit-char-notes').value = char.notes || '';
+  
+  // Populate skills
+  if (char.skills) {
+    populateSkillsForm(char.skills, 'edit-skill');
+  }
+  
+  // Populate saving throws
+  if (char.savingThrows) {
+    populateSavingThrowsForm(char.savingThrows, 'edit-save');
+  }
+  
+  showElement('edit-character-form');
+};
+
+window.hideEditCharacter = function() {
+  hideElement('edit-character-form');
+};
+
+window.handleEditCharacter = async function(event) {
+  event.preventDefault();
+  
+  if (!currentUser) return;
+  
+  const charId = document.getElementById('edit-char-id').value;
+  const char = currentCharacters.find(c => c.id === charId);
+  if (!char) return;
+  
+  const newData = {
+    name: document.getElementById('edit-char-name').value.trim(),
+    class: document.getElementById('edit-char-class').value.trim(),
+    subclass: document.getElementById('edit-char-subclass').value.trim(),
+    race: document.getElementById('edit-char-race').value.trim(),
+    background: document.getElementById('edit-char-background').value.trim(),
+    stats: {
+      str: parseInt(document.getElementById('edit-char-str').value),
+      dex: parseInt(document.getElementById('edit-char-dex').value),
+      con: parseInt(document.getElementById('edit-char-con').value),
+      int: parseInt(document.getElementById('edit-char-int').value),
+      wis: parseInt(document.getElementById('edit-char-wis').value),
+      cha: parseInt(document.getElementById('edit-char-cha').value)
+    },
+    combat: {
+      ac: parseInt(document.getElementById('edit-char-ac').value),
+      initiative: parseInt(document.getElementById('edit-char-initiative').value),
+      speed: parseInt(document.getElementById('edit-char-speed').value),
+      hpMax: parseInt(document.getElementById('edit-char-hp-max').value),
+      hpCurrent: parseInt(document.getElementById('edit-char-hp-current').value),
+      hpTemp: parseInt(document.getElementById('edit-char-hp-temp').value) || 0
+    },
+    savingThrows: readSavingThrowsFromForm('edit-save'),
+    skills: readSkillsFromForm('edit-skill'),
+    classFeatures: document.getElementById('edit-char-class-features').value.trim(),
+    subclassFeatures: document.getElementById('edit-char-subclass-features').value.trim(),
+    inventory: document.getElementById('edit-char-inventory').value.trim(),
+    notes: document.getElementById('edit-char-notes').value.trim()
+  };
+  
+  // Raccogli spellcasting modificato
+  const spellcasting = {
+    ability: document.getElementById('edit-char-spell-ability').value,
+    cantrips: document.getElementById('edit-char-cantrips').value.trim()
+  };
+  
+  for (let i = 1; i <= 9; i++) {
+    const spellListElem = document.querySelector(`.edit-spell-list[data-level="${i}"]`);
+    const spellSlotsElem = document.querySelector(`.edit-spell-slots[data-level="${i}"]`);
+    if (spellListElem && spellSlotsElem) {
+      const spells = spellListElem.value.trim();
+      const slots = parseInt(spellSlotsElem.value) || 0;
+      if (spells || slots) {
+        spellcasting[`level${i}`] = { spells, slots };
+      }
+    }
+  }
+  
+  newData.spellcasting = spellcasting;
+  // Keep weapons from original character (can't edit weapons in edit form yet)
+  newData.weapons = char.weapons || [];
+  
+  try {
+    showLoading();
+    
+    // Create pending change
+    await addDoc(collection(db, 'pending_changes'), {
+      type: 'character_edit',
+      characterId: charId,
+      characterName: char.name,
+      requestedBy: currentUser.uid,
+      requestedByName: currentUsername,
+      oldData: {
+        name: char.name,
+        class: char.class,
+        subclass: char.subclass,
+        race: char.race,
+        background: char.background,
+        stats: char.stats,
+        combat: char.combat,
+        classFeatures: char.classFeatures,
+        subclassFeatures: char.subclassFeatures,
+        inventory: char.inventory,
+        weapons: char.weapons,
+        spellcasting: char.spellcasting,
+        notes: char.notes
+      },
+      newData: newData,
+      status: 'pending',
+      createdAt: serverTimestamp()
+    });
+    
+    hideLoading();
+    hideEditCharacter();
+    alert('Modifiche inviate per approvazione! Il DM le esaminerà presto.');
+    
+  } catch (error) {
+    hideLoading();
+    console.error('Errore invio modifiche:', error);
+    alert('Errore nell\'invio delle modifiche');
+  }
+};
+
+window.dmEditLevel = async function(charId) {
+  if (currentUserRole !== 'dm') {
+    alert('Solo i DM possono modificare direttamente il livello!');
+    return;
+  }
+  
+  const char = currentCharacters.find(c => c.id === charId);
+  if (!char) return;
+  
+  const newLevel = prompt(`Inserisci il nuovo livello per ${char.name}:`, char.level || 1);
+  if (!newLevel || isNaN(newLevel)) return;
+  
+  const level = parseInt(newLevel);
+  if (level < 1 || level > 20) {
+    alert('Il livello deve essere tra 1 e 20!');
+    return;
+  }
+  
+  try {
+    showLoading();
+    const charRef = doc(db, 'characters', charId);
+    const profBonus = calculateProficiencyBonus(level);
+    await updateDoc(charRef, { 
+      level: level,
+      proficiencyBonus: profBonus
+    });
+    hideLoading();
+    hideCharacterDetail();
+    loadCharacters();
+    alert(`Livello di ${char.name} aggiornato a ${level}!\nBonus Competenza: +${profBonus}`);
+  } catch (error) {
+    hideLoading();
+    console.error('Errore aggiornamento livello:', error);
+    alert('Errore nell\'aggiornamento del livello');
+  }
+};
+
+window.killCharacter = async function(charId) {
+  if (currentUserRole !== 'dm') {
+    alert('Solo i Dungeon Master possono dichiarare morti i personaggi!');
+    return;
+  }
+  
+  if (!confirm('Sei sicuro di voler dichiarare questo personaggio morto? Questa azione è irreversibile!')) {
+    return;
+  }
+  
+  try {
+    showLoading();
+    
+    const charRef = doc(db, 'characters', charId);
+    await updateDoc(charRef, {
+      isDead: true,
+      deathDate: serverTimestamp()
+    });
+    
+    hideLoading();
+    hideCharacterDetail();
+    loadCharacters();
+    
+    alert('Il personaggio è ora nella Hall of Fallen Heroes 💀');
+  } catch (error) {
+    hideLoading();
+    console.error('Errore:', error);
+    alert('Errore nell\'aggiornamento del personaggio');
+  }
+};
+
+// === PENDING CHANGES (DM) ===
+async function loadPendingChanges() {
+  if (currentUserRole !== 'dm') return;
+  
+  const listEl = document.getElementById('pending-list');
+  listEl.innerHTML = '<div class="loading"><div class="dice-spinner">🎲</div></div>';
+  
+  try {
+    const q = query(
+      collection(db, 'pending_changes'),
+      where('status', '==', 'pending')
+    );
+    
+    const snapshot = await getDocs(q);
+    pendingChanges = [];
+    
+    snapshot.forEach(doc => {
+      pendingChanges.push({ id: doc.id, ...doc.data() });
+    });
+    
+    pendingChanges.sort((a, b) => {
+      if (!a.createdAt || !b.createdAt) return 0;
+      return b.createdAt.seconds - a.createdAt.seconds;
+    });
+    
+    renderPendingChanges();
+    updatePendingCount();
+  } catch (error) {
+    console.error('Errore caricamento pending:', error);
+    listEl.innerHTML = '<div class="empty-state"><p>Errore nel caricamento</p></div>';
+  }
+}
+
+function renderPendingChanges() {
+  const listEl = document.getElementById('pending-list');
+  
+  if (pendingChanges.length === 0) {
+    listEl.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">✅</div>
+        <p>Nessuna modifica in attesa!</p>
+        <p>Tutte le richieste sono state gestite.</p>
+      </div>
+    `;
+    return;
+  }
+  
+  listEl.innerHTML = pendingChanges.map(change => {
+    const date = change.createdAt ? 
+      new Date(change.createdAt.seconds * 1000).toLocaleDateString('it-IT') : 
+      'Data sconosciuta';
+    
+    return `
+      <div class="card pending-card" onclick="showPendingDetail('${change.id}')">
+        <span class="change-type">Modifica Personaggio</span>
+        <h3>${change.characterName}</h3>
+        <p class="requester"><strong>Richiesta da:</strong> ${change.requestedByName}</p>
+        <p><strong>Data:</strong> ${date}</p>
+        <span class="card-status status-pending">⏳ In Attesa</span>
+      </div>
+    `;
+  }).join('');
+}
+
+window.showPendingDetail = function(changeId) {
+  const change = pendingChanges.find(c => c.id === changeId);
+  if (!change) return;
+  
+  const old = change.oldData || {};
+  const newData = change.newData || {};
+  
+  // Build diff HTML
+  let diffHtml = '';
+  
+  const fields = [
+    { key: 'name', label: 'Nome' },
+    { key: 'class', label: 'Classe' },
+    { key: 'subclass', label: 'Sottoclasse' },
+    { key: 'race', label: 'Razza' },
+    { key: 'background', label: 'Background' }
+  ];
+  
+  fields.forEach(field => {
+    if (old[field.key] !== newData[field.key]) {
+      diffHtml += `
+        <div class="change-diff">
+          <strong>${field.label}:</strong><br>
+          <span class="old-value">- ${old[field.key] || '(vuoto)'}</span><br>
+          <span class="new-value">+ ${newData[field.key] || '(vuoto)'}</span>
+        </div>
+      `;
+    }
+  });
+  
+  // Stats comparison
+  if (old.stats && newData.stats) {
+    const statNames = { str: 'FOR', dex: 'DES', con: 'COS', int: 'INT', wis: 'SAG', cha: 'CAR' };
+    let statsChanged = false;
+    let statsDiff = '<div class="change-diff"><strong>Caratteristiche:</strong><br>';
+    
+    for (const [key, label] of Object.entries(statNames)) {
+      if (old.stats[key] !== newData.stats[key]) {
+        statsChanged = true;
+        statsDiff += `${label}: <span class="old-value">${old.stats[key]}</span> → <span class="new-value">${newData.stats[key]}</span><br>`;
+      }
+    }
+    
+    statsDiff += '</div>';
+    if (statsChanged) diffHtml += statsDiff;
+  }
+  
+  // Combat comparison
+  if (old.combat && newData.combat) {
+    const combatNames = { ac: 'CA', initiative: 'Iniziativa', speed: 'Velocità', hpMax: 'PF Max' };
+    let combatChanged = false;
+    let combatDiff = '<div class="change-diff"><strong>Combattimento:</strong><br>';
+    
+    for (const [key, label] of Object.entries(combatNames)) {
+      if (old.combat[key] !== newData.combat[key]) {
+        combatChanged = true;
+        combatDiff += `${label}: <span class="old-value">${old.combat[key]}</span> → <span class="new-value">${newData.combat[key]}</span><br>`;
+      }
+    }
+    
+    combatDiff += '</div>';
+    if (combatChanged) diffHtml += combatDiff;
+  }
+  
+  // Text fields
+  const textFields = [
+    { key: 'classFeatures', label: 'Abilità di Classe' },
+    { key: 'subclassFeatures', label: 'Abilità di Sottoclasse' },
+    { key: 'inventory', label: 'Inventario' },
+    { key: 'spellAbility', label: 'Caratteristica Incantesimi' },
+    { key: 'spells', label: 'Incantesimi' },
+    { key: 'notes', label: 'Note' }
+  ];
+  
+  textFields.forEach(field => {
+    if (old[field.key] !== newData[field.key]) {
+      diffHtml += `
+        <div class="change-diff">
+          <strong>${field.label}:</strong><br>
+          <span class="old-value">- ${(old[field.key] || '(vuoto)').substring(0, 100)}${(old[field.key] || '').length > 100 ? '...' : ''}</span><br>
+          <span class="new-value">+ ${(newData[field.key] || '(vuoto)').substring(0, 100)}${(newData[field.key] || '').length > 100 ? '...' : ''}</span>
+        </div>
+      `;
+    }
+  });
+  
+  if (!diffHtml) {
+    diffHtml = '<p style="color: var(--gray);">Nessuna modifica rilevata</p>';
+  }
+  
+  const modalContent = `
+    <h3>Richiesta Modifica: ${change.characterName}</h3>
+    <p><strong>Richiesta da:</strong> ${change.requestedByName}</p>
+    
+    <h4 style="margin-top: 1.5rem;">Modifiche Proposte:</h4>
+    ${diffHtml}
+    
+    <div class="approval-actions">
+      <button onclick="approvePendingChange('${change.id}')" class="btn-success">✓ Approva</button>
+      <button onclick="rejectPendingChange('${change.id}')" class="btn-danger">✗ Rifiuta</button>
+      <button onclick="closePendingDetail()" class="btn-secondary">Chiudi</button>
+    </div>
+  `;
+  
+  document.getElementById('pending-detail-content').innerHTML = modalContent;
+  showElement('pending-detail');
+};
+
+window.closePendingDetail = function() {
+  hideElement('pending-detail');
+};
+
+window.approvePendingChange = async function(changeId) {
+  const change = pendingChanges.find(c => c.id === changeId);
+  if (!change) return;
+  
+  if (!confirm(`Approvare le modifiche a ${change.characterName}?`)) return;
+  
+  try {
+    showLoading();
+    
+    // Update character
+    const charRef = doc(db, 'characters', change.characterId);
+    await updateDoc(charRef, change.newData);
+    
+    // Update pending change status
+    const pendingRef = doc(db, 'pending_changes', changeId);
+    await updateDoc(pendingRef, {
+      status: 'approved',
+      approvedBy: currentUser.uid,
+      approvedAt: serverTimestamp()
+    });
+    
+    hideLoading();
+    closePendingDetail();
+    loadPendingChanges();
+    alert('Modifiche approvate con successo!');
+    
+  } catch (error) {
+    hideLoading();
+    console.error('Errore approvazione:', error);
+    alert('Errore nell\'approvazione delle modifiche');
+  }
+};
+
+window.rejectPendingChange = async function(changeId) {
+  const change = pendingChanges.find(c => c.id === changeId);
+  if (!change) return;
+  
+  if (!confirm(`Rifiutare le modifiche a ${change.characterName}?`)) return;
+  
+  try {
+    showLoading();
+    
+    const pendingRef = doc(db, 'pending_changes', changeId);
+    await updateDoc(pendingRef, {
+      status: 'rejected',
+      rejectedBy: currentUser.uid,
+      rejectedAt: serverTimestamp()
+    });
+    
+    hideLoading();
+    closePendingDetail();
+    loadPendingChanges();
+    alert('Modifiche rifiutate.');
+    
+  } catch (error) {
+    hideLoading();
+    console.error('Errore rifiuto:', error);
+    alert('Errore nel rifiuto delle modifiche');
+  }
+};
+
+// === QUESTS ===
+async function loadQuests() {
+  if (!currentUser) return;
+  
+  const listEl = document.getElementById('quests-list');
+  listEl.innerHTML = '<div class="loading"><div class="dice-spinner">🎲</div></div>';
+  
+  try {
+    const snapshot = await getDocs(collection(db, 'quests'));
+    currentQuests = [];
+    
+    snapshot.forEach(doc => {
+      const questData = { id: doc.id, ...doc.data() };
+      // Show only active quests (not completed or closed)
+      if (!questData.isCompleted && !questData.isClosed) {
+        currentQuests.push(questData);
+      }
+    });
+    
+    currentQuests.sort((a, b) => {
+      if (!a.createdAt || !b.createdAt) return 0;
+      return b.createdAt.seconds - a.createdAt.seconds;
+    });
+    
+    renderQuests();
+  } catch (error) {
+    console.error('Errore caricamento quest:', error);
+    listEl.innerHTML = '<div class="empty-state"><p>Errore nel caricamento delle quest</p></div>';
+  }
+}
+
+function renderQuests() {
+  const listEl = document.getElementById('quests-list');
+  
+  // Show/hide add button based on DM role
+  const addBtn = document.querySelector('#quests .add-btn');
+  if (addBtn) {
+    if (currentUserRole === 'dm') {
+      addBtn.style.display = 'block';
+    } else {
+      addBtn.style.display = 'none';
+    }
+  }
+  
+  if (currentQuests.length === 0) {
+    listEl.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">📜</div>
+        <p>Nessuna quest disponibile.</p>
+        ${currentUserRole === 'dm' ? '<p>Inizia creando la tua prima quest!</p>' : '<p>Il Dungeon Master creerà presto delle quest!</p>'}
+      </div>
+    `;
+    return;
+  }
+  
+  listEl.innerHTML = currentQuests.map(quest => {
+    const participants = quest.participants || [];
+    const maxParticipants = quest.maxParticipants || 4;
+    const slotsLeft = maxParticipants - participants.length;
+    
+    return `
+      <div class="card" onclick="showQuestDetail('${quest.id}')">
+        <h3>${quest.title}</h3>
+        <p>${quest.description.substring(0, 100)}${quest.description.length > 100 ? '...' : ''}</p>
+        <span class="difficulty-badge difficulty-${quest.difficulty}">${quest.difficulty}</span>
+        <p style="margin-top: 0.5rem;"><strong>Slot:</strong> ${participants.length}/${maxParticipants}</p>
+        <span class="card-status status-active">Attiva</span>
+      </div>
+    `;
+  }).join('');
+}
+
+window.showAddQuest = function() {
+  if (currentUserRole !== 'dm') {
+    alert('Solo i Dungeon Master possono creare quest!');
+    return;
+  }
+  
+  document.getElementById('quest-title').value = '';
+  document.getElementById('quest-description').value = '';
+  document.getElementById('quest-setting').value = '';
+  document.getElementById('quest-rewards').value = '';
+  document.getElementById('quest-difficulty').value = '';
+  document.getElementById('quest-max-participants').value = '4';
+  showElement('add-quest-form');
+};
+
+window.hideAddQuest = function() {
+  hideElement('add-quest-form');
+};
+
+window.handleAddQuest = async function(event) {
+  event.preventDefault();
+  
+  if (!currentUser) return;
+  
+  const title = document.getElementById('quest-title').value.trim();
+  const description = document.getElementById('quest-description').value.trim();
+  const setting = document.getElementById('quest-setting').value.trim();
+  const rewards = document.getElementById('quest-rewards').value.trim();
+  const difficulty = document.getElementById('quest-difficulty').value;
+  const maxParticipants = parseInt(document.getElementById('quest-max-participants').value);
+  
+  try {
+    showLoading();
+    
+    await addDoc(collection(db, 'quests'), {
+      createdBy: currentUser.uid,
+      title,
+      description,
+      setting,
+      rewards,
+      difficulty,
+      maxParticipants,
+      participants: [],
+      isCompleted: false,
+      isClosed: false,
+      createdAt: serverTimestamp()
+    });
+    
+    hideLoading();
+    hideAddQuest();
+    loadQuests();
+  } catch (error) {
+    hideLoading();
+    console.error('Errore creazione quest:', error);
+    alert('Errore nella creazione della quest');
+  }
+};
+
+window.showQuestDetail = function(questId) {
+  const quest = currentQuests.find(q => q.id === questId);
+  if (!quest) return;
+  
+  const participants = quest.participants || [];
+  const maxParticipants = quest.maxParticipants || 4;
+  const slotsLeft = maxParticipants - participants.length;
+  const isParticipant = participants.some(p => p.userId === currentUser.uid);
+  const canJoin = !isParticipant && slotsLeft > 0;
+  
+  let participantsList = '';
+  if (participants.length > 0) {
+    participantsList = participants.map(p => `
+      <div class="participant-item">
+        <span class="participant-name">${p.username}</span>
+      </div>
+    `).join('');
+  } else {
+    participantsList = '<p style="color: var(--gray); text-align: center;">Nessun partecipante ancora</p>';
+  }
+  
+  const joinButton = canJoin ?
+    `<button onclick="joinQuest('${quest.id}')" class="btn-success">🎯 Iscriviti</button>` : '';
+  
+  const leaveButton = isParticipant ?
+    `<button onclick="leaveQuest('${quest.id}')" class="btn-warning">↩️ Abbandona</button>` : '';
+  
+  const completeButton = currentUserRole === 'dm' ?
+    `<button onclick="completeQuest('${quest.id}')" class="btn-info">✅ Completa Quest</button>` : '';
+  
+  const closeButton = currentUserRole === 'dm' ?
+    `<button onclick="closeQuest('${quest.id}')" class="btn-danger">🚫 Chiudi Quest</button>` : '';
+  
+  const detailContent = document.getElementById('quest-detail-content');
+  detailContent.innerHTML = `
+    <h3>${quest.title}</h3>
+    
+    <div class="character-info">
+      <p><strong>Descrizione:</strong></p>
+      <p style="white-space: pre-wrap;">${quest.description}</p>
+      
+      ${quest.setting ? `
+        <p><strong>Ambientazione:</strong></p>
+        <p style="white-space: pre-wrap;">${quest.setting}</p>
+      ` : ''}
+      
+      ${quest.rewards ? `
+        <p><strong>Ricompense:</strong></p>
+        <p style="white-space: pre-wrap;">${quest.rewards}</p>
+      ` : ''}
+      
+      <p><strong>Difficoltà:</strong> <span class="difficulty-badge difficulty-${quest.difficulty}">${quest.difficulty}</span></p>
+      
+      <div class="slots-info">
+        <div class="slots-count">${participants.length} / ${maxParticipants}</div>
+        <div class="slots-label">Partecipanti</div>
+        ${slotsLeft > 0 ? `<div style="color: var(--success); margin-top: 0.5rem;">${slotsLeft} slot disponibili</div>` : '<div style="color: var(--danger); margin-top: 0.5rem;">Completa</div>'}
+      </div>
+      
+      <div class="quest-participants">
+        <div class="participants-header">
+          <h4 style="margin: 0;">Avventurieri Iscritti</h4>
+        </div>
+        <div class="participants-list">
+          ${participantsList}
+        </div>
+      </div>
+    </div>
+    
+    <div class="character-actions">
+      ${joinButton}
+      ${leaveButton}
+      ${completeButton}
+      ${closeButton}
+      <button onclick="closeQuestDetail()" class="btn-secondary">Chiudi</button>
+    </div>
+  `;
+  
+  showElement('quest-detail');
+};
+
+window.closeQuestDetail = function() {
+  hideElement('quest-detail');
+};
+
+window.joinQuest = async function(questId) {
+  const quest = currentQuests.find(q => q.id === questId);
+  if (!quest) return;
+  
+  const participants = quest.participants || [];
+  if (participants.length >= quest.maxParticipants) {
+    alert('La quest è già completa!');
+    return;
+  }
+  
+  if (participants.some(p => p.userId === currentUser.uid)) {
+    alert('Sei già iscritto a questa quest!');
+    return;
+  }
+  
+  try {
+    showLoading();
+    
+    const questRef = doc(db, 'quests', questId);
+    await updateDoc(questRef, {
+      participants: arrayUnion({
+        userId: currentUser.uid,
+        username: currentUsername
+      })
+    });
+    
+    hideLoading();
+    closeQuestDetail();
+    loadQuests();
+    alert('Ti sei iscritto alla quest con successo!');
+    
+  } catch (error) {
+    hideLoading();
+    console.error('Errore iscrizione:', error);
+    alert('Errore nell\'iscrizione alla quest');
+  }
+};
+
+window.leaveQuest = async function(questId) {
+  const quest = currentQuests.find(q => q.id === questId);
+  if (!quest) return;
+  
+  if (!confirm('Vuoi davvero abbandonare questa quest?')) return;
+  
+  try {
+    showLoading();
+    
+    const participants = quest.participants || [];
+    const userParticipant = participants.find(p => p.userId === currentUser.uid);
+    
+    if (!userParticipant) {
+      alert('Non sei iscritto a questa quest!');
+      hideLoading();
+      return;
+    }
+    
+    const questRef = doc(db, 'quests', questId);
+    await updateDoc(questRef, {
+      participants: arrayRemove(userParticipant)
+    });
+    
+    hideLoading();
+    closeQuestDetail();
+    loadQuests();
+    alert('Hai abbandonato la quest.');
+    
+  } catch (error) {
+    hideLoading();
+    console.error('Errore abbandono:', error);
+    alert('Errore nell\'abbandono della quest');
+  }
+};
+
+window.completeQuest = async function(questId) {
+  if (currentUserRole !== 'dm') {
+    alert('Solo i Dungeon Master possono completare le quest!');
+    return;
+  }
+  
+  if (!confirm('Vuoi davvero segnare questa quest come completata? Questa azione è irreversibile!')) {
+    return;
+  }
+  
+  try {
+    showLoading();
+    
+    const questRef = doc(db, 'quests', questId);
+    await updateDoc(questRef, {
+      isCompleted: true,
+      completedAt: serverTimestamp()
+    });
+    
+    hideLoading();
+    closeQuestDetail();
+    loadQuests();
+    alert('Quest completata! ✅');
+    
+  } catch (error) {
+    hideLoading();
+    console.error('Errore:', error);
+    alert('Errore durante il completamento della quest');
+  }
+};
+
+window.closeQuest = async function(questId) {
+  if (currentUserRole !== 'dm') {
+    alert('Solo i Dungeon Master possono chiudere le quest!');
+    return;
+  }
+  
+  if (!confirm('Vuoi davvero chiudere questa quest senza completarla? La quest andrà nell\'archivio.')) {
+    return;
+  }
+  
+  try {
+    showLoading();
+    
+    const questRef = doc(db, 'quests', questId);
+    await updateDoc(questRef, {
+      isClosed: true,
+      closedAt: serverTimestamp()
+    });
+    
+    hideLoading();
+    closeQuestDetail();
+    loadQuests();
+    alert('Quest chiusa e archiviata! 🚫');
+    
+  } catch (error) {
+    hideLoading();
+    console.error('Errore:', error);
+    alert('Errore durante la chiusura della quest');
+  }
+};
+
+// === ARCHIVED QUESTS ===
+async function loadArchivedQuests() {
+  const listEl = document.getElementById('archive-list');
+  listEl.innerHTML = '<div class="loading"><div class="dice-spinner">🎲</div></div>';
+  
+  try {
+    const snapshot = await getDocs(collection(db, 'quests'));
+    const archivedQuests = [];
+    
+    snapshot.forEach(doc => {
+      const questData = { id: doc.id, ...doc.data() };
+      // Show only completed or closed quests
+      if (questData.isCompleted || questData.isClosed) {
+        archivedQuests.push(questData);
+      }
+    });
+    
+    // Sort by completion/close date
+    archivedQuests.sort((a, b) => {
+      const dateA = a.completedAt || a.closedAt;
+      const dateB = b.completedAt || b.closedAt;
+      if (!dateA || !dateB) return 0;
+      return dateB.seconds - dateA.seconds;
+    });
+    
+    renderArchivedQuests(archivedQuests);
+  } catch (error) {
+    console.error('Errore caricamento archivio:', error);
+    listEl.innerHTML = '<div class="empty-state"><p>Errore nel caricamento dell\'archivio</p></div>';
+  }
+}
+
+function renderArchivedQuests(quests) {
+  const listEl = document.getElementById('archive-list');
+  
+  if (quests.length === 0) {
+    listEl.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">📦</div>
+        <p>Nessuna quest archiviata.</p>
+        <p>Le quest completate o chiuse appariranno qui.</p>
+      </div>
+    `;
+    return;
+  }
+  
+  listEl.innerHTML = quests.map(quest => {
+    const participants = quest.participants || [];
+    const status = quest.isCompleted ? 
+      '<span class="card-status status-completed">✅ Completata</span>' :
+      '<span class="card-status" style="background: var(--gray)">🚫 Chiusa</span>';
+    
+    const date = quest.completedAt || quest.closedAt;
+    const dateStr = date ? new Date(date.seconds * 1000).toLocaleDateString('it-IT') : '';
+    
+    return `
+      <div class="card" onclick="showArchivedQuestDetail('${quest.id}')">
+        <h3>${quest.title}</h3>
+        <p>${quest.description.substring(0, 100)}${quest.description.length > 100 ? '...' : ''}</p>
+        <p><strong>Partecipanti:</strong> ${participants.length}</p>
+        ${dateStr ? `<p><strong>Data:</strong> ${dateStr}</p>` : ''}
+        <span class="difficulty-badge difficulty-${quest.difficulty}">${quest.difficulty}</span>
+        ${status}
+      </div>
+    `;
+  }).join('');
+}
+
+window.showArchivedQuestDetail = function(questId) {
+  // Load quest from DB since it's not in currentQuests
+  getDoc(doc(db, 'quests', questId)).then(docSnap => {
+    if (!docSnap.exists()) return;
+    
+    const quest = { id: docSnap.id, ...docSnap.data() };
+    const participants = quest.participants || [];
+    
+    let participantsList = '';
+    if (participants.length > 0) {
+      participantsList = participants.map(p => `
+        <div class="participant-item">
+          <span class="participant-name">${p.username}</span>
+        </div>
+      `).join('');
+    } else {
+      participantsList = '<p style="color: var(--gray); text-align: center;">Nessun partecipante</p>';
+    }
+    
+    const status = quest.isCompleted ? '✅ Completata' : '🚫 Chiusa';
+    const date = quest.completedAt || quest.closedAt;
+    const dateStr = date ? new Date(date.seconds * 1000).toLocaleDateString('it-IT') : '';
+    
+    const detailContent = document.getElementById('quest-detail-content');
+    detailContent.innerHTML = `
+      <h3>${quest.title}</h3>
+      <p><strong>Stato:</strong> ${status} ${dateStr ? `(${dateStr})` : ''}</p>
+      
+      <div class="character-info">
+        <p><strong>Descrizione:</strong></p>
+        <p style="white-space: pre-wrap;">${quest.description}</p>
+        
+        ${quest.setting ? `
+          <p><strong>Ambientazione:</strong></p>
+          <p style="white-space: pre-wrap;">${quest.setting}</p>
+        ` : ''}
+        
+        ${quest.rewards ? `
+          <p><strong>Ricompense:</strong></p>
+          <p style="white-space: pre-wrap;">${quest.rewards}</p>
+        ` : ''}
+        
+        <p><strong>Difficoltà:</strong> <span class="difficulty-badge difficulty-${quest.difficulty}">${quest.difficulty}</span></p>
+        
+        <div class="quest-participants">
+          <div class="participants-header">
+            <h4 style="margin: 0;">Avventurieri</h4>
+          </div>
+          <div class="participants-list">
+            ${participantsList}
+          </div>
+        </div>
+      </div>
+      
+      <div class="character-actions">
+        <button onclick="closeQuestDetail()" class="btn-secondary">Chiudi</button>
+      </div>
+    `;
+    
+    showElement('quest-detail');
+  });
+};
+
+// === FALLEN HEROES ===
+async function loadFallenHeroes() {
+  const listEl = document.getElementById('fallen-list');
+  listEl.innerHTML = '<div class="loading"><div class="dice-spinner">🎲</div></div>';
+  
+  try {
+    const snapshot = await getDocs(collection(db, 'characters'));
+    fallenHeroes = [];
+    
+    snapshot.forEach(doc => {
+      const charData = { id: doc.id, ...doc.data() };
+      if (charData.isDead) {
+        fallenHeroes.push(charData);
+      }
+    });
+    
+    fallenHeroes.sort((a, b) => {
+      if (!a.deathDate || !b.deathDate) return 0;
+      return b.deathDate.seconds - a.deathDate.seconds;
+    });
+    
+    renderFallenHeroes();
+  } catch (error) {
+    console.error('Errore caricamento fallen heroes:', error);
+    listEl.innerHTML = '<div class="empty-state"><p>Errore nel caricamento</p></div>';
+  }
+}
+
+function renderFallenHeroes() {
+  const listEl = document.getElementById('fallen-list');
+  
+  if (fallenHeroes.length === 0) {
+    listEl.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">☠️</div>
+        <p>Nessun eroe caduto... per ora.</p>
+        <p>La hall è vuota, ma le leggende attendono di essere scritte.</p>
+      </div>
+    `;
+    return;
+  }
+  
+  listEl.innerHTML = fallenHeroes.map(char => {
+    const deathDate = char.deathDate ? 
+      new Date(char.deathDate.seconds * 1000).toLocaleDateString('it-IT') : 
+      'Data sconosciuta';
+    
+    return `
+      <div class="card fallen-card">
+        <h3>⚰️ ${char.name}</h3>
+        <p><strong>Classe:</strong> ${char.class}${char.subclass ? ` (${char.subclass})` : ''}</p>
+        <p><strong>Livello:</strong> ${char.level || 1}</p>
+        <p><strong>Razza:</strong> ${char.race}</p>
+        <p><strong>Caduto il:</strong> ${deathDate}</p>
+        <span class="card-status status-dead">💀 Caduto in battaglia</span>
+      </div>
+    `;
+  }).join('');
+}
+
+// === FUNZIONE AGGIUNGI RIGA ARMA ===
+window.addWeaponRow = function() {
+  const container = document.getElementById('weapons-container');
+  const newRow = document.createElement('div');
+  newRow.className = 'weapon-row';
+  newRow.innerHTML = `
+    <input type="text" placeholder="Nome arma" class="weapon-name" />
+    <select class="weapon-stat">
+      <option value="">Caratteristica</option>
+      <option value="str">FOR</option>
+      <option value="dex">DES</option>
+      <option value="cha">CAR</option>
+    </select>
+    <select class="weapon-bonus">
+      <option value="0">+0</option>
+      <option value="1">+1</option>
+      <option value="2">+2</option>
+      <option value="3">+3</option>
+    </select>
+    <input type="text" placeholder="Danni (es. 1d8+3)" class="weapon-damage" />
+  `;
+  container.appendChild(newRow);
+};
+
+// === FUNZIONI INCANTESIMI DINAMICI ===
+window.addCantripRow = function() {
+  const container = document.getElementById('cantrips-container');
+  const newInput = document.createElement('input');
+  newInput.type = 'text';
+  newInput.placeholder = 'Nome trucchetto';
+  newInput.className = 'cantrip-input';
+  newInput.style.width = '100%';
+  newInput.style.marginBottom = '0.5rem';
+  container.appendChild(newInput);
+};
+
+let spellLevelCounter = 0;
+
+window.addSpellLevel = function() {
+  const container = document.getElementById('spell-levels-container');
+  const existingLevels = container.querySelectorAll('.spell-level-section');
+  const nextLevel = existingLevels.length + 1;
+  
+  if (nextLevel > 9) {
+    alert('Puoi aggiungere massimo 9 livelli di incantesimi!');
+    return;
+  }
+  
+  spellLevelCounter++;
+  const sectionId = `spell-level-${spellLevelCounter}`;
+  
+  const newSection = document.createElement('div');
+  newSection.className = 'spell-level-section';
+  newSection.id = sectionId;
+  newSection.dataset.level = nextLevel;
+  newSection.innerHTML = `
+    <div class="spell-level-header">
+      <h5>Livello ${nextLevel}</h5>
+      <div>
+        <label style="color: var(--gray); font-size: 0.9rem; margin-right: 0.5rem;">Slot:</label>
+        <input type="number" class="slots-input" min="0" value="0" />
+        <button type="button" onclick="removeSpellLevel('${sectionId}')" class="remove-spell-level" style="margin-left: 1rem;">Rimuovi</button>
+      </div>
+    </div>
+    <div class="spells-list">
+      <input type="text" placeholder="Nome incantesimo" class="spell-input" />
+    </div>
+    <button type="button" onclick="addSpellToLevel('${sectionId}')" class="btn-secondary" style="font-size: 0.85rem;">+ Aggiungi Incantesimo</button>
+  `;
+  
+  container.appendChild(newSection);
+};
+
+window.addSpellToLevel = function(sectionId) {
+  const section = document.getElementById(sectionId);
+  const spellsList = section.querySelector('.spells-list');
+  
+  const newInput = document.createElement('input');
+  newInput.type = 'text';
+  newInput.placeholder = 'Nome incantesimo';
+  newInput.className = 'spell-input';
+  spellsList.appendChild(newInput);
+};
+
+window.removeSpellLevel = function(sectionId) {
+  const section = document.getElementById(sectionId);
+  if (confirm('Rimuovere questo livello di incantesimi?')) {
+    section.remove();
+    // Rinumera i livelli rimanenti
+    renumberSpellLevels();
+  }
+};
+
+function renumberSpellLevels() {
+  const container = document.getElementById('spell-levels-container');
+  const sections = container.querySelectorAll('.spell-level-section');
+  sections.forEach((section, index) => {
+    const level = index + 1;
+    section.dataset.level = level;
+    section.querySelector('h5').textContent = `Livello ${level}`;
+  });
+}
+
+// === FUNZIONE EXPORT PDF ===
+window.exportToPDF = async function(charId) {
+  const char = currentCharacters.find(c => c.id === charId);
+  if (!char) {
+    alert('Personaggio non trovato');
+    return;
+  }
+  
+  try {
+    await exportCharacterToPDF(char);
+  } catch (error) {
+    console.error('Errore export PDF:', error);
+    alert('Errore durante l\'export PDF. Verifica la console per i dettagli.');
+  }
+};
+
+// === SERVICE WORKER UPDATE ORCHESTRATOR ===
+if ('serviceWorker' in navigator) {
+  // Register service worker
+  navigator.serviceWorker.register('/service-worker.js');
+  
+  // Reference to waiting worker
+  let waitingWorker = null;
+  
+  // Reload on controller change (atomic switch point)
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
+  
+  // Monitor for updates
+  navigator.serviceWorker.ready.then(registration => {
+    registration.addEventListener('updatefound', () => {
+      const newWorker = registration.installing;
+      waitingWorker = newWorker;
+      
+      newWorker.addEventListener('statechange', () => {
+        // Show update button only if new SW is installed and we have an active controller
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          showUpdateButton(() => {
+            waitingWorker.postMessage('SKIP_WAITING');
+          });
+        }
+      });
+    });
+  });
+}
+
+function showUpdateButton(onUpdate) {
+  // Prevent duplicate buttons
+  if (document.getElementById('sw-update-btn')) return;
+  
+  const updateBanner = document.createElement('div');
+  updateBanner.id = 'sw-update-banner';
+  updateBanner.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--red);
+    color: white;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 10000;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    animation: slideUp 0.3s ease;
+  `;
+  
+  updateBanner.innerHTML = `
+    <span>🎲 Nuovo aggiornamento disponibile!</span>
+    <button id="sw-update-btn" style="
+      background: white;
+      color: var(--red);
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+    ">Aggiorna Ora</button>
+  `;
+  
+  document.body.appendChild(updateBanner);
+  
+  document.getElementById('sw-update-btn').addEventListener('click', () => {
+    onUpdate();
+    updateBanner.innerHTML = '<span>⏳ Aggiornamento in corso...</span>';
+  });
+}
+
+// === INITIALIZE ===
+document.addEventListener('DOMContentLoaded', () => {
+  showLoading();
+});

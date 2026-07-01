@@ -1,0 +1,78 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isDM() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'dm';
+    }
+    
+    // Users collection - document ID MUST be the user's UID
+    match /users/{uid} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == uid;
+      allow update: if isAuthenticated() && (request.auth.uid == uid || isDM());
+      allow delete: if isDM();
+    }
+    
+    // Characters collection
+    match /characters/{characterId} {
+      // Anyone authenticated can read all characters
+      allow read: if isAuthenticated();
+      
+      // Create: authenticated users can create characters
+      allow create: if isAuthenticated() && 
+                      request.resource.data.userId == request.auth.uid;
+      
+      // Update: DMs can update anything, players can update their own (except isDead and level)
+      allow update: if isDM() ||
+                      (isAuthenticated() && 
+                       resource.data.userId == request.auth.uid &&
+                       request.resource.data.isDead == resource.data.isDead &&
+                       request.resource.data.level == resource.data.level);
+      
+      // Delete: only DMs
+      allow delete: if isDM();
+    }
+    
+    // Pending Changes collection
+    match /pending_changes/{changeId} {
+      // Read: owners and DMs
+      allow read: if isAuthenticated() && 
+                    (request.auth.uid == resource.data.requestedBy || isDM());
+      
+      // Create: players can create for their own characters
+      allow create: if isAuthenticated() && 
+                      request.resource.data.requestedBy == request.auth.uid &&
+                      request.resource.data.status == 'pending';
+      
+      // Update: only DMs to approve/reject
+      allow update: if isDM();
+      
+      // Delete: only DMs
+      allow delete: if isDM();
+    }
+    
+    // Quests collection
+    match /quests/{questId} {
+      // Read: everyone authenticated
+      allow read: if isAuthenticated();
+      
+      // Create: only DMs
+      allow create: if isDM();
+      
+      // Update: DMs can do anything, players can only modify participants
+      allow update: if isDM() ||
+                      (isAuthenticated() && 
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participants']));
+      
+      // Delete: only DMs
+      allow delete: if isDM();
+    }
+  }
+}

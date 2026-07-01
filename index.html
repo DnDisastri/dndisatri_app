@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#2c3e6e" />
+  <meta name="description" content="D&Disastri - Gestisci i tuoi personaggi D&D, quest e onora i caduti" />
+
+  <title>D&Disastri</title>
+
+  <link rel="stylesheet" href="style.css?v=3" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/jpeg" href="logo.jpg?v=3" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+  <div id="app">
+    <!-- HEADER -->
+    <header>
+      <div class="header-content">
+        <img src="logo.jpg?v=3" alt="D&Disastri" class="logo" />
+        <h1>D&Disastri</h1>
+      </div>
+      <button id="logout-btn" class="hidden" onclick="handleLogout()">Esci</button>
+    </header>
+
+    <!-- LOADING -->
+    <div id="loading" class="loading">
+      <div class="dice-spinner">🎲</div>
+      <p>Caricamento...</p>
+    </div>
+
+    <!-- LOGIN -->
+    <section id="login" class="hidden">
+      <div class="container">
+        <div class="login-logo-container">
+          <img src="logo.jpg?v=3" alt="D&Disastri Logo" class="login-logo" />
+        </div>
+        <h2>Accesso</h2>
+        <form id="login-form" onsubmit="handleLogin(event)">
+          <input 
+            type="email" 
+            id="login-email"
+            placeholder="Email" 
+            required 
+            autocomplete="email"
+          />
+          <input 
+            type="password" 
+            id="login-password"
+            placeholder="Password" 
+            required 
+            autocomplete="current-password"
+            minlength="6"
+          />
+          <button type="submit">Entra</button>
+          <p class="error-message" id="login-error"></p>
+        </form>
+        <p class="link-text">
+          Non hai un account? 
+          <a href="#" onclick="showRegistration(); return false;">Registrati</a>
+        </p>
+      </div>
+    </section>
+
+    <!-- REGISTRATION -->
+    <section id="registration" class="hidden">
+      <div class="container">
+        <div class="login-logo-container">
+          <img src="logo.jpg?v=3" alt="D&Disastri Logo" class="login-logo" />
+        </div>
+        <h2>Registrazione</h2>
+        <form id="registration-form" onsubmit="handleRegistration(event)">
+          <input 
+            type="text" 
+            id="reg-username"
+            placeholder="Nome utente" 
+            required 
+            minlength="3"
+          />
+          <input 
+            type="email" 
+            id="reg-email"
+            placeholder="Email" 
+            required 
+            autocomplete="email"
+          />
+          <input 
+            type="password" 
+            id="reg-password"
+            placeholder="Password (min 6 caratteri)" 
+            required 
+            autocomplete="new-password"
+            minlength="6"
+          />
+          <button type="submit">Crea Account</button>
+          <p class="error-message" id="reg-error"></p>
+        </form>
+        <p class="link-text">
+          Hai già un account? 
+          <a href="#" onclick="showLogin(); return false;">Accedi</a>
+        </p>
+      </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="hidden">
+      <div class="container">
+        <h2>Dashboard</h2>
+        <p class="welcome-text">Benvenuto, <span id="user-name">Avventuriero</span>!</p>
+
+        <nav class="nav-grid">
+          <button class="nav-btn" onclick="showSection('characters')">
+            <span class="nav-icon">⚔️</span>
+            <span>I miei Personaggi</span>
+          </button>
+          <button class="nav-btn" onclick="showSection('quests')">
+            <span class="nav-icon">📜</span>
+            <span>Quest Attive</span>
+          </button>
+          <button class="nav-btn" onclick="showSection('archive')">
+            <span class="nav-icon">📦</span>
+            <span>Archivio Quest</span>
+          </button>
+          <button class="nav-btn" onclick="showSection('fallen')">
+            <span class="nav-icon">☠️</span>
+            <span>Fallen Heroes</span>
+          </button>
+          <button class="nav-btn" id="pending-btn" onclick="showSection('pending')" style="display:none;">
+            <span class="nav-icon">⏳</span>
+            <span>Modifiche Pending</span>
+            <span class="pending-badge" id="pending-count">0</span>
+          </button>
+        </nav>
+      </div>
+    </section>
+
+    <!-- PERSONAGGI -->
+    <section id="characters" class="hidden">
+      <div class="container">
+        <div class="section-header">
+          <button class="back-btn" onclick="showSection('dashboard')">← Indietro</button>
+          <h2>I miei Personaggi</h2>
+          <button class="add-btn" onclick="showAddCharacter()">+ Nuovo</button>
+        </div>
+
+        <div id="characters-list" class="cards-grid">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Add Character Form -->
+        <div id="add-character-form" class="modal hidden">
+          <div class="modal-content large-modal">
+            <h3>Crea Nuovo Personaggio</h3>
+            <form onsubmit="handleAddCharacter(event)">
+              <div class="form-section">
+                <h4>Informazioni Base</h4>
+                <input type="text" id="char-name" placeholder="Nome Personaggio" required />
+                <input type="text" id="char-class" placeholder="Classe (es. Guerriero)" required />
+                <input type="text" id="char-subclass" placeholder="Sottoclasse (opzionale)" />
+                <input type="text" id="char-race" placeholder="Razza (es. Umano)" required />
+                <input type="text" id="char-background" placeholder="Background (opzionale)" />
+              </div>
+
+              <div class="form-section">
+                <h4>Caratteristiche (Punteggi)</h4>
+                <div class="stats-grid">
+                  <div>
+                    <label>Forza (STR)</label>
+                    <input type="number" id="char-str" min="1" max="30" value="10" required />
+                  </div>
+                  <div>
+                    <label>Destrezza (DEX)</label>
+                    <input type="number" id="char-dex" min="1" max="30" value="10" required />
+                  </div>
+                  <div>
+                    <label>Costituzione (CON)</label>
+                    <input type="number" id="char-con" min="1" max="30" value="10" required />
+                  </div>
+                  <div>
+                    <label>Intelligenza (INT)</label>
+                    <input type="number" id="char-int" min="1" max="30" value="10" required />
+                  </div>
+                  <div>
+                    <label>Saggezza (WIS)</label>
+                    <input type="number" id="char-wis" min="1" max="30" value="10" required />
+                  </div>
+                  <div>
+                    <label>Carisma (CHA)</label>
+                    <input type="number" id="char-cha" min="1" max="30" value="10" required />
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h4>Statistiche di Combattimento</h4>
+                <div class="combat-grid">
+                  <div>
+                    <label>Classe Armatura (AC)</label>
+                    <input type="number" id="char-ac" min="1" max="30" value="10" required />
+                  </div>
+                  <div>
+                    <label>Iniziativa</label>
+                    <input type="number" id="char-initiative" value="0" required />
+                  </div>
+                  <div>
+                    <label>Velocità (ft)</label>
+                    <input type="number" id="char-speed" min="0" value="30" required />
+                  </div>
+                  <div>
+                    <label>Punti Ferita Max</label>
+                    <input type="number" id="char-hp-max" min="1" value="10" required />
+                  </div>
+                  <div>
+                    <label>PF Attuali</label>
+                    <input type="number" id="char-hp-current" min="0" value="10" />
+                  </div>
+                  <div>
+                    <label>PF Temporanei</label>
+                    <input type="number" id="char-hp-temp" min="0" value="0" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h4>Tiri Salvezza</h4>
+                <p style="font-size: 0.85rem; color: var(--gray); margin-bottom: 1rem;">
+                  Seleziona le caratteristiche in cui hai competenza nei tiri salvezza.
+                </p>
+                <div class="saving-throws-grid">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="save-str" />
+                    <span>Forza</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="save-dex" />
+                    <span>Destrezza</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="save-con" />
+                    <span>Costituzione</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="save-int" />
+                    <span>Intelligenza</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="save-wis" />
+                    <span>Saggezza</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="save-cha" />
+                    <span>Carisma</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h4>Abilità & Privilegi</h4>
+                <textarea id="char-class-features" placeholder="Abilità di Classe (es. Azione Impetuosa, Secondo Respiro...)" rows="3"></textarea>
+                <textarea id="char-subclass-features" placeholder="Abilità di Sottoclasse (opzionale)" rows="3"></textarea>
+              </div>
+
+              <div class="form-section">
+                <h4>Inventario</h4>
+                <textarea id="char-inventory" placeholder="Inventario (es. Spada lunga, Armatura di piastre, Pozione di cura...)" rows="3"></textarea>
+              </div>
+
+              <div class="form-section">
+                <h4>Armi & Attacchi</h4>
+                <div id="weapons-container">
+                  <div class="weapon-row">
+                    <input type="text" placeholder="Nome arma" class="weapon-name" />
+                    <select class="weapon-stat">
+                      <option value="str" selected>FOR (default)</option>
+                      <option value="str">FOR</option>
+                      <option value="dex">DES</option>
+                      <option value="cha">CAR</option>
+                    </select>
+                    <select class="weapon-bonus">
+                      <option value="0">+0</option>
+                      <option value="1">+1</option>
+                      <option value="2">+2</option>
+                      <option value="3">+3</option>
+                    </select>
+                    <input type="text" placeholder="Danni (es. 1d8+3)" class="weapon-damage" />
+                  </div>
+                </div>
+                <button type="button" onclick="addWeaponRow()" class="btn-secondary">+ Aggiungi Arma</button>
+              </div>
+
+              <div class="form-section">
+                <h4>Incantesimi</h4>
+                <label>Caratteristica Incantatore</label>
+                <select id="char-spell-ability">
+                  <option value="">Nessuna</option>
+                  <option value="int">Intelligenza</option>
+                  <option value="wis">Saggezza</option>
+                  <option value="cha">Carisma</option>
+                </select>
+  
+                <div style="margin-top: 1rem;">
+                  <label>Trucchetti</label>
+                  <div id="cantrips-container">
+                    <input type="text" placeholder="Nome trucchetto" class="cantrip-input" style="width: 100%; margin-bottom: 0.5rem;" />
+                  </div>
+                  <button type="button" onclick="addCantripRow()" class="btn-secondary">+ Aggiungi Trucchetto</button>
+                </div>
+  
+                <div id="spell-levels-container" style="margin-top: 1.5rem;">
+                  <!-- I livelli verranno aggiunti dinamicamente -->
+                </div>
+                
+                <button type="button" onclick="addSpellLevel()" class="btn-secondary" style="margin-top: 1rem;">+ Aggiungi Livello Incantesimi</button>
+              </div>
+
+              <div class="form-section">
+                <h4>Abilità (Skills)</h4>
+                <p style="font-size: 0.85rem; color: var(--gray); margin-bottom: 1rem;">
+                  Seleziona le abilità in cui sei competente o esperto. Il bonus di competenza verrà calcolato automaticamente dal livello.
+                </p>
+                
+                <div class="skills-section">
+                  <div class="skill-category">
+                    <h5>💪 Forza</h5>
+                    <div class="skill-row">
+                      <label class="skill-label">Atletica</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-athletics-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-athletics-exp"> Esperto</label>
+                    </div>
+                  </div>
+
+                  <div class="skill-category">
+                    <h5>🤸 Destrezza</h5>
+                    <div class="skill-row">
+                      <label class="skill-label">Acrobazia</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-acrobatics-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-acrobatics-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Rapidità di Mano</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-sleightOfHand-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-sleightOfHand-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Furtività</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-stealth-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-stealth-exp"> Esperto</label>
+                    </div>
+                  </div>
+
+                  <div class="skill-category">
+                    <h5>🧠 Intelligenza</h5>
+                    <div class="skill-row">
+                      <label class="skill-label">Arcano</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-arcana-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-arcana-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Storia</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-history-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-history-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Indagare</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-investigation-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-investigation-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Natura</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-nature-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-nature-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Religione</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-religion-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-religion-exp"> Esperto</label>
+                    </div>
+                  </div>
+
+                  <div class="skill-category">
+                    <h5>🦉 Saggezza</h5>
+                    <div class="skill-row">
+                      <label class="skill-label">Addestrare Animali</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-animalHandling-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-animalHandling-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Intuizione</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-insight-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-insight-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Medicina</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-medicine-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-medicine-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Percezione</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-perception-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-perception-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Sopravvivenza</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-survival-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-survival-exp"> Esperto</label>
+                    </div>
+                  </div>
+
+                  <div class="skill-category">
+                    <h5>🎭 Carisma</h5>
+                    <div class="skill-row">
+                      <label class="skill-label">Inganno</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-deception-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-deception-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Intimidire</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-intimidation-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-intimidation-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Intrattenere</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-performance-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-performance-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Persuasione</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-persuasion-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="skill-persuasion-exp"> Esperto</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h4>Note Aggiuntive</h4>
+                <textarea id="char-notes" placeholder="Note generali, storia, obiettivi..." rows="3"></textarea>
+              </div>
+
+              <div class="modal-buttons">
+                <button type="submit">Crea Personaggio</button>
+                <button type="button" onclick="hideAddCharacter()">Annulla</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Character Detail Modal -->
+        <div id="character-detail" class="modal hidden">
+          <div class="modal-content large-modal">
+            <div id="character-detail-content">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Edit Character Modal -->
+        <div id="edit-character-form" class="modal hidden">
+          <div class="modal-content large-modal">
+            <h3>Modifica Personaggio <span class="pending-notice">(Le modifiche richiederanno approvazione DM)</span></h3>
+            <form onsubmit="handleEditCharacter(event)">
+              <input type="hidden" id="edit-char-id" />
+              
+              <div class="form-section">
+                <h4>Informazioni Base</h4>
+                <input type="text" id="edit-char-name" placeholder="Nome Personaggio" required />
+                <input type="text" id="edit-char-class" placeholder="Classe" required />
+                <input type="text" id="edit-char-subclass" placeholder="Sottoclasse" />
+                <input type="text" id="edit-char-race" placeholder="Razza" required />
+                <input type="text" id="edit-char-background" placeholder="Background" />
+                <div>
+                  <label>Livello (Solo DM può modificare direttamente)</label>
+                  <input type="number" id="edit-char-level" min="1" max="20" readonly />
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h4>Caratteristiche</h4>
+                <div class="stats-grid">
+                  <div>
+                    <label>STR</label>
+                    <input type="number" id="edit-char-str" min="1" max="30" required />
+                  </div>
+                  <div>
+                    <label>DEX</label>
+                    <input type="number" id="edit-char-dex" min="1" max="30" required />
+                  </div>
+                  <div>
+                    <label>CON</label>
+                    <input type="number" id="edit-char-con" min="1" max="30" required />
+                  </div>
+                  <div>
+                    <label>INT</label>
+                    <input type="number" id="edit-char-int" min="1" max="30" required />
+                  </div>
+                  <div>
+                    <label>WIS</label>
+                    <input type="number" id="edit-char-wis" min="1" max="30" required />
+                  </div>
+                  <div>
+                    <label>CHA</label>
+                    <input type="number" id="edit-char-cha" min="1" max="30" required />
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h4>Statistiche Combattimento</h4>
+                <div class="combat-grid">
+                  <div>
+                    <label>AC</label>
+                    <input type="number" id="edit-char-ac" min="1" max="30" required />
+                  </div>
+                  <div>
+                    <label>Iniziativa</label>
+                    <input type="number" id="edit-char-initiative" required />
+                  </div>
+                  <div>
+                    <label>Velocità</label>
+                    <input type="number" id="edit-char-speed" min="0" required />
+                  </div>
+                  <div>
+                    <label>HP Max</label>
+                    <input type="number" id="edit-char-hp-max" min="1" required />
+                  </div>
+                  <div>
+                    <label>PF Attuali</label>
+                    <input type="number" id="edit-char-hp-current" min="0" />
+                  </div>
+                  <div>
+                    <label>PF Temporanei</label>
+                    <input type="number" id="edit-char-hp-temp" min="0" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h4>Tiri Salvezza</h4>
+                <div class="saving-throws-grid">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="edit-save-str" />
+                    <span>Forza</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="edit-save-dex" />
+                    <span>Destrezza</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="edit-save-con" />
+                    <span>Costituzione</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="edit-save-int" />
+                    <span>Intelligenza</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="edit-save-wis" />
+                    <span>Saggezza</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="edit-save-cha" />
+                    <span>Carisma</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h4>Abilità & Privilegi</h4>
+                <textarea id="edit-char-class-features" rows="3"></textarea>
+                <textarea id="edit-char-subclass-features" rows="3"></textarea>
+              </div>
+
+              <div class="form-section">
+                <h4>Inventario</h4>
+                <textarea id="edit-char-inventory" rows="3"></textarea>
+              </div>
+
+              <div class="form-section">
+                <h4>Armi & Attacchi</h4>
+                <div id="weapons-container">
+                  <div class="weapon-row">
+                    <input type="text" placeholder="Nome arma" class="weapon-name" />
+                    <select class="weapon-stat">
+                      <option value="str" selected>FOR (default)</option>
+                      <option value="str">FOR</option>
+                      <option value="dex">DES</option>
+                      <option value="cha">CAR</option>
+                    </select>
+                    <select class="weapon-bonus">
+                      <option value="0">+0</option>
+                      <option value="1">+1</option>
+                      <option value="2">+2</option>
+                      <option value="3">+3</option>
+                    </select>
+                    <input type="text" placeholder="Danni (es. 1d8+3)" class="weapon-damage" />
+                  </div>
+                </div>
+                <button type="button" onclick="addWeaponRow()" class="btn-secondary">+ Aggiungi Arma</button>
+              </div>
+
+              <div class="form-section">
+                <h4>Incantesimi</h4>
+                <label>Caratteristica Incantatore</label>
+                <select id="edit-char-spell-ability">
+                  <option value="">Nessuna</option>
+                  <option value="int">Intelligenza</option>
+                  <option value="wis">Saggezza</option>
+                  <option value="cha">Carisma</option>
+                </select>
+  
+              <label>Trucchetti</label>
+              <textarea id="edit-char-cantrips" rows="2" placeholder="Lista trucchetti separati da virgola"></textarea>
+  
+              <div class="spell-levels">
+                <div class="spell-level-row">
+                  <label>Livello 1</label>
+                  <textarea class="edit-spell-list" data-level="1" rows="2"></textarea>
+                  <input type="number" class="edit-spell-slots" data-level="1" placeholder="Slot" min="0" />
+              </div>
+              <div class="spell-level-row">
+                <label>Livello 2</label>
+                <textarea class="edit-spell-list" data-level="2" rows="2"></textarea>
+                <input type="number" class="edit-spell-slots" data-level="2" placeholder="Slot" min="0" />
+              </div>
+              <div class="spell-level-row">
+                <label>Livello 3</label>
+                <textarea class="edit-spell-list" data-level="3" rows="2"></textarea>
+                <input type="number" class="edit-spell-slots" data-level="3" placeholder="Slot" min="0" />
+              </div>
+              <div class="spell-level-row">
+                <label>Livello 4</label>
+                <textarea class="edit-spell-list" data-level="4" rows="2"></textarea>
+                <input type="number" class="edit-spell-slots" data-level="4" placeholder="Slot" min="0" />
+              </div>
+              <div class="spell-level-row">
+                <label>Livello 5</label>
+                <textarea class="edit-spell-list" data-level="5" rows="2"></textarea>
+                <input type="number" class="edit-spell-slots" data-level="5" placeholder="Slot" min="0" />
+              </div>
+              <div class="spell-level-row">
+                <label>Livello 6</label>
+                <textarea class="edit-spell-list" data-level="6" rows="2"></textarea>
+                <input type="number" class="edit-spell-slots" data-level="6" placeholder="Slot" min="0" />
+              </div>
+              <div class="spell-level-row">
+                <label>Livello 7</label>
+                <textarea class="edit-spell-list" data-level="7" rows="2"></textarea>
+                <input type="number" class="edit-spell-slots" data-level="7" placeholder="Slot" min="0" />
+              </div>
+              <div class="spell-level-row">
+                <label>Livello 8</label>
+                <textarea class="edit-spell-list" data-level="8" rows="2"></textarea>
+                <input type="number" class="edit-spell-slots" data-level="8" placeholder="Slot" min="0" />
+              </div>
+              <div class="spell-level-row">
+                <label>Livello 9</label>
+                <textarea class="edit-spell-list" data-level="9" rows="2"></textarea>
+                <input type="number" class="edit-spell-slots" data-level="9" placeholder="Slot" min="0" />
+              </div>
+            </div>
+          </div>
+
+              <div class="form-section">
+                <h4>Abilità (Skills)</h4>
+                <p style="font-size: 0.85rem; color: var(--gray); margin-bottom: 1rem;">
+                  Modifica competenze e expertise. Le modifiche richiedono approvazione del DM.
+                </p>
+                
+                <div class="skills-section">
+                  <div class="skill-category">
+                    <h5>💪 Forza</h5>
+                    <div class="skill-row">
+                      <label class="skill-label">Atletica</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-athletics-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-athletics-exp"> Esperto</label>
+                    </div>
+                  </div>
+
+                  <div class="skill-category">
+                    <h5>🤸 Destrezza</h5>
+                    <div class="skill-row">
+                      <label class="skill-label">Acrobazia</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-acrobatics-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-acrobatics-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Rapidità di Mano</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-sleightOfHand-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-sleightOfHand-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Furtività</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-stealth-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-stealth-exp"> Esperto</label>
+                    </div>
+                  </div>
+
+                  <div class="skill-category">
+                    <h5>🧠 Intelligenza</h5>
+                    <div class="skill-row">
+                      <label class="skill-label">Arcano</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-arcana-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-arcana-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Storia</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-history-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-history-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Indagare</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-investigation-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-investigation-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Natura</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-nature-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-nature-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Religione</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-religion-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-religion-exp"> Esperto</label>
+                    </div>
+                  </div>
+
+                  <div class="skill-category">
+                    <h5>🦉 Saggezza</h5>
+                    <div class="skill-row">
+                      <label class="skill-label">Addestrare Animali</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-animalHandling-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-animalHandling-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Intuizione</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-insight-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-insight-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Medicina</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-medicine-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-medicine-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Percezione</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-perception-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-perception-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Sopravvivenza</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-survival-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-survival-exp"> Esperto</label>
+                    </div>
+                  </div>
+
+                  <div class="skill-category">
+                    <h5>🎭 Carisma</h5>
+                    <div class="skill-row">
+                      <label class="skill-label">Inganno</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-deception-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-deception-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Intimidire</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-intimidation-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-intimidation-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Intrattenere</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-performance-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-performance-exp"> Esperto</label>
+                    </div>
+                    <div class="skill-row">
+                      <label class="skill-label">Persuasione</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-persuasion-prof"> Competente</label>
+                      <label class="checkbox-label"><input type="checkbox" id="edit-skill-persuasion-exp"> Esperto</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h4>Note</h4>
+                <textarea id="edit-char-notes" rows="3"></textarea>
+              </div>
+
+              <div class="modal-buttons">
+                <button type="submit">Proponi Modifiche</button>
+                <button type="button" onclick="hideEditCharacter()">Annulla</button>
+                <button onclick="exportToPDF('${char.id}')" class="btn-info">Esporta PDF</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUEST -->
+    <section id="quests" class="hidden">
+      <div class="container">
+        <div class="section-header">
+          <button class="back-btn" onclick="showSection('dashboard')">← Indietro</button>
+          <h2>Quest</h2>
+          <button class="add-btn" onclick="showAddQuest()">+ Nuova</button>
+        </div>
+
+        <div id="quests-list" class="cards-grid">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Add Quest Form -->
+        <div id="add-quest-form" class="modal hidden">
+          <div class="modal-content large-modal">
+            <h3>Crea Nuova Quest</h3>
+            <form onsubmit="handleAddQuest(event)">
+              <input type="text" id="quest-title" placeholder="Titolo" required />
+              <textarea id="quest-description" placeholder="Descrizione" rows="4" required></textarea>
+              <textarea id="quest-setting" placeholder="Ambientazione (opzionale)" rows="3"></textarea>
+              <textarea id="quest-rewards" placeholder="Ricompense (opzionale)" rows="2"></textarea>
+              <select id="quest-difficulty" required>
+                <option value="">Seleziona difficoltà</option>
+                <option value="Facile">Facile</option>
+                <option value="Media">Media</option>
+                <option value="Difficile">Difficile</option>
+                <option value="Epica">Epica</option>
+              </select>
+              <div>
+                <label>Numero massimo partecipanti:</label>
+                <input type="number" id="quest-max-participants" min="1" max="20" value="4" required />
+              </div>
+              <div class="modal-buttons">
+                <button type="submit">Crea Quest</button>
+                <button type="button" onclick="hideAddQuest()">Annulla</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Quest Detail Modal -->
+        <div id="quest-detail" class="modal hidden">
+          <div class="modal-content">
+            <div id="quest-detail-content">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ARCHIVIO QUEST -->
+    <section id="archive" class="hidden">
+      <div class="container">
+        <div class="section-header">
+          <button class="back-btn" onclick="showSection('dashboard')">← Indietro</button>
+          <h2>📦 Archivio Quest</h2>
+        </div>
+
+        <p class="memorial-text">
+          Quest completate e chiuse della campagna
+        </p>
+
+        <div id="archive-list" class="cards-grid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- FALLEN HEROES -->
+    <section id="fallen" class="hidden">
+      <div class="container">
+        <div class="section-header">
+          <button class="back-btn" onclick="showSection('dashboard')">← Indietro</button>
+          <h2>Hall of Fallen Heroes ☠️</h2>
+        </div>
+
+        <p class="memorial-text">
+          "In memoria di coloro che hanno dato tutto per la causa..."
+        </p>
+
+        <div id="fallen-list" class="cards-grid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- PENDING CHANGES (DM Only) -->
+    <section id="pending" class="hidden">
+      <div class="container">
+        <div class="section-header">
+          <button class="back-btn" onclick="showSection('dashboard')">← Indietro</button>
+          <h2>Modifiche in Attesa di Approvazione</h2>
+        </div>
+
+        <div id="pending-list" class="cards-grid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Pending Detail Modal -->
+    <div id="pending-detail" class="modal hidden">
+      <div class="modal-content large-modal">
+        <div id="pending-detail-content">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK (modular) -->
+  <script type="module" src="app.js?v=4"></script>
+</body>
+</html>
