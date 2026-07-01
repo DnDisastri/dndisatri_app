@@ -1246,6 +1246,22 @@ button.add-btn:hover {
   font-weight: 600;
 }
 
+/* === MENU A TENDINA DASHBOARD === */
+.nav-dropdown {
+  margin: 0.5rem 0 1rem;
+}
+
+.nav-dropdown select {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  font-size: 1.05rem;
+  border-radius: 10px;
+  background: var(--primary, #2c3e6e);
+  color: #fff;
+  border: 1px solid rgba(232, 213, 160, 0.35);
+  cursor: pointer;
+}
+
 /* === MAPPE === */
 .map-thumb {
   width: 100%;

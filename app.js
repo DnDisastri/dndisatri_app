@@ -62,6 +62,8 @@ let marketItems = [];
 let notifications = [];
 let currentCampaignId = null;
 let campaignsCache = [];
+let notifUnreadCount = 0;
+let pendingCount = 0;
 
 // === UTILITY FUNCTIONS ===
 function calculateModifier(score) {
@@ -872,13 +874,16 @@ function hideLoading() {
 }
 
 // === NAVIGATION ===
-window.showSection = function(sectionId) {
-  const sections = ['dashboard', 'characters', 'quests', 'archive', 'guild', 'maps', 'market', 'profile', 'notifications', 'audit', 'fallen', 'pending'];
-  sections.forEach(id => hideElement(id));
+const SECTION_IDS = ['dashboard', 'characters', 'quests', 'archive', 'guild', 'maps', 'market', 'profile', 'notifications', 'audit', 'fallen', 'pending'];
+function hideAllSections() { SECTION_IDS.forEach(id => hideElement(id)); }
 
+window.showSection = function(sectionId) {
+  hideAllSections();
   showElement(sectionId);
 
-  if (sectionId === 'characters') {
+  if (sectionId === 'dashboard') {
+    loadDashboard();
+  } else if (sectionId === 'characters') {
     loadCharacters();
   } else if (sectionId === 'quests') {
     loadQuests();
@@ -901,6 +906,109 @@ window.showSection = function(sectionId) {
   } else if (sectionId === 'pending') {
     loadPendingChanges();
   }
+};
+
+// === MENU A TENDINA + DASHBOARD ===
+function renderNav() {
+  const sel = document.getElementById('nav-select');
+  if (!sel) return;
+  const opts = [
+    ['characters', 'I miei Personaggi'],
+    ['quests', 'Campagne'],
+    ['archive', 'Libro Mastro'],
+    ['guild', 'Gilda'],
+    ['maps', 'Mappe'],
+    ['market', 'Mercato'],
+    ['profile', 'Profilo'],
+    ['notifications', `Notifiche${notifUnreadCount > 0 ? ` (${notifUnreadCount})` : ''}`],
+    ['fallen', 'Fallen Heroes']
+  ];
+  if (currentUserRole === 'dm') {
+    opts.push(['pending', `Modifiche Pending${pendingCount > 0 ? ` (${pendingCount})` : ''}`]);
+    opts.push(['audit', 'Registro']);
+  }
+  sel.innerHTML = '<option value="">— Vai a… —</option>' +
+    opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+}
+
+window.navGo = function(value) {
+  if (!value) return;
+  showSection(value);
+  const sel = document.getElementById('nav-select');
+  if (sel) sel.value = '';
+};
+
+function loadDashboard() {
+  renderNav();
+  loadAnnouncements();
+  loadOpenCampaigns();
+}
+
+async function loadAnnouncements() {
+  const el = document.getElementById('announcements-list');
+  if (!el) return;
+  try {
+    const snap = await getDocs(collection(db, 'notifications'));
+    const items = [];
+    snap.forEach(d => {
+      const n = { id: d.id, ...d.data() };
+      if (audienceMatches(n.audience)) items.push(n);
+    });
+    items.sort((a, b) => ((b.createdAt && b.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0));
+    if (items.length === 0) {
+      el.innerHTML = '<p style="color: var(--gray);">Nessun annuncio per ora.</p>';
+      return;
+    }
+    el.innerHTML = items.slice(0, 8).map(n => {
+      const date = n.createdAt ? new Date(n.createdAt.seconds * 1000).toLocaleString('it-IT') : '';
+      return `<div class="card"><p>${n.message}</p><p style="color:var(--gray); font-size:0.85rem;">${date}</p></div>`;
+    }).join('');
+  } catch (e) {
+    console.error('Errore annunci:', e);
+    el.innerHTML = '<p style="color: var(--gray);">Impossibile caricare gli annunci.</p>';
+  }
+}
+
+async function loadOpenCampaigns() {
+  const el = document.getElementById('open-campaigns');
+  if (!el) return;
+  try {
+    const [campSnap, questSnap] = await Promise.all([
+      getDocs(collection(db, 'campaigns')),
+      getDocs(collection(db, 'quests'))
+    ]);
+    campaignsCache = [];
+    campSnap.forEach(d => campaignsCache.push({ id: d.id, ...d.data() }));
+    const activeByCampaign = {};
+    questSnap.forEach(d => {
+      const q = d.data();
+      if (!q.isCompleted && !q.isClosed) {
+        const key = q.campaignId || '_none';
+        activeByCampaign[key] = (activeByCampaign[key] || 0) + 1;
+      }
+    });
+    const open = campaignsCache.filter(c => c.status !== 'ended')
+      .sort((a, b) => ((b.createdAt && b.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0));
+    if (open.length === 0) {
+      el.innerHTML = '<p style="color: var(--gray);">Nessuna campagna aperta.</p>';
+      return;
+    }
+    el.innerHTML = open.map(c => `
+      <div class="card" style="cursor:pointer;" onclick="dashOpenCampaign('${c.id}')">
+        <h3>${c.title}</h3>
+        ${c.description ? `<p>${c.description.substring(0, 120)}${c.description.length > 120 ? '...' : ''}</p>` : ''}
+        <p style="margin-top:0.5rem;"><strong>Quest attive:</strong> ${activeByCampaign[c.id] || 0}</p>
+      </div>`).join('');
+  } catch (e) {
+    console.error('Errore campagne aperte:', e);
+    el.innerHTML = '<p style="color: var(--gray);">Impossibile caricare le campagne.</p>';
+  }
+}
+
+window.dashOpenCampaign = function(campaignId) {
+  hideAllSections();
+  showElement('quests');
+  openCampaign(campaignId);
 };
 
 window.showLogin = function() {
@@ -1042,23 +1150,15 @@ onAuthStateChanged(auth, async (user) => {
     document.getElementById('user-name').textContent = currentUsername + roleText;
 
     // Show/hide pending button for DMs
-    // Notifiche per tutti (player e DM)
-    document.getElementById('notifications-btn').style.display = 'flex';
+    renderNav();
     updateNotificationsCount();
+    if (currentUserRole === 'dm') updatePendingCount();
 
-    if (currentUserRole === 'dm') {
-      document.getElementById('pending-btn').style.display = 'flex';
-      document.getElementById('audit-btn').style.display = 'flex';
-      updatePendingCount();
-    } else {
-      document.getElementById('pending-btn').style.display = 'none';
-      document.getElementById('audit-btn').style.display = 'none';
-    }
-    
     hideElement('login');
     hideElement('registration');
     showElement('dashboard');
     showElement('logout-btn');
+    loadDashboard();
     
   } else {
     currentUser = null;
@@ -1085,15 +1185,8 @@ async function updatePendingCount() {
       where('status', '==', 'pending')
     );
     const snapshot = await getDocs(q);
-    const count = snapshot.size;
-    
-    document.getElementById('pending-count').textContent = count;
-    
-    if (count > 0) {
-      document.getElementById('pending-count').style.display = 'flex';
-    } else {
-      document.getElementById('pending-count').style.display = 'none';
-    }
+    pendingCount = snapshot.size;
+    renderNav();
   } catch (error) {
     console.error('Error counting pending changes:', error);
   }
@@ -3987,9 +4080,8 @@ async function updateNotificationsCount() {
       const n = d.data();
       if (audienceMatches(n.audience) && !(n.readBy || []).includes(currentUser.uid)) count++;
     });
-    const el = document.getElementById('notifications-count');
-    el.textContent = count;
-    el.style.display = count > 0 ? 'flex' : 'none';
+    notifUnreadCount = count;
+    renderNav();
   } catch (e) { console.error(e); }
 }
 

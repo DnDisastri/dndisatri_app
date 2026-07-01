@@ -110,57 +110,23 @@
     <!-- DASHBOARD -->
     <section id="dashboard" class="hidden">
       <div class="container">
-        <h2>Dashboard</h2>
         <p class="welcome-text">Benvenuto, <span id="user-name">Avventuriero</span>!</p>
 
-        <nav class="nav-grid">
-          <button class="nav-btn" onclick="showSection('characters')">
-            <span class="nav-icon">⚔️</span>
-            <span>I miei Personaggi</span>
-          </button>
-          <button class="nav-btn" onclick="showSection('quests')">
-            <span class="nav-icon">📜</span>
-            <span>Campagne</span>
-          </button>
-          <button class="nav-btn" onclick="showSection('archive')">
-            <span class="nav-icon">📖</span>
-            <span>Libro Mastro</span>
-          </button>
-          <button class="nav-btn" onclick="showSection('guild')">
-            <span class="nav-icon">🛡️</span>
-            <span>Gilda</span>
-          </button>
-          <button class="nav-btn" onclick="showSection('maps')">
-            <span class="nav-icon">🗺️</span>
-            <span>Mappe</span>
-          </button>
-          <button class="nav-btn" onclick="showSection('market')">
-            <span class="nav-icon">🪙</span>
-            <span>Mercato</span>
-          </button>
-          <button class="nav-btn" onclick="showSection('profile')">
-            <span class="nav-icon">👤</span>
-            <span>Profilo</span>
-          </button>
-          <button class="nav-btn" id="notifications-btn" onclick="showSection('notifications')" style="display:none;">
-            <span class="nav-icon">🔔</span>
-            <span>Notifiche</span>
-            <span class="pending-badge" id="notifications-count">0</span>
-          </button>
-          <button class="nav-btn" id="audit-btn" onclick="showSection('audit')" style="display:none;">
-            <span class="nav-icon">📋</span>
-            <span>Registro</span>
-          </button>
-          <button class="nav-btn" onclick="showSection('fallen')">
-            <span class="nav-icon">☠️</span>
-            <span>Fallen Heroes</span>
-          </button>
-          <button class="nav-btn" id="pending-btn" onclick="showSection('pending')" style="display:none;">
-            <span class="nav-icon">⏳</span>
-            <span>Modifiche Pending</span>
-            <span class="pending-badge" id="pending-count">0</span>
-          </button>
-        </nav>
+        <div class="nav-dropdown">
+          <select id="nav-select" onchange="navGo(this.value)">
+            <option value="">— Vai a… —</option>
+          </select>
+        </div>
+
+        <h2 style="margin-top: 1.5rem;">📣📣 Annunci di D&Disastri</h2>
+        <div id="announcements-list">
+          <!-- Populated by JS -->
+        </div>
+
+        <h2 style="margin-top: 1.5rem;">Campagne aperte</h2>
+        <div id="open-campaigns" class="cards-grid">
+          <!-- Populated by JS -->
+        </div>
       </div>
     </section>
 
@@ -1093,6 +1059,6 @@
   </div>
 
   <!-- Firebase SDK (modular) -->
-  <script type="module" src="app.js?v=16"></script>
+  <script type="module" src="app.js?v=17"></script>
 </body>
 </html>
