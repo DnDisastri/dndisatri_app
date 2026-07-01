@@ -6,7 +6,8 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  updateProfile
+  updateProfile,
+  sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { 
   getFirestore,
@@ -837,6 +838,26 @@ window.handleLogin = async function(event) {
     }
     
     showError('login-error', errorMessage);
+  }
+};
+
+window.handleForgotPassword = async function() {
+  const prefill = document.getElementById('login-email').value.trim();
+  const email = (prompt('Inserisci la tua email: ti invieremo un link per reimpostare la password.', prefill) || '').trim();
+  if (!email) return;
+  try {
+    showLoading();
+    await sendPasswordResetEmail(auth, email);
+    hideLoading();
+    alert('Email di reset inviata! Controlla la posta (anche lo spam) e segui il link.');
+  } catch (error) {
+    hideLoading();
+    let msg = 'Errore nell\'invio dell\'email di reset';
+    if (error.code === 'auth/invalid-email') msg = 'Email non valida';
+    else if (error.code === 'auth/user-not-found') msg = 'Nessun account registrato con questa email';
+    else if (error.code === 'auth/too-many-requests') msg = 'Troppi tentativi. Riprova più tardi';
+    console.error('Errore reset password:', error);
+    alert(msg);
   }
 };
 
