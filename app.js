@@ -1201,6 +1201,10 @@ window.showCharacterDetail = function(charId) {
   const itemEffectRequestButton = (char.userId === currentUser.uid && !char.isDead) ?
     `<button onclick="requestItemEffect('${char.id}')" class="btn-info">🔮 Richiedi Oggetto Magico</button>` : '';
 
+  // Players can request loot/rewards (gp + items); needs DM approval
+  const lootButton = (char.userId === currentUser.uid && !char.isDead) ?
+    `<button onclick="requestLoot('${char.id}')" class="btn-info">🎁 Richiedi Bottino</button>` : '';
+
   // DM can directly edit level
   const dmLevelButton = currentUserRole === 'dm' ?
     `<button onclick="dmEditLevel('${char.id}')" class="btn-warning">⬆️ Modifica Livello</button>` : '';
@@ -1377,6 +1381,7 @@ window.showCharacterDetail = function(charId) {
       ${editButton}
       ${levelUpButton}
       ${itemEffectRequestButton}
+      ${lootButton}
       ${dmLevelButton}
       ${dmGrantButtons}
       ${killButton}
@@ -1916,6 +1921,55 @@ window.requestItemEffect = async function(charId) {
   }
 };
 
+// === RICHIESTA BOTTINO / RICOMPENSA (PLAYER → APPROVAZIONE DM) ===
+window.requestLoot = async function(charId) {
+  const char = currentCharacters.find(c => c.id === charId);
+  if (!char) return;
+  if (char.userId !== currentUser.uid) {
+    alert('Puoi richiedere bottino solo per i tuoi personaggi!');
+    return;
+  }
+
+  const gp = parseInt(prompt('Oro guadagnato (gp):', '0')) || 0;
+  const items = [];
+  while (true) {
+    const name = prompt('Nome oggetto da aggiungere (lascia vuoto per finire):', '');
+    if (!name || !name.trim()) break;
+    const qty = parseInt(prompt(`Quantità di ${name.trim()}:`, '1')) || 1;
+    const value = parseInt(prompt(`Valore unitario in gp di ${name.trim()} (0 se ignoto):`, '0')) || 0;
+    items.push({ name: name.trim(), qty, value, category: 'Bottino' });
+  }
+
+  if (gp <= 0 && items.length === 0) { alert('Niente da richiedere.'); return; }
+
+  const parts = [];
+  if (gp > 0) parts.push(`${gp} gp`);
+  items.forEach(it => parts.push(`${it.qty}× ${it.name}`));
+
+  try {
+    showLoading();
+    await addDoc(collection(db, 'pending_changes'), {
+      type: 'loot',
+      characterId: charId,
+      characterName: char.name,
+      requestedBy: currentUser.uid,
+      requestedByName: currentUsername,
+      summary: `Bottino: ${parts.join(', ')}`,
+      grantGp: gp,
+      grantItems: items,
+      status: 'pending',
+      createdAt: serverTimestamp()
+    });
+    hideLoading();
+    hideCharacterDetail();
+    alert('Richiesta bottino inviata! Il DM la esaminerà presto.');
+  } catch (error) {
+    hideLoading();
+    console.error('Errore richiesta bottino:', error);
+    alert('Errore nell\'invio della richiesta');
+  }
+};
+
 // === STRUMENTI DM: EFFETTI DA OGGETTI MAGICI SULLE CARATTERISTICHE ===
 window.dmAddItemEffect = async function(charId) {
   if (currentUserRole !== 'dm') { alert('Solo i DM possono gestire gli oggetti magici!'); return; }
@@ -2053,6 +2107,7 @@ function renderPendingChanges() {
     
     const typeLabel = change.type === 'level_up' ? '⬆️ Passaggio di Livello'
       : change.type === 'item_effect' ? '🔮 Oggetto Magico'
+      : change.type === 'loot' ? '🎁 Bottino'
       : 'Modifica Personaggio';
     return `
       <div class="card pending-card" onclick="showPendingDetail('${change.id}')">
@@ -2143,6 +2198,21 @@ window.showPendingDetail = function(changeId) {
     }
   }
 
+  // Bottino / ricompensa
+  if (change.type === 'loot') {
+    const parts = [];
+    if (change.grantGp) parts.push(`${change.grantGp} gp`);
+    (change.grantItems || []).forEach(it => parts.push(`${it.qty}× ${it.name}${it.value ? ` (${it.value} gp)` : ''}`));
+    if (parts.length) {
+      diffHtml += `
+        <div class="change-diff">
+          <strong>Bottino da aggiungere:</strong><br>
+          ${parts.map(p => `<span class="new-value">+ ${p}</span>`).join('<br>')}
+        </div>
+      `;
+    }
+  }
+
   // Stats comparison
   if (old.stats && newData.stats) {
     const statNames = { str: 'FOR', dex: 'DES', con: 'COS', int: 'INT', wis: 'SAG', cha: 'CAR' };
@@ -2204,7 +2274,7 @@ window.showPendingDetail = function(changeId) {
   }
   
   const modalContent = `
-    <h3>${change.type === 'level_up' ? '⬆️ Passaggio di Livello' : change.type === 'item_effect' ? '🔮 Oggetto Magico' : 'Richiesta Modifica'}: ${change.characterName}</h3>
+    <h3>${change.type === 'level_up' ? '⬆️ Passaggio di Livello' : change.type === 'item_effect' ? '🔮 Oggetto Magico' : change.type === 'loot' ? '🎁 Bottino' : 'Richiesta Modifica'}: ${change.characterName}</h3>
     <p><strong>Richiesta da:</strong> ${change.requestedByName}</p>
     ${change.summary ? `<p><em>${change.summary}</em></p>` : ''}
 
@@ -2234,11 +2304,20 @@ window.approvePendingChange = async function(changeId) {
   
   try {
     showLoading();
-    
+
     // Update character
     const charRef = doc(db, 'characters', change.characterId);
-    await updateDoc(charRef, change.newData);
-    
+    if (change.type === 'loot') {
+      // Applica i delta sul valore aggiornato (evita di sovrascrivere cambi nel frattempo)
+      const snap = await getDoc(charRef);
+      const cur = snap.exists() ? snap.data() : {};
+      let items = cur.items || [];
+      (change.grantItems || []).forEach(it => { items = addItemToList(items, it); });
+      await updateDoc(charRef, { gp: (cur.gp || 0) + (change.grantGp || 0), items });
+    } else {
+      await updateDoc(charRef, change.newData);
+    }
+
     // Update pending change status
     const pendingRef = doc(db, 'pending_changes', changeId);
     await updateDoc(pendingRef, {
