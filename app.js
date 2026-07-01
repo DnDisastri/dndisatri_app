@@ -55,6 +55,7 @@ let fallenHeroes = [];
 let pendingChanges = [];
 let hasActiveCharacter = false;
 let guildCharacters = [];
+let guildUsers = {};
 let levelUpCtx = null;
 let currentUserPhoto = '';
 let marketItems = [];
@@ -1292,11 +1293,11 @@ window.showCharacterDetail = function(charId) {
       ` : ''}
 
       <h4 style="margin-top: 1.5rem;">Borsa</h4>
-      <p><strong>Oro:</strong> ${char.gp || 0} gp
-        ${currentUserRole === 'dm' ? `<button onclick="dmGrantGold('${char.id}')" class="btn-warning" style="padding: 0.1rem 0.5rem; margin-left: 0.5rem;">± gp</button>` : ''}
+      <p><strong>Oro:</strong> 🪙 ${char.gp || 0} Oro
+        ${currentUserRole === 'dm' ? `<button onclick="dmGrantGold('${char.id}')" class="btn-warning" style="padding: 0.1rem 0.5rem; margin-left: 0.5rem;">± Oro</button>` : ''}
       </p>
       ${(char.items && char.items.length > 0)
-        ? char.items.map(it => `<p>• ${it.qty}× ${it.name}${it.value ? ` <span style="color: var(--gray);">(${it.value} gp)</span>` : ''}${it.details ? `<br><span style="color: var(--gray); font-size: 0.9rem; margin-left: 1rem;">${it.details}</span>` : ''}</p>`).join('')
+        ? char.items.map(it => `<p>• ${it.qty}× ${it.name}${it.value ? ` <span style="color: var(--gray);">(${it.value} Oro)</span>` : ''}${it.details ? `<br><span style="color: var(--gray); font-size: 0.9rem; margin-left: 1rem;">${it.details}</span>` : ''}</p>`).join('')
         : '<p style="color: var(--gray);">Inventario oggetti vuoto.</p>'}
 
       ${char.weapons && char.weapons.length > 0 ? `
@@ -2454,8 +2455,8 @@ function renderQuests() {
     listEl.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">📜</div>
-        <p>Nessuna quest disponibile.</p>
-        ${currentUserRole === 'dm' ? '<p>Inizia creando la tua prima quest!</p>' : '<p>Il Dungeon Master creerà presto delle quest!</p>'}
+        <p>Nessuna campagna disponibile.</p>
+        ${currentUserRole === 'dm' ? '<p>Inizia creando la tua prima campagna!</p>' : '<p>Il Dungeon Master creerà presto delle campagne!</p>'}
       </div>
     `;
     return;
@@ -2481,7 +2482,7 @@ function renderQuests() {
 
 window.showAddQuest = function() {
   if (currentUserRole !== 'dm') {
-    alert('Solo i Dungeon Master possono creare quest!');
+    alert('Solo i Dungeon Master possono creare campagne!');
     return;
   }
   
@@ -2800,8 +2801,8 @@ function renderArchivedQuests(quests) {
     listEl.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">📦</div>
-        <p>Nessuna quest archiviata.</p>
-        <p>Le quest completate o chiuse appariranno qui.</p>
+        <p>Nessuna campagna archiviata.</p>
+        <p>Le campagne completate o chiuse appariranno qui.</p>
       </div>
     `;
     return;
@@ -2971,6 +2972,7 @@ async function loadGuild() {
 
     const usersById = {};
     usersSnap.forEach(d => { usersById[d.id] = d.data(); });
+    guildUsers = usersById;
 
     guildCharacters = [];
     const roster = [];
@@ -3029,6 +3031,8 @@ window.showGuildCharacter = function(charId) {
   const stats = effectiveStats(char);
   const combat = char.combat || {};
   const statNames = STAT_LABELS;
+  const owner = guildUsers[char.userId] || {};
+  const playerName = owner.username || 'Sconosciuto';
 
   const statsGrid = Object.entries(statNames).map(([key, label]) => {
     const val = stats[key] || 10;
@@ -3044,6 +3048,7 @@ window.showGuildCharacter = function(charId) {
   document.getElementById('character-detail-content').innerHTML = `
     <h3>${char.name}</h3>
     <div class="character-info">
+      <p><strong>Giocatore/Giocatrice:</strong> ${playerName}</p>
       <p><strong>Classe:</strong> ${char.class}${char.subclass ? ` (${char.subclass})` : ''}</p>
       <p><strong>Livello:</strong> ${char.level || 1}</p>
       <p><strong>Razza:</strong> ${char.race}</p>
@@ -3265,12 +3270,12 @@ function renderMarket(myChar, listings, trades) {
           return `
             <div class="market-row">
               <div style="flex:1; min-width: 60%;">
-                <strong>${i.name}</strong> — ${i.price} gp <span style="color: var(--gray);">· scorte: ${stockLabel}</span>
+                <strong>${i.name}</strong> — ${i.price} Oro <span style="color: var(--gray);">· scorte: ${stockLabel}</span>
                 ${i.details ? `<br><span style="color: var(--gray); font-size: 0.9rem;">${i.details}</span>` : ''}
               </div>
               <div>
                 ${soldout ? '<span class="card-status status-dead">Esaurito</span>'
-                  : (myChar ? `<button class="btn-success" onclick="buyMarketItem('${i.id}')">Compra</button>` : '')}
+                  : (myChar ? `<button class="btn-success" onclick="buyMarketItem('${i.id}')">🪙 Compra</button>` : '')}
                 ${currentUserRole === 'dm' ? `<button class="btn-warning" onclick="dmEditMarketItem('${i.id}')">✏️</button><button class="btn-danger" onclick="dmDeleteMarketItem('${i.id}')">✕</button>` : ''}
               </div>
             </div>
@@ -3284,10 +3289,10 @@ function renderMarket(myChar, listings, trades) {
         const mine = l.sellerId === currentUser.uid;
         return `
           <div class="market-row">
-            <div><strong>${l.qty}× ${l.name}</strong> — ${l.price} gp <span style="color: var(--gray);">· da ${l.sellerName}</span></div>
+            <div><strong>${l.qty}× ${l.name}</strong> — ${l.price} Oro <span style="color: var(--gray);">· da ${l.sellerName}</span></div>
             <div>
               ${mine || currentUserRole === 'dm' ? `<button class="btn-warning" onclick="cancelListing('${l.id}')">Ritira</button>` : ''}
-              ${!mine && myChar ? `<button class="btn-success" onclick="buyListing('${l.id}')">Compra</button>` : ''}
+              ${!mine && myChar ? `<button class="btn-success" onclick="buyListing('${l.id}')">🪙 Compra</button>` : ''}
             </div>
           </div>
         `;
@@ -3321,7 +3326,7 @@ function renderMarket(myChar, listings, trades) {
 
   el.innerHTML = `
     <div class="profile-box" style="margin-bottom:1rem;">
-      <p><strong>Il tuo oro:</strong> ${gp} gp ${myChar ? `(${myChar.name})` : '(nessun personaggio attivo)'}</p>
+      <p><strong>Il tuo oro:</strong> 🪙 ${gp} Oro ${myChar ? `(${myChar.name})` : '(nessun personaggio attivo)'}</p>
       ${myChar ? `<div class="character-actions"><button class="btn-info" onclick="sellItem()">🏷️ Vendi un Oggetto</button><button class="btn-info" onclick="openTradeForm()">🔄 Proponi Scambio</button></div>` : ''}
     </div>
     ${dmControls}
@@ -3339,7 +3344,7 @@ window.buyMarketItem = async function(itemId) {
   if (!item) return;
   const myChar = await fetchMyCharacter();
   if (!myChar) { alert('Devi avere un personaggio attivo per comprare.'); return; }
-  const qty = parseInt(prompt(`Quante unità di "${item.name}"? (${item.price} gp l'una)`, '1'));
+  const qty = parseInt(prompt(`Quante unità di "${item.name}"? (${item.price} Oro l'una)`, '1'));
   if (isNaN(qty) || qty < 1) return;
   const cost = item.price * qty;
   const gp = myChar.gp || 0;

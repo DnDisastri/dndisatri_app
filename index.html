@@ -120,11 +120,11 @@
           </button>
           <button class="nav-btn" onclick="showSection('quests')">
             <span class="nav-icon">📜</span>
-            <span>Quest Attive</span>
+            <span>Campagne</span>
           </button>
           <button class="nav-btn" onclick="showSection('archive')">
             <span class="nav-icon">📦</span>
-            <span>Archivio Quest</span>
+            <span>Archivio Campagne</span>
           </button>
           <button class="nav-btn" onclick="showSection('guild')">
             <span class="nav-icon">🛡️</span>
@@ -865,7 +865,7 @@
       <div class="container">
         <div class="section-header">
           <button class="back-btn" onclick="showSection('dashboard')">← Indietro</button>
-          <h2>Quest</h2>
+          <h2>Campagne</h2>
           <button class="add-btn" onclick="showAddQuest()">+ Nuova</button>
         </div>
 
@@ -876,7 +876,7 @@
         <!-- Add Quest Form -->
         <div id="add-quest-form" class="modal hidden">
           <div class="modal-content large-modal">
-            <h3>Crea Nuova Quest</h3>
+            <h3>Crea Nuova Campagna</h3>
             <form onsubmit="handleAddQuest(event)">
               <input type="text" id="quest-title" placeholder="Titolo" required />
               <input type="text" id="quest-giver" placeholder="Affidata da (personaggio che assegna la quest)" />
@@ -918,11 +918,11 @@
       <div class="container">
         <div class="section-header">
           <button class="back-btn" onclick="showSection('dashboard')">← Indietro</button>
-          <h2>📦 Archivio Quest</h2>
+          <h2>📦 Archivio Campagne</h2>
         </div>
 
         <p class="memorial-text">
-          Quest completate e chiuse della campagna
+          Campagne completate e chiuse
         </p>
 
         <div id="archive-list" class="cards-grid">
@@ -1069,6 +1069,6 @@
   </div>
 
   <!-- Firebase SDK (modular) -->
-  <script type="module" src="app.js?v=12"></script>
+  <script type="module" src="app.js?v=13"></script>
 </body>
 </html>
