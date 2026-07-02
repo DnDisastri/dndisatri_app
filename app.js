@@ -239,6 +239,35 @@ function casterType(cls, subclass) {
   return c.caster;
 }
 
+// Livello a cui una classe sceglie la sottoclasse (1 = Chierico/Stregone/Warlock, 2 = Druido/Mago, 3 = resto)
+function subclassLevel(cls) {
+  if (['Chierico', 'Stregone', 'Warlock'].includes(cls)) return 1;
+  if (['Druido', 'Mago'].includes(cls)) return 2;
+  return 3;
+}
+
+// Liste incantesimi per classe (fatti di gioco), limitate alla libreria interna
+const CLASS_SPELL_LIST = {
+  'Mago': ['Dardo di Fuoco', 'Mano Magica', 'Luce', 'Prestidigitazione', 'Illusione Minore', 'Raggio di Gelo', 'Tocco Gelido', 'Dardo Incantato', 'Scudo', 'Armatura Magica', 'Mani Brucianti', 'Charme su Persone', 'Sonno', 'Individuazione del Magico', 'Nube di Nebbia', 'Raggio Rovente', 'Passo Velato', 'Invisibilità', 'Immagine Speculare', 'Blocca Persone', 'Frantumare', 'Palla di Fuoco', 'Fulmine', 'Controincantesimo', 'Dissolvi Magie', 'Volare', 'Porta Dimensionale', 'Polimorfia', 'Cono di Freddo', 'Muro di Forza'],
+  'Chierico': ['Fiamma Sacra', 'Luce', 'Taumaturgia', 'Guida', 'Cura Ferite', 'Parola Guaritrice', 'Benedizione', 'Comando', 'Individuazione del Magico', 'Ristorare Inferiore', 'Rivitalizzare', 'Dissolvi Magie', 'Rianimare Morti'],
+  'Stregone': ['Dardo di Fuoco', 'Mano Magica', 'Luce', 'Prestidigitazione', 'Raggio di Gelo', 'Dardo Incantato', 'Scudo', 'Armatura Magica', 'Mani Brucianti', 'Charme su Persone', 'Sonno', 'Nube di Nebbia', 'Passo Velato', 'Invisibilità', 'Immagine Speculare', 'Frantumare', 'Palla di Fuoco', 'Fulmine', 'Controincantesimo', 'Volare', 'Polimorfia', 'Cono di Freddo'],
+  'Bardo': ['Mano Magica', 'Luce', 'Prestidigitazione', 'Illusione Minore', 'Cura Ferite', 'Parola Guaritrice', 'Charme su Persone', 'Sonno', 'Comando', 'Invisibilità', 'Immagine Speculare', 'Blocca Persone', 'Dissolvi Magie', 'Polimorfia'],
+  'Druido': ['Guida', 'Luce', 'Cura Ferite', 'Individuazione del Magico', 'Nube di Nebbia', 'Frantumare', 'Volare', 'Dissolvi Magie', 'Cono di Freddo'],
+  'Warlock': ['Tocco Gelido', 'Mano Magica', 'Illusione Minore', 'Charme su Persone', 'Passo Velato', 'Invisibilità', 'Blocca Persone', 'Controincantesimo', 'Dissolvi Magie', 'Volare', 'Polimorfia'],
+  'Paladino': ['Cura Ferite', 'Benedizione', 'Comando', 'Individuazione del Magico'],
+  'Ranger': ['Cura Ferite', 'Nube di Nebbia', 'Individuazione del Magico']
+};
+
+function renderClassSpellList() {
+  const el = document.getElementById('class-spell-list');
+  if (!el) return;
+  const cls = document.getElementById('char-class').value;
+  const list = CLASS_SPELL_LIST[cls];
+  if (!list || !list.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="choice-info"><strong>Incantesimi di ${cls}</strong> — tocca per la descrizione, poi scrivi sopra quelli che il tuo personaggio conosce.</div>` +
+    '<div>' + list.map(n => `<span class="spell-chip" onclick="openSpellInfo('${encodeURIComponent(n)}')">${n}</span>`).join(' ') + '</div>';
+}
+
 // Tabelle slot: [slot liv.1, liv.2, ...] indicizzate per livello del personaggio
 const FULL_CASTER_SLOTS = {
   1: [2], 2: [3], 3: [4, 2], 4: [4, 3], 5: [4, 3, 2], 6: [4, 3, 3], 7: [4, 3, 3, 1], 8: [4, 3, 3, 2],
@@ -326,6 +355,7 @@ function applyClassToCreation() {
   renderPointBuy();
   renderEquipChoices();
   recomputeSkillAvailability();
+  renderClassSpellList();
 }
 
 // === SPECIE (bonus di caratteristica = fatti; tratti = sintesi originali) ===
@@ -1795,6 +1825,7 @@ window.showAddCharacter = function() {
   populateBackgroundSelect('');
   document.getElementById('background-info').innerHTML = '';
   document.getElementById('equip-choices').innerHTML = '';
+  document.getElementById('class-spell-list').innerHTML = '';
   // Riabilita i tiri salvezza (verranno bloccati alla scelta della classe)
   ['str', 'dex', 'con', 'int', 'wis', 'cha'].forEach(a => {
     const cb = document.getElementById('save-' + a);
@@ -2551,6 +2582,15 @@ window.showLevelUpRequest = function(charId) {
     </div>
   ` : '';
 
+  const subs = (CLASSES[char.class] && CLASSES[char.class].subclasses) || [];
+  const needsSubclass = newLevel === subclassLevel(char.class) && !char.subclass && subs.length > 0;
+  const subclassBlock = needsSubclass ? `
+    <div class="form-section">
+      <h4>Sottoclasse (livello ${newLevel})</h4>
+      <p style="color: var(--gray);">A questo livello scegli la tua sottoclasse.</p>
+      <select id="levelup-subclass">${subs.map(s => `<option value="${s}">${s}</option>`).join('')}</select>
+    </div>` : '';
+
   document.getElementById('levelup-content').innerHTML = `
     <h3>⬆️ Richiesta Passaggio di Livello</h3>
     <p><strong>${char.name}</strong>: livello ${currentLevel} → <strong>${newLevel}</strong></p>
@@ -2564,6 +2604,7 @@ window.showLevelUpRequest = function(charId) {
       <p style="margin-top: 0.5rem;">PF guadagnati (media + COS): <strong id="hp-gain-preview"></strong></p>
     </div>
 
+    ${subclassBlock}
     ${asiBlock}
 
     <div class="modal-buttons">
@@ -2660,6 +2701,13 @@ window.submitLevelUpRequest = async function(charId) {
     combat: combat,
     feats: feats
   };
+
+  // Scelta sottoclasse al livello corretto
+  const subclassSel = document.getElementById('levelup-subclass');
+  if (subclassSel && subclassSel.value) {
+    newData.subclass = subclassSel.value;
+    summary += ` Sottoclasse: ${subclassSel.value}.`;
+  }
 
   try {
     showLoading();
