@@ -173,7 +173,7 @@ function effectiveAC(char) {
 }
 
 window.equipItem = async function(charId, slot) {
-  const char = currentCharacters.find(c => c.id === charId);
+  const char = findChar(charId);
   if (!char) return;
   if (char.userId !== currentUser.uid && currentUserRole !== 'dm') { alert('Puoi equipaggiare solo i tuoi personaggi.'); return; }
   const items = char.items || [];
@@ -199,7 +199,7 @@ window.equipItem = async function(charId, slot) {
 };
 
 window.unequipItem = async function(charId, slot) {
-  const char = currentCharacters.find(c => c.id === charId);
+  const char = findChar(charId);
   if (!char) return;
   if (char.userId !== currentUser.uid && currentUserRole !== 'dm') return;
   const equipped = Object.assign({}, char.equipped || {});
@@ -324,6 +324,8 @@ function applyClassToCreation() {
       <strong>Equipaggiamento iniziale:</strong> ${c.equip}`;
   }
   renderPointBuy();
+  renderEquipChoices();
+  recomputeSkillAvailability();
 }
 
 // === SPECIE (bonus di caratteristica = fatti; tratti = sintesi originali) ===
@@ -493,14 +495,108 @@ window.onBackgroundChange = function() {
       <strong>Oro iniziale:</strong> ${bg.gp} Oro<br>
       <strong>Equipaggiamento:</strong> ${bg.equip}`;
   }
+  recomputeSkillAvailability();
 };
+
+// === SCELTE ABILITÀ (limite di classe; background bloccate) ===
+function recomputeSkillAvailability() {
+  const cls = CLASSES[document.getElementById('char-class').value];
+  const bg = BACKGROUNDS[document.getElementById('char-background').value];
+  const allKeys = Object.keys(SKILLS_MAP);
+  const classFrom = cls ? (cls.skills.from === 'any' ? allKeys : cls.skills.from) : [];
+  const bgSkills = bg ? bg.skills : [];
+  allKeys.forEach(k => {
+    const cb = document.getElementById('skill-' + k + '-prof');
+    if (!cb) return;
+    if (bgSkills.includes(k)) { cb.checked = true; cb.disabled = true; cb.onchange = null; }
+    else if (classFrom.includes(k)) { cb.disabled = false; cb.onchange = enforceClassSkillLimit; }
+    else { cb.checked = false; cb.disabled = true; cb.onchange = null; }
+  });
+  enforceClassSkillLimit();
+}
+
+function enforceClassSkillLimit() {
+  const cls = CLASSES[document.getElementById('char-class').value];
+  const counter = document.getElementById('skill-counter');
+  if (!cls) { if (counter) counter.innerHTML = 'Scegli prima una classe per selezionare le abilità.'; return; }
+  const bg = BACKGROUNDS[document.getElementById('char-background').value];
+  const bgSkills = bg ? bg.skills : [];
+  const allKeys = Object.keys(SKILLS_MAP);
+  const from = cls.skills.from === 'any' ? allKeys : cls.skills.from;
+  const choosable = from.filter(k => !bgSkills.includes(k));
+  const chosen = choosable.filter(k => { const cb = document.getElementById('skill-' + k + '-prof'); return cb && cb.checked; });
+  choosable.forEach(k => {
+    const cb = document.getElementById('skill-' + k + '-prof');
+    if (cb) cb.disabled = (!cb.checked && chosen.length >= cls.skills.count);
+  });
+  if (counter) counter.innerHTML = `Abilità di classe: <strong>${chosen.length} / ${cls.skills.count}</strong>` +
+    (bgSkills.length ? ` · dal background (bloccate): ${bgSkills.map(s => SKILLS_ITALIAN[s]).join(', ')}` : '');
+}
+
+// === SCELTE EQUIPAGGIAMENTO INIZIALE (liste di oggetti = fatti) ===
+const CLASS_EQUIP = {
+  'Barbaro': { fixed: [], choices: [
+    { label: 'Arma principale', options: [{ label: 'Ascia Bipenne', items: [{ name: 'Ascia Bipenne', category: 'Armi' }] }, { label: 'Arma da guerra (Spada Lunga)', items: [{ name: 'Spada Lunga', category: 'Armi' }] }] },
+    { label: 'Armi secondarie', options: [{ label: 'Due Asce da Battaglia', items: [{ name: 'Ascia da Battaglia', category: 'Armi', qty: 2 }] }, { label: 'Arma semplice (Lancia)', items: [{ name: 'Lancia', category: 'Armi' }] }] }
+  ] },
+  'Bardo': { fixed: [{ name: 'Armatura di Cuoio', category: 'Armature' }, { name: 'Pugnale', category: 'Armi' }, { name: 'Strumento Musicale', category: 'Kit e Strumenti' }], choices: [
+    { label: 'Arma', options: [{ label: 'Stocco (Spada Corta)', items: [{ name: 'Spada Corta', category: 'Armi' }] }, { label: 'Spada Lunga', items: [{ name: 'Spada Lunga', category: 'Armi' }] }] }
+  ] },
+  'Chierico': { fixed: [{ name: 'Scudo', category: 'Armature' }, { name: 'Simbolo Sacro', category: 'Varie' }], choices: [
+    { label: 'Arma', options: [{ label: 'Mazza', items: [{ name: 'Mazza', category: 'Armi' }] }, { label: 'Martello da Guerra', items: [{ name: 'Martello da Guerra', category: 'Armi' }] }] },
+    { label: 'Armatura', options: [{ label: 'Corazza di Scaglie', items: [{ name: 'Corazza di Scaglie', category: 'Armature' }] }, { label: 'Armatura di Cuoio', items: [{ name: 'Armatura di Cuoio', category: 'Armature' }] }] },
+    { label: 'A distanza', options: [{ label: 'Balestra Leggera', items: [{ name: 'Balestra Leggera', category: 'Armi' }] }, { label: 'Arma semplice (Mazza)', items: [{ name: 'Mazza', category: 'Armi' }] }] }
+  ] },
+  'Druido': { fixed: [{ name: 'Armatura di Cuoio', category: 'Armature' }, { name: 'Kit da Erborista', category: 'Kit e Strumenti' }], choices: [
+    { label: 'Scudo o arma', options: [{ label: 'Scudo di legno (Scudo)', items: [{ name: 'Scudo', category: 'Armature' }] }, { label: 'Arma semplice (Lancia)', items: [{ name: 'Lancia', category: 'Armi' }] }] },
+    { label: 'Arma da mischia', options: [{ label: 'Lancia', items: [{ name: 'Lancia', category: 'Armi' }] }, { label: 'Mazza', items: [{ name: 'Mazza', category: 'Armi' }] }] }
+  ] },
+  'Guerriero': { fixed: [], choices: [
+    { label: 'Armatura', options: [{ label: 'Cotta di Maglia', items: [{ name: 'Cotta di Maglia', category: 'Armature' }] }, { label: 'Cuoio + Arco Lungo', items: [{ name: 'Armatura di Cuoio', category: 'Armature' }, { name: 'Arco Lungo', category: 'Armi' }] }] },
+    { label: 'Arma principale', options: [{ label: 'Arma da guerra + Scudo', items: [{ name: 'Spada Lunga', category: 'Armi' }, { name: 'Scudo', category: 'Armature' }] }, { label: 'Due armi da guerra', items: [{ name: 'Spada Lunga', category: 'Armi' }, { name: 'Ascia da Battaglia', category: 'Armi' }] }] },
+    { label: 'A distanza', options: [{ label: 'Balestra Leggera', items: [{ name: 'Balestra Leggera', category: 'Armi' }] }, { label: 'Due Asce da Battaglia', items: [{ name: 'Ascia da Battaglia', category: 'Armi', qty: 2 }] }] }
+  ] },
+  'Ladro': { fixed: [{ name: 'Armatura di Cuoio', category: 'Armature' }, { name: 'Pugnale', category: 'Armi', qty: 2 }, { name: 'Arnesi da Scasso', category: 'Kit e Strumenti' }], choices: [
+    { label: 'Arma principale', options: [{ label: 'Stocco (Spada Corta)', items: [{ name: 'Spada Corta', category: 'Armi' }] }, { label: 'Spada Corta', items: [{ name: 'Spada Corta', category: 'Armi' }] }] },
+    { label: 'A distanza', options: [{ label: 'Arco Corto', items: [{ name: 'Arco Corto', category: 'Armi' }] }, { label: 'Spada Corta', items: [{ name: 'Spada Corta', category: 'Armi' }] }] }
+  ] },
+  'Mago': { fixed: [{ name: 'Libro degli Incantesimi', category: 'Varie' }, { name: 'Focus Arcano', category: 'Varie' }], choices: [
+    { label: 'Arma', options: [{ label: 'Bastone Ferrato (Pugnale)', items: [{ name: 'Pugnale', category: 'Armi' }] }, { label: 'Pugnale', items: [{ name: 'Pugnale', category: 'Armi' }] }] }
+  ] },
+  'Monaco': { fixed: [], choices: [
+    { label: 'Arma', options: [{ label: 'Spada Corta', items: [{ name: 'Spada Corta', category: 'Armi' }] }, { label: 'Arma semplice (Lancia)', items: [{ name: 'Lancia', category: 'Armi' }] }] }
+  ] },
+  'Paladino': { fixed: [{ name: 'Cotta di Maglia', category: 'Armature' }, { name: 'Simbolo Sacro', category: 'Varie' }], choices: [
+    { label: 'Arma principale', options: [{ label: 'Arma da guerra + Scudo', items: [{ name: 'Spada Lunga', category: 'Armi' }, { name: 'Scudo', category: 'Armature' }] }, { label: 'Due armi da guerra', items: [{ name: 'Spada Lunga', category: 'Armi' }, { name: 'Ascia da Battaglia', category: 'Armi' }] }] },
+    { label: 'Secondaria', options: [{ label: 'Giavellotti (Lancia)', items: [{ name: 'Lancia', category: 'Armi' }] }, { label: 'Arma da mischia semplice (Mazza)', items: [{ name: 'Mazza', category: 'Armi' }] }] }
+  ] },
+  'Ranger': { fixed: [{ name: 'Arco Lungo', category: 'Armi' }], choices: [
+    { label: 'Armatura', options: [{ label: 'Corazza di Scaglie', items: [{ name: 'Corazza di Scaglie', category: 'Armature' }] }, { label: 'Armatura di Cuoio', items: [{ name: 'Armatura di Cuoio', category: 'Armature' }] }] },
+    { label: 'Armi da mischia', options: [{ label: 'Due Spade Corte', items: [{ name: 'Spada Corta', category: 'Armi', qty: 2 }] }, { label: 'Due Lance', items: [{ name: 'Lancia', category: 'Armi', qty: 2 }] }] }
+  ] },
+  'Stregone': { fixed: [{ name: 'Focus Arcano', category: 'Varie' }, { name: 'Pugnale', category: 'Armi', qty: 2 }], choices: [
+    { label: 'Arma', options: [{ label: 'Balestra Leggera', items: [{ name: 'Balestra Leggera', category: 'Armi' }] }, { label: 'Arma semplice (Mazza)', items: [{ name: 'Mazza', category: 'Armi' }] }] }
+  ] },
+  'Warlock': { fixed: [{ name: 'Armatura di Cuoio', category: 'Armature' }, { name: 'Focus Arcano', category: 'Varie' }, { name: 'Pugnale', category: 'Armi', qty: 2 }], choices: [
+    { label: 'Arma', options: [{ label: 'Balestra Leggera', items: [{ name: 'Balestra Leggera', category: 'Armi' }] }, { label: 'Arma semplice (Mazza)', items: [{ name: 'Mazza', category: 'Armi' }] }] }
+  ] }
+};
+
+function renderEquipChoices() {
+  const el = document.getElementById('equip-choices');
+  if (!el) return;
+  const eq = CLASS_EQUIP[document.getElementById('char-class').value];
+  if (!eq || !(eq.choices || []).length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="choice-info"><strong>Equipaggiamento iniziale — scegli:</strong></div>' +
+    eq.choices.map((g, i) => `<label>${g.label}</label><select id="equip-choice-${i}">${g.options.map((o, j) => `<option value="${j}">${o.label}</option>`).join('')}</select>`).join('');
+}
 
 // === TRACKER SLOT INCANTESIMO ===
 async function persistSlots(charId, used) {
   try {
     showLoading();
     await updateDoc(doc(db, 'characters', charId), { spellSlotsUsed: used });
-    const char = currentCharacters.find(c => c.id === charId);
+    const char = findChar(charId);
     if (char) char.spellSlotsUsed = used;
     hideLoading();
     showCharacterDetail(charId);
@@ -508,7 +604,7 @@ async function persistSlots(charId, used) {
 }
 
 window.useSpellSlot = async function(charId, key) {
-  const char = currentCharacters.find(c => c.id === charId);
+  const char = findChar(charId);
   if (!char) return;
   const info = spellSlotsForCharacter(char);
   if (!info) return;
@@ -522,7 +618,7 @@ window.useSpellSlot = async function(charId, key) {
 };
 
 window.recoverSpellSlot = async function(charId, key) {
-  const char = currentCharacters.find(c => c.id === charId);
+  const char = findChar(charId);
   if (!char) return;
   const used = Object.assign({}, char.spellSlotsUsed || {});
   const usedKey = key === 'pact' ? 'pact' : 'level' + key;
@@ -538,7 +634,7 @@ window.restLong = async function(charId) {
 };
 
 window.restShort = async function(charId) {
-  const char = currentCharacters.find(c => c.id === charId);
+  const char = findChar(charId);
   if (!char) return;
   const used = Object.assign({}, char.spellSlotsUsed || {});
   delete used.pact;
@@ -1698,6 +1794,7 @@ window.showAddCharacter = function() {
   resetPointBuy();
   populateBackgroundSelect('');
   document.getElementById('background-info').innerHTML = '';
+  document.getElementById('equip-choices').innerHTML = '';
   // Riabilita i tiri salvezza (verranno bloccati alla scelta della classe)
   ['str', 'dex', 'con', 'int', 'wis', 'cha'].forEach(a => {
     const cb = document.getElementById('save-' + a);
@@ -1747,7 +1844,8 @@ window.showAddCharacter = function() {
   
   // Reset skills
   resetSkillsForm('skill');
-  
+  recomputeSkillAvailability();
+
   showElement('add-character-form');
 };
 
@@ -1864,7 +1962,7 @@ window.handleAddCharacter = async function(event) {
   if (bg) characterData.gp = bg.gp || 0;
 
   let startItems = [];
-  (CLASS_START[clsName] || []).concat(BG_START[bgName] || []).forEach(it => {
+  const pushItem = it => {
     const m = DEFAULT_MARKET.find(d => d.name === it.name);
     startItems = addItemToList(startItems, {
       name: it.name,
@@ -1873,7 +1971,19 @@ window.handleAddCharacter = async function(event) {
       category: it.category || (m ? m.category : ''),
       details: m ? m.details : (it.details || '')
     });
-  });
+  };
+  const eqDef = CLASS_EQUIP[clsName];
+  if (eqDef) {
+    (eqDef.fixed || []).forEach(pushItem);
+    (eqDef.choices || []).forEach((g, i) => {
+      const sel = document.getElementById('equip-choice-' + i);
+      const j = sel ? parseInt(sel.value) : 0;
+      ((g.options[j] || g.options[0]).items || []).forEach(pushItem);
+    });
+  } else {
+    (CLASS_START[clsName] || []).forEach(pushItem);
+  }
+  (BG_START[bgName] || []).forEach(pushItem);
   characterData.items = startItems;
 
   const armorItem = startItems.find(i => ARMOR[i.name]);
@@ -1899,8 +2009,13 @@ window.handleAddCharacter = async function(event) {
   }
 };
 
+// Cerca un personaggio tra i propri e quelli della Gilda (per la vista DM)
+function findChar(id) {
+  return currentCharacters.find(c => c.id === id) || guildCharacters.find(c => c.id === id);
+}
+
 window.showCharacterDetail = function(charId) {
-  const char = currentCharacters.find(c => c.id === charId);
+  const char = findChar(charId);
   if (!char) return;
 
   const baseStats = char.stats || {};
@@ -2175,7 +2290,7 @@ window.hideCharacterDetail = function() {
 };
 
 window.showEditCharacter = function(charId) {
-  const char = currentCharacters.find(c => c.id === charId);
+  const char = findChar(charId);
   if (!char) return;
   
   hideCharacterDetail();
@@ -2250,7 +2365,7 @@ window.handleEditCharacter = async function(event) {
   if (!currentUser) return;
   
   const charId = document.getElementById('edit-char-id').value;
-  const char = currentCharacters.find(c => c.id === charId);
+  const char = findChar(charId);
   if (!char) return;
   
   const newData = {
@@ -2352,7 +2467,7 @@ window.dmEditLevel = async function(charId) {
     return;
   }
   
-  const char = currentCharacters.find(c => c.id === charId);
+  const char = findChar(charId);
   if (!char) return;
   
   const newLevel = prompt(`Inserisci il nuovo livello per ${char.name}:`, char.level || 1);
@@ -2385,7 +2500,7 @@ window.dmEditLevel = async function(charId) {
 
 // === RICHIESTA PASSAGGIO DI LIVELLO (PLAYER) ===
 window.showLevelUpRequest = function(charId) {
-  const char = currentCharacters.find(c => c.id === charId);
+  const char = findChar(charId);
   if (!char) return;
   if (char.userId !== currentUser.uid) {
     alert('Puoi richiedere il passaggio di livello solo per i tuoi personaggi!');
@@ -2481,7 +2596,7 @@ window.updateHpPreview = function() {
 };
 
 window.submitLevelUpRequest = async function(charId) {
-  const char = currentCharacters.find(c => c.id === charId);
+  const char = findChar(charId);
   if (!char) return;
 
   const currentLevel = char.level || 1;
@@ -2580,7 +2695,7 @@ window.submitLevelUpRequest = async function(charId) {
 // === STRUMENTI DM: ASI EXTRA E TALENTI DIRETTI ===
 window.dmGrantASI = async function(charId) {
   if (currentUserRole !== 'dm') { alert('Solo i DM possono concedere un ASI extra!'); return; }
-  const char = currentCharacters.find(c => c.id === charId);
+  const char = findChar(charId);
   if (!char) return;
 
   const ability = prompt('Quale caratteristica aumentare? (str/dex/con/int/wis/cha)');
@@ -2613,7 +2728,7 @@ window.dmGrantASI = async function(charId) {
 
 window.dmGrantFeat = async function(charId) {
   if (currentUserRole !== 'dm') { alert('Solo i DM possono assegnare talenti!'); return; }
-  const char = currentCharacters.find(c => c.id === charId);
+  const char = findChar(charId);
   if (!char) return;
 
   const name = prompt('Nome del talento:');
@@ -2663,7 +2778,7 @@ function describeItemEffect(e) {
 }
 
 window.requestItemEffect = async function(charId) {
-  const char = currentCharacters.find(c => c.id === charId);
+  const char = findChar(charId);
   if (!char) return;
   if (char.userId !== currentUser.uid) {
     alert('Puoi richiedere oggetti magici solo per i tuoi personaggi!');
@@ -2702,7 +2817,7 @@ window.requestItemEffect = async function(charId) {
 
 // === RICHIESTA BOTTINO / RICOMPENSA (PLAYER → APPROVAZIONE DM) ===
 window.requestLoot = async function(charId) {
-  const char = currentCharacters.find(c => c.id === charId);
+  const char = findChar(charId);
   if (!char) return;
   if (char.userId !== currentUser.uid) {
     alert('Puoi richiedere bottino solo per i tuoi personaggi!');
@@ -2752,7 +2867,7 @@ window.requestLoot = async function(charId) {
 // === STRUMENTI DM: EFFETTI DA OGGETTI MAGICI SULLE CARATTERISTICHE ===
 window.dmAddItemEffect = async function(charId) {
   if (currentUserRole !== 'dm') { alert('Solo i DM possono gestire gli oggetti magici!'); return; }
-  const char = currentCharacters.find(c => c.id === charId);
+  const char = findChar(charId);
   if (!char) return;
 
   const effect = promptItemEffect();
@@ -2778,7 +2893,7 @@ window.dmAddItemEffect = async function(charId) {
 
 window.dmRemoveItemEffect = async function(charId, index) {
   if (currentUserRole !== 'dm') { alert('Solo i DM possono rimuovere gli oggetti magici!'); return; }
-  const char = currentCharacters.find(c => c.id === charId);
+  const char = findChar(charId);
   if (!char || !Array.isArray(char.itemEffects)) return;
 
   const effect = char.itemEffects[index];
@@ -3889,6 +4004,9 @@ window.showGuildCharacter = function(charId) {
   const char = guildCharacters.find(c => c.id === charId);
   if (!char) return;
 
+  // I DM vedono la scheda completa (gestione inclusa) direttamente dalla Gilda
+  if (currentUserRole === 'dm') { showCharacterDetail(charId); return; }
+
   const stats = effectiveStats(char);
   const combat = char.combat || {};
   const statNames = STAT_LABELS;
@@ -4312,7 +4430,7 @@ window.dmDeleteMarketItem = async function(itemId) {
 
 window.dmGrantGold = async function(charId) {
   if (currentUserRole !== 'dm') { alert('Solo i DM!'); return; }
-  const char = currentCharacters.find(c => c.id === charId);
+  const char = findChar(charId);
   if (!char) return;
   const amt = parseInt(prompt(`Oro da aggiungere a ${char.name} (negativo per togliere):`, '100'));
   if (isNaN(amt)) return;
@@ -4932,7 +5050,7 @@ function renumberSpellLevels() {
 
 // === FUNZIONE EXPORT PDF ===
 window.exportToPDF = async function(charId) {
-  const char = currentCharacters.find(c => c.id === charId);
+  const char = findChar(charId);
   if (!char) {
     alert('Personaggio non trovato');
     return;

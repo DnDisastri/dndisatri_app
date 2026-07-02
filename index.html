@@ -157,6 +157,7 @@
                 <label>Classe</label>
                 <select id="char-class" required onchange="onClassChange('char-class','char-subclass')"></select>
                 <div id="class-info" class="choice-info"></div>
+                <div id="equip-choices"></div>
                 <label>Sottoclasse</label>
                 <select id="char-subclass"></select>
                 <label>Specie</label>
@@ -344,9 +345,10 @@
               <div class="form-section">
                 <h4>Abilità (Skills)</h4>
                 <p style="font-size: 0.85rem; color: var(--gray); margin-bottom: 1rem;">
-                  Seleziona le abilità in cui sei competente o esperto. Il bonus di competenza verrà calcolato automaticamente dal livello.
+                  Le abilità concesse dal background sono già spuntate e bloccate; scegli quelle di classe (il resto è disabilitato). L'esperto (doppia competenza) riguarda solo alcune classi.
                 </p>
-                
+                <div id="skill-counter" class="choice-info"></div>
+
                 <div class="skills-section">
                   <div class="skill-category">
                     <h5>💪 Forza</h5>
@@ -1050,6 +1052,6 @@
   </div>
 
   <!-- Firebase SDK (modular) -->
-  <script type="module" src="app.js?v=24"></script>
+  <script type="module" src="app.js?v=25"></script>
 </body>
 </html>
