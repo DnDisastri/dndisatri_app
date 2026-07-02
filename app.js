@@ -123,18 +123,18 @@ function effectiveHpMax(char) {
 
 // === CLASSI E SOTTOCLASSI UFFICIALI (D&D 5e) ===
 const CLASSES = {
-  'Barbaro': { caster: 'none', subclasses: ['Cammino del Berserker', 'Cammino del Totem Guerriero'] },
-  'Bardo': { caster: 'full', subclasses: ['Collegio della Sapienza', 'Collegio del Valore'] },
-  'Chierico': { caster: 'full', subclasses: ['Dominio della Conoscenza', 'Dominio della Vita', 'Dominio della Guerra', 'Dominio della Tempesta', "Dominio dell'Inganno", 'Dominio della Luce', 'Dominio della Natura'] },
-  'Druido': { caster: 'full', subclasses: ['Circolo della Terra', 'Circolo della Luna'] },
-  'Guerriero': { caster: 'none', subclasses: ['Campione', 'Maestro di Battaglia', 'Cavaliere Mistico'] },
-  'Ladro': { caster: 'none', subclasses: ['Ladro', 'Assassino', 'Furfante Arcano'] },
-  'Mago': { caster: 'full', subclasses: ['Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'] },
-  'Monaco': { caster: 'none', subclasses: ['Via della Mano Aperta', "Via dell'Ombra", 'Via dei Quattro Elementi'] },
-  'Paladino': { caster: 'half', subclasses: ['Giuramento di Devozione', 'Giuramento degli Antichi', 'Giuramento di Vendetta'] },
-  'Ranger': { caster: 'half', subclasses: ['Cacciatore', 'Signore delle Bestie'] },
-  'Stregone': { caster: 'full', subclasses: ['Discendenza Draconica', 'Magia Selvaggia'] },
-  'Warlock': { caster: 'pact', subclasses: ["Patrono: l'Immondo", "Patrono: l'Arcifata", 'Patrono: il Grande Antico'] }
+  'Barbaro': { caster: 'none', hitDie: 12, saves: ['str', 'con'], skills: { count: 2, from: ['animalHandling', 'athletics', 'intimidation', 'nature', 'perception', 'survival'] }, recommended: ['str', 'con'], prof: 'Armature leggere e medie, scudi; armi semplici e da guerra.', equip: 'Ascia bipenne (o arma da guerra), due ascie (o arma semplice), pacchetto da esploratore, 4 giavellotti.', subclasses: ['Cammino del Berserker', 'Cammino del Totem Guerriero'] },
+  'Bardo': { caster: 'full', hitDie: 8, saves: ['dex', 'cha'], skills: { count: 3, from: 'any' }, recommended: ['cha', 'dex'], prof: 'Armature leggere; armi semplici, balestre a mano, spade lunghe, stocchi, spade corte; tre strumenti musicali a scelta.', equip: 'Stocco (o arma semplice), pacchetto da intrattenitore, uno strumento musicale, armatura di cuoio, un pugnale.', subclasses: ['Collegio della Sapienza', 'Collegio del Valore'] },
+  'Chierico': { caster: 'full', hitDie: 8, saves: ['wis', 'cha'], skills: { count: 2, from: ['history', 'insight', 'medicine', 'persuasion', 'religion'] }, recommended: ['wis', 'con'], prof: 'Armature leggere e medie, scudi; armi semplici.', equip: 'Mazza, armatura di scaglie (o cuoio), balestra leggera e 20 dardi (o arma semplice), simbolo sacro, pacchetto da sacerdote.', subclasses: ['Dominio della Conoscenza', 'Dominio della Vita', 'Dominio della Guerra', 'Dominio della Tempesta', "Dominio dell'Inganno", 'Dominio della Luce', 'Dominio della Natura'] },
+  'Druido': { caster: 'full', hitDie: 8, saves: ['int', 'wis'], skills: { count: 2, from: ['arcana', 'animalHandling', 'insight', 'medicine', 'nature', 'perception', 'religion', 'survival'] }, recommended: ['wis', 'con'], prof: 'Armature e scudi non di metallo; clave, randelli, dardi, giavellotti, mazze, bastoni ferrati, scimitarre, falcetti, fionde, lance; kit da erborista.', equip: 'Scudo di legno (o arma semplice), scimitarra (o arma da mischia semplice), armatura di cuoio, pacchetto da esploratore, focus druidico.', subclasses: ['Circolo della Terra', 'Circolo della Luna'] },
+  'Guerriero': { caster: 'none', hitDie: 10, saves: ['str', 'con'], skills: { count: 2, from: ['acrobatics', 'animalHandling', 'athletics', 'history', 'insight', 'intimidation', 'perception', 'survival'] }, recommended: ['str', 'con'], prof: 'Tutte le armature, scudi; armi semplici e da guerra.', equip: 'Cotta di maglia (o cuoio + arco lungo), arma da guerra e scudo (o due armi da guerra), balestra leggera (o due asce), pacchetto da esploratore.', subclasses: ['Campione', 'Maestro di Battaglia', 'Cavaliere Mistico'] },
+  'Ladro': { caster: 'none', hitDie: 8, saves: ['dex', 'int'], skills: { count: 4, from: ['acrobatics', 'athletics', 'deception', 'insight', 'intimidation', 'investigation', 'perception', 'performance', 'persuasion', 'sleightOfHand', 'stealth'] }, recommended: ['dex', 'int'], prof: 'Armature leggere; armi semplici, balestre a mano, spade lunghe, stocchi, spade corte; arnesi da scasso.', equip: 'Stocco (o spada corta), arco corto e faretra (o spada corta), armatura di cuoio, due pugnali, arnesi da scasso, pacchetto da scassinatore.', subclasses: ['Ladro', 'Assassino', 'Furfante Arcano'] },
+  'Mago': { caster: 'full', hitDie: 6, saves: ['int', 'wis'], skills: { count: 2, from: ['arcana', 'history', 'insight', 'investigation', 'medicine', 'religion'] }, recommended: ['int', 'dex', 'con'], prof: 'Pugnali, dardi, fionde, bastoni ferrati, balestre leggere.', equip: 'Bastone ferrato (o pugnale), focus arcano (o borsa dei componenti), libro degli incantesimi, pacchetto da studioso.', subclasses: ['Abiurazione', 'Ammaliamento', 'Divinazione', 'Evocazione', 'Illusione', 'Invocazione', 'Necromanzia', 'Trasmutazione'] },
+  'Monaco': { caster: 'none', hitDie: 8, saves: ['str', 'dex'], skills: { count: 2, from: ['acrobatics', 'athletics', 'history', 'insight', 'religion', 'stealth'] }, recommended: ['dex', 'wis'], prof: 'Armi semplici e spade corte; uno strumento da artigiano o musicale a scelta.', equip: 'Spada corta (o arma semplice), pacchetto da esploratore (o da avventuriero), 10 dardi.', subclasses: ['Via della Mano Aperta', "Via dell'Ombra", 'Via dei Quattro Elementi'] },
+  'Paladino': { caster: 'half', hitDie: 10, saves: ['wis', 'cha'], skills: { count: 2, from: ['athletics', 'insight', 'intimidation', 'medicine', 'persuasion', 'religion'] }, recommended: ['str', 'cha', 'con'], prof: 'Tutte le armature, scudi; armi semplici e da guerra.', equip: 'Arma da guerra e scudo (o due armi da guerra), cinque giavellotti (o arma da mischia semplice), pacchetto da sacerdote, cotta di maglia, simbolo sacro.', subclasses: ['Giuramento di Devozione', 'Giuramento degli Antichi', 'Giuramento di Vendetta'] },
+  'Ranger': { caster: 'half', hitDie: 10, saves: ['str', 'dex'], skills: { count: 3, from: ['animalHandling', 'athletics', 'insight', 'investigation', 'nature', 'perception', 'stealth', 'survival'] }, recommended: ['dex', 'wis'], prof: 'Armature leggere e medie, scudi; armi semplici e da guerra.', equip: 'Armatura di scaglie (o cuoio), due spade corte (o due armi semplici da mischia), arco lungo e faretra, pacchetto da esploratore.', subclasses: ['Cacciatore', 'Signore delle Bestie'] },
+  'Stregone': { caster: 'full', hitDie: 6, saves: ['con', 'cha'], skills: { count: 2, from: ['arcana', 'deception', 'insight', 'intimidation', 'persuasion', 'religion'] }, recommended: ['cha', 'con'], prof: 'Pugnali, dardi, fionde, bastoni ferrati, balestre leggere.', equip: 'Balestra leggera e 20 dardi (o arma semplice), focus arcano (o borsa dei componenti), pacchetto da esploratore (o da studioso), due pugnali.', subclasses: ['Discendenza Draconica', 'Magia Selvaggia'] },
+  'Warlock': { caster: 'pact', hitDie: 8, saves: ['wis', 'cha'], skills: { count: 2, from: ['arcana', 'deception', 'history', 'intimidation', 'investigation', 'nature', 'religion'] }, recommended: ['cha', 'con'], prof: 'Armature leggere; armi semplici.', equip: 'Balestra leggera e 20 dardi (o arma semplice), focus arcano (o borsa dei componenti), armatura di cuoio, arma semplice, due pugnali, pacchetto da studioso.', subclasses: ["Patrono: l'Immondo", "Patrono: l'Arcifata", 'Patrono: il Grande Antico'] }
 };
 
 // Sottoclassi che rendono incantatori 1/3 Guerrieri e Ladri
@@ -204,7 +204,35 @@ function populateSubclassSelect(classSelectId, subclassSelectId, selectedSub) {
 
 window.onClassChange = function(classSelectId, subclassSelectId) {
   populateSubclassSelect(classSelectId, subclassSelectId);
+  if (classSelectId === 'char-class') applyClassToCreation();
 };
+
+function applyClassToCreation() {
+  const c = CLASSES[document.getElementById('char-class').value];
+  const info = document.getElementById('class-info');
+  if (!c) { if (info) info.innerHTML = ''; return; }
+
+  const hd = document.getElementById('char-hitdie');
+  if (hd) hd.value = String(c.hitDie);
+
+  ['str', 'dex', 'con', 'int', 'wis', 'cha'].forEach(a => {
+    const cb = document.getElementById('save-' + a);
+    if (cb) { cb.checked = c.saves.includes(a); cb.disabled = true; }
+  });
+
+  if (info) {
+    const rec = (c.recommended || []).map(a => STAT_LABELS[a]).join(', ');
+    const skillFrom = c.skills.from === 'any' ? 'una qualsiasi abilità' : c.skills.from.map(s => SKILLS_ITALIAN[s]).join(', ');
+    info.innerHTML = `
+      <strong>Dado Vita:</strong> d${c.hitDie}<br>
+      <strong>Competenze:</strong> ${c.prof}<br>
+      <strong>Tiri Salvezza (automatici):</strong> ${c.saves.map(a => STAT_LABELS[a]).join(', ')}<br>
+      <strong>Abilità:</strong> scegli ${c.skills.count} tra ${skillFrom}<br>
+      <strong>Caratteristiche consigliate:</strong> ${rec || '—'}<br>
+      <strong>Equipaggiamento iniziale:</strong> ${c.equip}`;
+  }
+  renderPointBuy();
+}
 
 // === SPECIE (bonus di caratteristica = fatti; tratti = sintesi originali) ===
 const SPECIES = {
@@ -262,6 +290,8 @@ function renderPointBuy() {
   if (!container) return;
   const raceEl = document.getElementById('char-race');
   const bonus = speciesBonus(raceEl ? raceEl.value : '');
+  const clsEl = document.getElementById('char-class');
+  const recommended = (CLASSES[clsEl ? clsEl.value : ''] || {}).recommended || [];
   const remaining = 27 - pbPointsUsed();
   const remEl = document.getElementById('pb-remaining');
   if (remEl) remEl.textContent = remaining;
@@ -271,9 +301,10 @@ function renderPointBuy() {
     const canDec = base > 8;
     const nextCost = (PB_COST[base + 1] || 99) - (PB_COST[base] || 0);
     const canInc = base < 15 && remaining >= nextCost;
+    const rec = recommended.includes(k) ? ' <span title="Consigliata per questa classe" style="color: var(--red);">★</span>' : '';
     return `
       <div class="pb-row">
-        <span class="pb-label">${label}</span>
+        <span class="pb-label">${label}${rec}</span>
         <button type="button" class="pb-btn" ${canDec ? '' : 'disabled'} onclick="pbAdjust('${k}',-1)">−</button>
         <span class="pb-value">${base}</span>
         <button type="button" class="pb-btn" ${canInc ? '' : 'disabled'} onclick="pbAdjust('${k}',1)">+</button>
@@ -299,6 +330,47 @@ function resetPointBuy() {
   pbState = { str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 };
   renderPointBuy();
 }
+
+// === BACKGROUND (competenze = fatti; equipaggiamento = sintesi originali) ===
+const BACKGROUNDS = {
+  'Accolito': { skills: ['insight', 'religion'], gp: 15, equip: 'Simbolo sacro, libro di preghiere, 5 bastoncini d\'incenso, vesti, abiti comuni. 2 linguaggi.' },
+  'Ciarlatano': { skills: ['deception', 'sleightOfHand'], gp: 15, equip: 'Abiti eleganti, kit da travestimento, attrezzatura per una truffa. Strumenti: kit da falsario e da trucco.' },
+  'Criminale': { skills: ['deception', 'stealth'], gp: 15, equip: 'Piede di porco, abiti scuri col cappuccio. Strumenti: un gioco e arnesi da scasso.' },
+  'Intrattenitore': { skills: ['acrobatics', 'performance'], gp: 15, equip: 'Uno strumento musicale, il favore di un ammiratore, un costume. Strumenti: kit da trucco.' },
+  'Eroe Popolano': { skills: ['animalHandling', 'survival'], gp: 10, equip: 'Strumenti da artigiano, una pala, una pentola di ferro, abiti comuni. Competenza: veicoli terrestri.' },
+  'Artigiano di Gilda': { skills: ['insight', 'persuasion'], gp: 15, equip: 'Strumenti da artigiano, lettera di presentazione della gilda, abiti da viaggio. 1 linguaggio.' },
+  'Eremita': { skills: ['medicine', 'religion'], gp: 5, equip: 'Custodia con appunti, coperta, kit da erborista, abiti comuni. 1 linguaggio.' },
+  'Nobile': { skills: ['history', 'persuasion'], gp: 25, equip: 'Abiti eleganti, anello con sigillo, pergamena del casato. Strumenti: un gioco. 1 linguaggio.' },
+  'Forestiero': { skills: ['athletics', 'survival'], gp: 10, equip: 'Un bastone, una trappola, uno strumento musicale, abiti da viaggio. 1 linguaggio.' },
+  'Sapiente': { skills: ['arcana', 'history'], gp: 10, equip: 'Boccetta d\'inchiostro, penna, coltellino, lettera di un collega defunto, abiti comuni. 2 linguaggi.' },
+  'Marinaio': { skills: ['athletics', 'perception'], gp: 10, equip: 'Verga di ferro, corda di seta, portafortuna, abiti comuni. Strumenti: navigatore e veicoli acquatici.' },
+  'Soldato': { skills: ['athletics', 'intimidation'], gp: 10, equip: 'Insegna di grado, trofeo di guerra, un gioco di dadi, abiti comuni. Strumenti: un gioco e veicoli terrestri.' },
+  'Monello': { skills: ['sleightOfHand', 'stealth'], gp: 10, equip: 'Coltellino, mappa della città natale, un topo domestico, un souvenir dei genitori, abiti comuni. Strumenti: kit da trucco e arnesi da scasso.' }
+};
+
+function populateBackgroundSelect(selected) {
+  const sel = document.getElementById('char-background');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Nessuno</option>' +
+    Object.keys(BACKGROUNDS).map(b => `<option value="${b}"${b === selected ? ' selected' : ''}>${b}</option>`).join('');
+}
+
+window.onBackgroundChange = function() {
+  const bg = BACKGROUNDS[document.getElementById('char-background').value];
+  const el = document.getElementById('background-info');
+  if (!bg) { if (el) el.innerHTML = ''; return; }
+  // Spunta le abilità concesse dal background
+  bg.skills.forEach(s => {
+    const cb = document.getElementById('skill-' + s + '-prof');
+    if (cb) cb.checked = true;
+  });
+  if (el) {
+    el.innerHTML = `
+      <strong>Competenze (automatiche):</strong> ${bg.skills.map(s => SKILLS_ITALIAN[s]).join(', ')}<br>
+      <strong>Oro iniziale:</strong> ${bg.gp} Oro<br>
+      <strong>Equipaggiamento:</strong> ${bg.equip}`;
+  }
+};
 
 // === TRACKER SLOT INCANTESIMO ===
 async function persistSlots(charId, used) {
@@ -1497,10 +1569,17 @@ window.showAddCharacter = function() {
   document.getElementById('char-name').value = '';
   populateClassSelect('char-class', '');
   populateSubclassSelect('char-class', 'char-subclass', '');
+  document.getElementById('class-info').innerHTML = '';
   populateSpeciesSelect('');
   document.getElementById('species-traits').innerHTML = '';
   resetPointBuy();
-  document.getElementById('char-background').value = '';
+  populateBackgroundSelect('');
+  document.getElementById('background-info').innerHTML = '';
+  // Riabilita i tiri salvezza (verranno bloccati alla scelta della classe)
+  ['str', 'dex', 'con', 'int', 'wis', 'cha'].forEach(a => {
+    const cb = document.getElementById('save-' + a);
+    if (cb) { cb.checked = false; cb.disabled = false; }
+  });
   document.getElementById('char-ac').value = '10';
   document.getElementById('char-initiative').value = '0';
   document.getElementById('char-speed').value = '30';
@@ -1655,6 +1734,13 @@ window.handleAddCharacter = async function(event) {
   // Aggiungere ai characterData
   characterData.weapons = weapons;
   characterData.spellcasting = spellcasting;
+
+  // Background: oro ed equipaggiamento iniziale
+  const bg = BACKGROUNDS[document.getElementById('char-background').value];
+  if (bg) {
+    characterData.gp = bg.gp || 0;
+    characterData.inventory = (characterData.inventory ? characterData.inventory + '\n' : '') + 'Equipaggiamento background: ' + bg.equip;
+  }
 
   try {
     showLoading();
@@ -3815,7 +3901,15 @@ const DEFAULT_MARKET = [
   { name: 'Pozione di Cura Superiore', category: 'Pozioni Rare', price: 150, stock: 5, details: 'Recupera 4d4+4 punti ferita bevendola (azione).' },
   { name: 'Arma +1', category: 'Oggetti Magici', price: 1000, stock: 2, details: '+1 ai tiri per colpire e ai danni effettuati con quest\'arma.' },
   { name: 'Armatura +1', category: 'Oggetti Magici', price: 1500, stock: 1, details: '+1 alla Classe Armatura fornita dall\'armatura.' },
-  { name: 'Scudo +1', category: 'Oggetti Magici', price: 500, stock: 1, details: '+3 alla Classe Armatura (scudo potenziato).' }
+  { name: 'Scudo +1', category: 'Oggetti Magici', price: 500, stock: 1, details: '+3 alla Classe Armatura (scudo potenziato).' },
+  { name: 'Arnesi da Scasso', category: 'Kit e Strumenti', price: 20, stock: null, details: 'Con competenza: prove per forzare serrature e disinnescare trappole.' },
+  { name: 'Forniture da Alchimista', category: 'Kit e Strumenti', price: 700, stock: null, details: 'Materiali per preparare e identificare sostanze alchemiche.' },
+  { name: 'Kit da Erborista', category: 'Kit e Strumenti', price: 5, stock: null, details: 'Per identificare piante e preparare rimedi e antidoti.' },
+  { name: 'Kit del Guaritore', category: 'Kit e Strumenti', price: 5, stock: null, details: 'Dieci usi: stabilizza una creatura morente senza tiro.' },
+  { name: 'Kit da Trucco', category: 'Kit e Strumenti', price: 25, stock: null, details: 'Per creare travestimenti convincenti.' },
+  { name: 'Kit da Falsario', category: 'Kit e Strumenti', price: 15, stock: null, details: 'Per contraffare documenti e sigilli.' },
+  { name: 'Strumenti da Navigatore', category: 'Kit e Strumenti', price: 25, stock: null, details: 'Per orientarsi e tracciare rotte in mare.' },
+  { name: 'Strumenti da Artigiano', category: 'Kit e Strumenti', price: 15, stock: null, details: 'Set generico per un mestiere artigiano.' }
 ];
 
 function isInfinite(item) {
@@ -3925,7 +4019,7 @@ function renderMarket(myChar, listings, trades) {
 
   const dmControls = currentUserRole === 'dm' ? `
     <div class="character-actions" style="margin-bottom: 1rem;">
-      ${marketItems.length === 0 ? `<button class="btn-success btn-lg" onclick="seedMarket()">🌱 Inizializza Catalogo Standard</button>` : ''}
+      ${marketItems.length === 0 ? `<button class="btn-success btn-lg" onclick="seedMarket()">🌱 Inizializza Catalogo Standard</button>` : `<button class="btn-info btn-lg" onclick="dmSyncMarketDefaults()">🔁 Aggiorna Catalogo</button>`}
       <button class="btn-info btn-lg" onclick="dmAddMarketItem()">➕ Aggiungi Oggetto</button>
     </div>` : '';
 
@@ -3989,6 +4083,22 @@ window.seedMarket = async function() {
     showLoading();
     const batch = writeBatch(db);
     DEFAULT_MARKET.forEach(it => batch.set(doc(collection(db, 'market_items')), it));
+    await batch.commit();
+    hideLoading();
+    loadMarket();
+  } catch (e) { hideLoading(); console.error(e); alert('Errore'); }
+};
+
+window.dmSyncMarketDefaults = async function() {
+  if (currentUserRole !== 'dm') return;
+  const existing = new Set(marketItems.map(i => i.name));
+  const missing = DEFAULT_MARKET.filter(it => !existing.has(it.name));
+  if (missing.length === 0) { alert('Il catalogo è già aggiornato.'); return; }
+  if (!confirm(`Aggiungere ${missing.length} oggetti standard mancanti (incl. kit da background)?`)) return;
+  try {
+    showLoading();
+    const batch = writeBatch(db);
+    missing.forEach(it => batch.set(doc(collection(db, 'market_items')), it));
     await batch.commit();
     hideLoading();
     loadMarket();

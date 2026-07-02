@@ -156,6 +156,7 @@
                 <input type="text" id="char-name" placeholder="Nome Personaggio" required />
                 <label>Classe</label>
                 <select id="char-class" required onchange="onClassChange('char-class','char-subclass')"></select>
+                <div id="class-info" class="choice-info"></div>
                 <label>Sottoclasse</label>
                 <select id="char-subclass"></select>
                 <label>Specie</label>
@@ -191,7 +192,9 @@
                   <option value="Shifter"></option>
                   <option value="Minotauro"></option>
                 </datalist>
-                <input type="text" id="char-background" placeholder="Background (opzionale)" />
+                <label>Background</label>
+                <select id="char-background" onchange="onBackgroundChange()"></select>
+                <div id="background-info" class="choice-info"></div>
               </div>
 
               <div class="form-section">
@@ -1047,6 +1050,6 @@
   </div>
 
   <!-- Firebase SDK (modular) -->
-  <script type="module" src="app.js?v=21"></script>
+  <script type="module" src="app.js?v=22"></script>
 </body>
 </html>
