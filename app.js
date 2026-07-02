@@ -258,6 +258,39 @@ const CLASS_SPELL_LIST = {
   'Ranger': ['Cura Ferite', 'Nube di Nebbia', 'Individuazione del Magico']
 };
 
+// Capstone di classe (liv. 20) — sintesi originali, non testo ufficiale
+const CLASS_CAPSTONE = {
+  'Barbaro': 'Liv. 20 — Campione Primordiale: +4 a Forza e Costituzione (massimo 24).',
+  'Bardo': 'Liv. 20 — Ispirazione Superiore: recuperi usi di Ispirazione Bardica a ogni riposo.',
+  'Chierico': 'Liv. 20 — Intervento Divino garantito: la tua invocazione riesce automaticamente.',
+  'Druido': 'Liv. 20 — Arciforma: trasformazioni selvatiche praticamente illimitate.',
+  'Guerriero': 'Liv. 20 — Attacco Extra (3): quattro attacchi con l\'azione di Attacco.',
+  'Ladro': 'Liv. 20 — Colpo di Fortuna: trasformi un fallimento in successo una volta a riposo.',
+  'Mago': 'Liv. 20 — Maestria Arcana: recuperi alcuni slot incantesimo con un riposo breve.',
+  'Monaco': 'Liv. 20 — Sé Perfetto: +4 a Destrezza e Saggezza (massimo 24) e recupero del Ki.',
+  'Paladino': 'Liv. 20 — Forma sacra secondo il giuramento e aura ampliata.',
+  'Ranger': 'Liv. 20 — Nemico Prescelto supremo: percezione e difesa eccezionali contro le prede.',
+  'Stregone': 'Liv. 20 — Ripristino Arcano: recuperi punti stregoneria con un riposo breve.',
+  'Warlock': 'Liv. 20 — Maestro Occultista: recuperi tutti gli slot del patto con un riposo breve.'
+};
+
+// Privilegio del background — sintesi originali
+const BG_FEATURE = {
+  'Accolito': 'Rifugio dei Fedeli: templi affini offrono ospitalità a te e ai tuoi compagni.',
+  'Ciarlatano': 'Falsa Identità: possiedi una seconda identità documentata e credibile.',
+  'Criminale': 'Contatto Criminale: hai una rete affidabile nel mondo del crimine.',
+  'Intrattenitore': 'Richiesto ovunque: trovi sempre da esibirti in cambio di vitto e alloggio.',
+  'Eroe Popolano': 'Ospitalità Rustica: la gente comune ti offre riparo e protezione.',
+  'Artigiano di Gilda': 'Appartenenza alla Gilda: sostegno, alloggio e contatti dalla tua gilda.',
+  'Eremita': 'Scoperta: dal tuo isolamento hai appreso un segreto unico e importante.',
+  'Nobile': 'Posizione di Privilegio: sei accolto con rispetto dall\'alta società.',
+  'Forestiero': 'Viandante: ti orienti sempre e puoi procurare cibo per il gruppo.',
+  'Sapiente': 'Ricercatore: sai dove e da chi ottenere le informazioni che ti mancano.',
+  'Marinaio': 'Passaggio in Nave: puoi ottenere un imbarco gratuito per te e i compagni.',
+  'Soldato': 'Grado Militare: i soldati riconoscono la tua autorità di ex commilitone.',
+  'Monello': 'Segreti della Città: ti muovi tra i vicoli al doppio della velocità normale.'
+};
+
 function renderClassSpellList() {
   const el = document.getElementById('class-spell-list');
   if (!el) return;
@@ -350,7 +383,7 @@ function applyClassToCreation() {
       <strong>Tiri Salvezza (automatici):</strong> ${c.saves.map(a => STAT_LABELS[a]).join(', ')}<br>
       <strong>Abilità:</strong> scegli ${c.skills.count} tra ${skillFrom}<br>
       <strong>Caratteristiche consigliate:</strong> ${rec || '—'}<br>
-      <strong>Equipaggiamento iniziale:</strong> ${c.equip}`;
+      <strong>Equipaggiamento iniziale:</strong> ${c.equip}${CLASS_CAPSTONE[document.getElementById('char-class').value] ? `<br><strong>Capstone:</strong> ${CLASS_CAPSTONE[document.getElementById('char-class').value]}` : ''}`;
   }
   renderPointBuy();
   renderEquipChoices();
@@ -523,7 +556,7 @@ window.onBackgroundChange = function() {
     el.innerHTML = `
       <strong>Competenze (automatiche):</strong> ${bg.skills.map(s => SKILLS_ITALIAN[s]).join(', ')}<br>
       <strong>Oro iniziale:</strong> ${bg.gp} Oro<br>
-      <strong>Equipaggiamento:</strong> ${bg.equip}`;
+      <strong>Equipaggiamento:</strong> ${bg.equip}${BG_FEATURE[document.getElementById('char-background').value] ? `<br><strong>Privilegio:</strong> ${BG_FEATURE[document.getElementById('char-background').value]}` : ''}`;
   }
   recomputeSkillAvailability();
 };
@@ -823,6 +856,7 @@ async function exportCharacterToPDF(char) {
   let y = 20;
   const lineHeight = 6;
   const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
   
   // === HEADER CON LOGO ===
   try {
@@ -1219,16 +1253,26 @@ async function exportCharacterToPDF(char) {
   doc.circle(68, 274, 1, 'F');
   doc.text('Esperto', 71, 275);
   
-  // Footer con logo piccolo e data
+  // Cornice pagina + footer brandizzato su ogni pagina
   const pageCount = doc.internal.getNumberOfPages();
+  const today = new Date().toLocaleDateString('it-IT');
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
+    // Cornice
+    doc.setDrawColor(44, 62, 110);
+    doc.setLineWidth(0.8);
+    doc.rect(6, 6, pageWidth - 12, pageHeight - 12);
+    // Banda footer
+    doc.setFillColor(44, 62, 110);
+    doc.rect(6, pageHeight - 16, pageWidth - 12, 10, 'F');
+    doc.setTextColor(232, 213, 160);
     doc.setFontSize(8);
-    doc.setTextColor(128, 128, 128);
-    doc.text(`D&Disastri • Pagina ${i}/${pageCount} • ${new Date().toLocaleDateString('it-IT')}`, 
-             pageWidth / 2, 285, { align: 'center' });
+    doc.setFont(undefined, 'bold');
+    doc.text('D&Disastri — Scheda Personaggio', 12, pageHeight - 9);
+    doc.setFont(undefined, 'normal');
+    doc.text(`${today} · Pagina ${i}/${pageCount}`, pageWidth - 12, pageHeight - 9, { align: 'right' });
   }
-  
+
   // Salva PDF
   doc.save(`${char.name.replace(/\s+/g, '_')}_scheda.pdf`);
 }
@@ -1386,7 +1430,7 @@ function hideLoading() {
 }
 
 // === NAVIGATION ===
-const SECTION_IDS = ['dashboard', 'characters', 'quests', 'archive', 'guild', 'maps', 'market', 'profile', 'notifications', 'audit', 'fallen', 'pending'];
+const SECTION_IDS = ['dashboard', 'characters', 'quests', 'archive', 'guild', 'maps', 'market', 'profile', 'recommended', 'notifications', 'audit', 'fallen', 'pending'];
 function hideAllSections() { SECTION_IDS.forEach(id => hideElement(id)); }
 
 window.showSection = function(sectionId) {
@@ -1409,6 +1453,8 @@ window.showSection = function(sectionId) {
     loadMarket();
   } else if (sectionId === 'profile') {
     loadProfile();
+  } else if (sectionId === 'recommended') {
+    loadRecommended();
   } else if (sectionId === 'notifications') {
     loadNotifications();
   } else if (sectionId === 'audit') {
@@ -1442,6 +1488,7 @@ function renderNav() {
       ['maps', 'Mappe'],
       ['market', 'Mercato'],
       ['profile', 'Profilo'],
+      ['recommended', 'Consigliati'],
       ['notifications', 'Notifiche'],
       ['fallen', 'Fallen Heroes']
     ];
@@ -2093,6 +2140,8 @@ window.showCharacterDetail = function(charId) {
       <p><strong>Specie:</strong> ${char.race}</p>
       ${char.speciesTraits ? `<p style="color: var(--gray); font-size: 0.9rem;">${char.speciesTraits}</p>` : ''}
       ${char.background ? `<p><strong>Background:</strong> ${char.background}</p>` : ''}
+      ${BG_FEATURE[char.background] ? `<p style="color: var(--gray); font-size: 0.9rem;">${BG_FEATURE[char.background]}</p>` : ''}
+      ${CLASS_CAPSTONE[char.class] ? `<p style="color: var(--gray); font-size: 0.9rem;">${CLASS_CAPSTONE[char.class]}</p>` : ''}
 
       <h4 style="margin-top: 1.5rem;">Caratteristiche</h4>
       <div class="character-stats-grid">
@@ -4171,6 +4220,32 @@ window.removeAvatar = async function() {
     alert('Errore');
   }
 };
+
+// === BUILD CONSIGLIATE (contenuto originale) ===
+const RECOMMENDED_BUILDS = [
+  { name: 'Guerriero Campione', tag: 'Semplice · Robusto', cls: 'Guerriero', sub: 'Campione', abil: 'FOR e COS', note: 'Ideale per iniziare: tanti PF, critici migliorati e poche decisioni. Spada Lunga + Scudo + Cotta di Maglia.' },
+  { name: 'Ladro Assassino', tag: 'Furtivo · Critici', cls: 'Ladro', sub: 'Assassino', abil: 'DES, poi COS/SAG', note: 'Danni enormi in apertura con Attacco Furtivo e sorpresa. Punta su Furtività e Rapidità di Mano.' },
+  { name: 'Mago Evocatore', tag: 'Controllo · Area', cls: 'Mago', sub: 'Evocazione', abil: 'INT, poi DES/COS', note: 'Domini il campo con incantesimi ad area (Palla di Fuoco) e Controincantesimo. Fragile: resta a distanza.' },
+  { name: 'Chierico della Vita', tag: 'Guaritore · Supporto', cls: 'Chierico', sub: 'Dominio della Vita', abil: 'SAG e COS', note: 'Il miglior curatore: tiene in piedi il gruppo. Buona CA con armatura media + scudo.' },
+  { name: 'Paladino della Devozione', tag: 'Tank sacro · Danni', cls: 'Paladino', sub: 'Giuramento di Devozione', abil: 'FOR, CAR e COS', note: 'Resistente e devastante con la Punizione Divina; aura che protegge gli alleati.' },
+  { name: 'Barbaro Totem', tag: 'Bruto · Resistente', cls: 'Barbaro', sub: 'Cammino del Totem Guerriero', abil: 'FOR e COS', note: 'In ira dimezza i danni subiti: prima linea inarrestabile, semplice da giocare.' },
+  { name: 'Stregone Draconico', tag: 'Blaster · Carisma', cls: 'Stregone', sub: 'Discendenza Draconica', abil: 'CAR e COS', note: 'Danni elementali potenziati e più PF del mago. Poche opzioni ma efficaci.' },
+  { name: 'Bardo della Sapienza', tag: 'Jolly · Supporto', cls: 'Bardo', sub: 'Collegio della Sapienza', abil: 'CAR, poi DES', note: 'Fa un po\' di tutto: cura, controllo, abilità sociali e "furto" di incantesimi altrui.' }
+];
+
+function loadRecommended() {
+  const el = document.getElementById('recommended-list');
+  if (!el) return;
+  el.innerHTML = RECOMMENDED_BUILDS.map(b => `
+    <div class="card">
+      <h3>${b.name}</h3>
+      <span class="difficulty-badge difficulty-Media">${b.tag}</span>
+      <p style="margin-top:0.5rem;"><strong>Classe:</strong> ${b.cls} (${b.sub})</p>
+      <p><strong>Caratteristiche:</strong> ${b.abil}</p>
+      <p style="color: var(--gray);">${b.note}</p>
+    </div>
+  `).join('');
+}
 
 // ===================================================================
 // HELPER INVENTARIO / PERSONAGGIO ATTIVO
