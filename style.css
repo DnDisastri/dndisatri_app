@@ -1264,33 +1264,57 @@ button.add-btn:hover {
   font-size: 0.95rem;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+#main-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.quick-bells {
+  margin: 0;
+}
+
 .app-menu {
-  margin-bottom: 1rem;
+  position: relative;
 }
 
 .app-menu-toggle {
-  width: 100%;
   background: var(--primary, #2c3e6e);
   color: #fff;
   border: 1px solid rgba(232, 213, 160, 0.35);
   border-radius: 10px;
-  padding: 0.85rem 1rem;
-  font-size: 1.05rem;
+  padding: 0.55rem 0.9rem;
+  font-size: 1rem;
   cursor: pointer;
   text-align: left;
+  white-space: nowrap;
 }
 
 .app-menu-panel {
-  margin-top: 0.4rem;
-  max-height: 320px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.4rem);
+  width: min(300px, 82vw);
+  max-height: 70vh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(232, 213, 160, 0.2);
+  background: #1a2440;
+  border: 1px solid rgba(232, 213, 160, 0.25);
   border-radius: 10px;
   padding: 0.5rem;
+  z-index: 2000;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
 .menu-item {

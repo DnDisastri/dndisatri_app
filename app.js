@@ -455,7 +455,7 @@ async function exportCharacterToPDF(char) {
   doc.text(`Classe: ${char.class}${char.subclass ? ' (' + char.subclass + ')' : ''}`, 15, y);
   doc.text(`Livello: ${char.level || 1}`, 110, y);
   y += lineHeight;
-  doc.text(`Razza: ${char.race}`, 15, y);
+  doc.text(`Specie: ${char.race}`, 15, y);
   if (char.background) {
     doc.text(`Background: ${char.background}`, 110, y);
   }
@@ -1267,6 +1267,7 @@ onAuthStateChanged(auth, async (user) => {
 
     hideElement('login');
     hideElement('registration');
+    showElement('main-nav');
     showElement('dashboard');
     showElement('logout-btn');
     loadDashboard();
@@ -1277,6 +1278,7 @@ onAuthStateChanged(auth, async (user) => {
     currentUserRole = 'player';
     currentUsername = '';
     
+    hideElement('main-nav');
     hideElement('dashboard');
     hideElement('characters');
     hideElement('quests');
@@ -1360,7 +1362,7 @@ function renderCharacters() {
       <h3>${char.name}</h3>
       <p><strong>Classe:</strong> ${char.class}${char.subclass ? ` (${char.subclass})` : ''}</p>
       <p><strong>Livello:</strong> ${char.level}</p>
-      <p><strong>Razza:</strong> ${char.race}</p>
+      <p><strong>Specie:</strong> ${char.race}</p>
       <span class="card-status status-alive">⚔️ Vivo</span>
     </div>
   `).join('');
@@ -1593,7 +1595,7 @@ window.showCharacterDetail = function(charId) {
     <div class="character-info">
       <p><strong>Classe:</strong> ${char.class}${char.subclass ? ` (${char.subclass})` : ''}</p>
       <p><strong>Livello:</strong> ${char.level || 1}</p>
-      <p><strong>Razza:</strong> ${char.race}</p>
+      <p><strong>Specie:</strong> ${char.race}</p>
       ${char.background ? `<p><strong>Background:</strong> ${char.background}</p>` : ''}
       
       <h4 style="margin-top: 1.5rem;">Caratteristiche</h4>
@@ -2538,7 +2540,7 @@ window.showPendingDetail = function(changeId) {
     { key: 'name', label: 'Nome' },
     { key: 'class', label: 'Classe' },
     { key: 'subclass', label: 'Sottoclasse' },
-    { key: 'race', label: 'Razza' },
+    { key: 'race', label: 'Specie' },
     { key: 'background', label: 'Background' }
   ];
   
@@ -3434,7 +3436,7 @@ function renderFallenHeroes() {
         <h3>⚰️ ${char.name}</h3>
         <p><strong>Classe:</strong> ${char.class}${char.subclass ? ` (${char.subclass})` : ''}</p>
         <p><strong>Livello:</strong> ${char.level || 1}</p>
-        <p><strong>Razza:</strong> ${char.race}</p>
+        <p><strong>Specie:</strong> ${char.race}</p>
         <p><strong>Caduto il:</strong> ${deathDate}</p>
         <span class="card-status status-dead">💀 Caduto in battaglia</span>
       </div>
@@ -3501,7 +3503,7 @@ function renderGuild(roster) {
       <div class="card" style="cursor:pointer;" onclick="showGuildCharacter('${c.id}')">
         <h3 style="display: flex; align-items: center; gap: 0.5rem;">${avatar} ${c.name}${roleBadge}${isMe}</h3>
         <p><strong>Classe:</strong> ${c.class}${c.subclass ? ` (${c.subclass})` : ''}</p>
-        <p><strong>Livello:</strong> ${c.level || 1} · <strong>Razza:</strong> ${c.race}</p>
+        <p><strong>Livello:</strong> ${c.level || 1} · <strong>Specie:</strong> ${c.race}</p>
       </div>
     `;
   }).join('');
@@ -3534,7 +3536,7 @@ window.showGuildCharacter = function(charId) {
       <p><strong>Giocatore/Giocatrice:</strong> ${playerName}</p>
       <p><strong>Classe:</strong> ${char.class}${char.subclass ? ` (${char.subclass})` : ''}</p>
       <p><strong>Livello:</strong> ${char.level || 1}</p>
-      <p><strong>Razza:</strong> ${char.race}</p>
+      <p><strong>Specie:</strong> ${char.race}</p>
       ${char.background ? `<p><strong>Background:</strong> ${char.background}</p>` : ''}
 
       <h4 style="margin-top: 1.5rem;">Caratteristiche</h4>

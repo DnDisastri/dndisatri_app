@@ -22,7 +22,16 @@
         <img src="logo.jpg?v=3" alt="D&Disastri" class="logo" />
         <h1>D&Disastri</h1>
       </div>
-      <button id="logout-btn" class="hidden" onclick="handleLogout()">Esci</button>
+      <div class="header-actions">
+        <nav id="main-nav" class="hidden">
+          <div id="quick-bells" class="quick-bells"></div>
+          <div class="app-menu">
+            <button class="app-menu-toggle" onclick="toggleMenu()">☰ Menu</button>
+            <div id="app-menu-panel" class="app-menu-panel hidden"></div>
+          </div>
+        </nav>
+        <button id="logout-btn" class="hidden" onclick="handleLogout()">Esci</button>
+      </div>
     </header>
 
     <!-- LOADING -->
@@ -112,13 +121,7 @@
       <div class="container">
         <p class="welcome-text">Benvenuto, <span id="user-name">Avventuriero</span>!</p>
 
-        <div id="quick-bells" class="quick-bells"></div>
-        <div class="app-menu">
-          <button class="app-menu-toggle" onclick="toggleMenu()">☰ Menu</button>
-          <div id="app-menu-panel" class="app-menu-panel hidden"></div>
-        </div>
-
-        <h2 style="margin-top: 1.5rem;">📣📣 Annunci di D&Disastri</h2>
+        <h2 style="margin-top: 1rem;">📣📣 Annunci di D&Disastri</h2>
         <div id="announcements-list">
           <!-- Populated by JS -->
         </div>
@@ -155,7 +158,7 @@
                 <select id="char-class" required onchange="onClassChange('char-class','char-subclass')"></select>
                 <label>Sottoclasse</label>
                 <select id="char-subclass"></select>
-                <input type="text" id="char-race" placeholder="Razza (es. Umano)" list="races-list" required />
+                <input type="text" id="char-race" placeholder="Specie (es. Umano)" list="races-list" required />
                 <datalist id="races-list">
                   <option value="Umano"></option>
                   <option value="Elfo"></option>
@@ -505,7 +508,7 @@
                 <select id="edit-char-class" required onchange="onClassChange('edit-char-class','edit-char-subclass')"></select>
                 <label>Sottoclasse</label>
                 <select id="edit-char-subclass"></select>
-                <input type="text" id="edit-char-race" placeholder="Razza" list="races-list" required />
+                <input type="text" id="edit-char-race" placeholder="Specie" list="races-list" required />
                 <input type="text" id="edit-char-background" placeholder="Background" />
                 <div>
                   <label>Livello (Solo DM può modificare direttamente)</label>
@@ -1059,6 +1062,6 @@
   </div>
 
   <!-- Firebase SDK (modular) -->
-  <script type="module" src="app.js?v=18"></script>
+  <script type="module" src="app.js?v=19"></script>
 </body>
 </html>
