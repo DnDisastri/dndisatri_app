@@ -121,6 +121,98 @@ function effectiveHpMax(char) {
   return baseHp + (effConMod - baseConMod) * level;
 }
 
+// === EQUIPAGGIAMENTO: dati (fatti di gioco) e calcoli automatici ===
+const ARMOR = {
+  'Armatura Imbottita': { type: 'light', base: 11 },
+  'Armatura di Cuoio': { type: 'light', base: 11 },
+  'Cuoio Borchiato': { type: 'light', base: 12 },
+  'Corazza di Scaglie': { type: 'medium', base: 14 },
+  'Corpetto (Corazza a Bande)': { type: 'medium', base: 14 },
+  'Mezza Armatura': { type: 'medium', base: 15 },
+  'Cotta di Maglia': { type: 'heavy', base: 16 },
+  'Armatura a Piastre': { type: 'heavy', base: 18 }
+};
+const SHIELDS = { 'Scudo': 2, 'Scudo +1': 3 };
+const WEAPONS_DATA = {
+  'Pugnale': { damage: '1d4', stat: 'dex' },
+  'Spada Corta': { damage: '1d6', stat: 'dex' },
+  'Spada Lunga': { damage: '1d8', stat: 'str' },
+  'Spadone': { damage: '2d6', stat: 'str' },
+  'Ascia da Battaglia': { damage: '1d8', stat: 'str' },
+  'Ascia Bipenne': { damage: '1d12', stat: 'str' },
+  'Mazza': { damage: '1d6', stat: 'str' },
+  'Martello da Guerra': { damage: '1d8', stat: 'str' },
+  'Maglio': { damage: '2d6', stat: 'str' },
+  'Lancia': { damage: '1d6', stat: 'str' },
+  'Alabarda': { damage: '1d10', stat: 'str' },
+  'Arco Corto': { damage: '1d6', stat: 'dex' },
+  'Arco Lungo': { damage: '1d8', stat: 'dex' },
+  'Balestra Leggera': { damage: '1d8', stat: 'dex' },
+  'Balestra Pesante': { damage: '1d10', stat: 'dex' },
+  'Arma +1': { damage: '1d8', stat: 'str', magic: 1 }
+};
+
+function effectiveInitiative(char) {
+  return calculateModifier(effectiveStats(char).dex || 10);
+}
+
+function effectiveAC(char) {
+  const dexMod = calculateModifier(effectiveStats(char).dex || 10);
+  const eq = char.equipped || {};
+  const armor = ARMOR[eq.armor];
+  let ac;
+  if (armor) {
+    if (armor.type === 'light') ac = armor.base + dexMod;
+    else if (armor.type === 'medium') ac = armor.base + Math.min(dexMod, 2);
+    else ac = armor.base;
+  } else {
+    ac = 10 + dexMod;
+  }
+  ac += (SHIELDS[eq.shield] || 0);
+  return ac;
+}
+
+window.equipItem = async function(charId, slot) {
+  const char = currentCharacters.find(c => c.id === charId);
+  if (!char) return;
+  if (char.userId !== currentUser.uid && currentUserRole !== 'dm') { alert('Puoi equipaggiare solo i tuoi personaggi.'); return; }
+  const items = char.items || [];
+  let qualifies;
+  if (slot === 'weapon') qualifies = it => WEAPONS_DATA[it.name];
+  else if (slot === 'armor') qualifies = it => ARMOR[it.name];
+  else if (slot === 'shield') qualifies = it => SHIELDS[it.name];
+  else qualifies = it => it.category === 'Oggetti Magici' || /\+\d/.test(it.name);
+  const options = items.filter(qualifies);
+  if (options.length === 0) { alert('Non hai oggetti adatti a questo slot nel tuo inventario.'); return; }
+  const list = options.map((it, i) => `${i + 1}) ${it.name}`).join('\n');
+  const choice = parseInt(prompt(`Quale equipaggiare?\n${list}`, '1'));
+  if (isNaN(choice) || choice < 1 || choice > options.length) return;
+  const equipped = Object.assign({}, char.equipped || {});
+  equipped[slot] = options[choice - 1].name;
+  try {
+    showLoading();
+    await updateDoc(doc(db, 'characters', charId), { equipped });
+    char.equipped = equipped;
+    hideLoading();
+    showCharacterDetail(charId);
+  } catch (e) { hideLoading(); console.error(e); alert('Errore'); }
+};
+
+window.unequipItem = async function(charId, slot) {
+  const char = currentCharacters.find(c => c.id === charId);
+  if (!char) return;
+  if (char.userId !== currentUser.uid && currentUserRole !== 'dm') return;
+  const equipped = Object.assign({}, char.equipped || {});
+  equipped[slot] = null;
+  try {
+    showLoading();
+    await updateDoc(doc(db, 'characters', charId), { equipped });
+    char.equipped = equipped;
+    hideLoading();
+    showCharacterDetail(charId);
+  } catch (e) { hideLoading(); console.error(e); alert('Errore'); }
+};
+
 // === CLASSI E SOTTOCLASSI UFFICIALI (D&D 5e) ===
 const CLASSES = {
   'Barbaro': { caster: 'none', hitDie: 12, saves: ['str', 'con'], skills: { count: 2, from: ['animalHandling', 'athletics', 'intimidation', 'nature', 'perception', 'survival'] }, recommended: ['str', 'con'], prof: 'Armature leggere e medie, scudi; armi semplici e da guerra.', equip: 'Ascia bipenne (o arma da guerra), due ascie (o arma semplice), pacchetto da esploratore, 4 giavellotti.', subclasses: ['Cammino del Berserker', 'Cammino del Totem Guerriero'] },
@@ -674,8 +766,8 @@ async function exportCharacterToPDF(char) {
   doc.setFont(undefined, 'normal');
   doc.setTextColor(0, 0, 0);
   
-  doc.text(`CA: ${combat.ac || 10}`, 15, y);
-  doc.text(`Iniziativa: ${formatModifier(combat.initiative || 0)}`, 55, y);
+  doc.text(`CA: ${effectiveAC(char)}`, 15, y);
+  doc.text(`Iniziativa: ${formatModifier(effectiveInitiative(char))}`, 55, y);
   doc.text(`Velocità: ${combat.speed || 30} ft`, 110, y);
   doc.text(`PF Max: ${effectiveHpMax(char)}`, 155, y);
   y += lineHeight;
@@ -1719,15 +1811,14 @@ window.handleAddCharacter = async function(event) {
   const spellLevelSections = document.querySelectorAll('#spell-levels-container .spell-level-section');
   spellLevelSections.forEach(section => {
     const level = parseInt(section.dataset.level);
-    const slots = parseInt(section.querySelector('.slots-input').value) || 0;
     const spellInputs = section.querySelectorAll('.spell-input');
     const spells = Array.from(spellInputs)
       .map(input => input.value.trim())
       .filter(val => val !== '')
       .join(', ');
-    
-    if (spells || slots) {
-      spellcasting[`level${level}`] = { spells, slots };
+
+    if (spells) {
+      spellcasting[`level${level}`] = { spells };
     }
   });
 
@@ -1829,13 +1920,39 @@ window.showCharacterDetail = function(charId) {
       ` : ''}
 
       <h4 style="margin-top: 1.5rem;">Combattimento</h4>
-      <p><strong>Classe Armatura:</strong> ${combat.ac || 10}</p>
-      <p><strong>Iniziativa:</strong> ${formatModifier(combat.initiative || 0)}</p>
+      <p><strong>Classe Armatura:</strong> ${effectiveAC(char)} <span style="color:var(--gray); font-size:0.85rem;">(automatica)</span></p>
+      <p><strong>Iniziativa:</strong> ${formatModifier(effectiveInitiative(char))} <span style="color:var(--gray); font-size:0.85rem;">(automatica)</span></p>
       <p><strong>Velocità:</strong> ${combat.speed || 30} ft</p>
       <p><strong>Punti Ferita Max:</strong> ${effectiveHpMax(char)}${effectiveHpMax(char) !== (combat.hpMax || 0) ? ' <span title="Modificato da oggetto magico (COS)" style="color: var(--success);">🔮</span>' : ''}</p>
       <p><strong>PF Attuali:</strong> ${combat.hpCurrent !== undefined ? combat.hpCurrent : (combat.hpMax || 10)}${combat.hpTemp ? ` <span style="color: var(--success);">(+${combat.hpTemp} temp)</span>` : ''}</p>
       <p><strong>Bonus Competenza:</strong> +${char.proficiencyBonus || calculateProficiencyBonus(char.level || 1)}</p>
       ${char.hitDie ? `<p><strong>Dado Vita:</strong> d${char.hitDie}</p>` : ''}
+
+      ${(() => {
+        const eq = char.equipped || {};
+        const canManage = char.userId === currentUser.uid || currentUserRole === 'dm';
+        const profBonus = char.proficiencyBonus || calculateProficiencyBonus(char.level || 1);
+        const eqStats = effectiveStats(char);
+        const slotRow = (labelIt, slot, value, extra) => `
+          <p><strong>${labelIt}:</strong> ${value || '<span style="color:var(--gray);">— nessuno —</span>'} ${extra || ''}
+            ${canManage ? `<button class="btn-info" style="padding:0.1rem 0.5rem; margin-left:0.4rem;" onclick="equipItem('${char.id}','${slot}')">Equipaggia</button>${value ? `<button class="btn-warning" style="padding:0.1rem 0.5rem;" onclick="unequipItem('${char.id}','${slot}')">Togli</button>` : ''}` : ''}
+          </p>`;
+        let weaponExtra = '';
+        const w = WEAPONS_DATA[eq.weapon];
+        if (w) {
+          const statMod = calculateModifier(eqStats[w.stat] || 10);
+          const atk = profBonus + statMod + (w.magic || 0);
+          const bonus = statMod + (w.magic || 0);
+          weaponExtra = `<span style="color:var(--gray);">(Attacco ${formatModifier(atk)}, Danni ${w.damage}${bonus ? ` ${formatModifier(bonus)}` : ''})</span>`;
+        }
+        return `
+          <h4 style="margin-top: 1.5rem;">Equipaggiamento</h4>
+          ${slotRow('Arma', 'weapon', eq.weapon, weaponExtra)}
+          ${slotRow('Armatura', 'armor', eq.armor)}
+          ${slotRow('Scudo', 'shield', eq.shield)}
+          ${slotRow('Oggetto Magico', 'magicItem', eq.magicItem)}
+        `;
+      })()}
 
       ${char.feats && char.feats.length > 0 ? `
         <h4 style="margin-top: 1.5rem;">Talenti</h4>
@@ -3749,7 +3866,7 @@ window.showGuildCharacter = function(charId) {
       <div class="character-stats-grid">${statsGrid}</div>
 
       <h4 style="margin-top: 1.5rem;">Combattimento</h4>
-      <p><strong>Classe Armatura:</strong> ${combat.ac || 10}</p>
+      <p><strong>Classe Armatura:</strong> ${effectiveAC(char)}</p>
       <p><strong>Punti Ferita Max:</strong> ${effectiveHpMax(char)}</p>
       <p><strong>Bonus Competenza:</strong> +${char.proficiencyBonus || calculateProficiencyBonus(char.level || 1)}</p>
 
@@ -4716,11 +4833,9 @@ window.addSpellLevel = function() {
   newSection.dataset.level = nextLevel;
   newSection.innerHTML = `
     <div class="spell-level-header">
-      <h5>Livello ${nextLevel}</h5>
+      <h5>Livello ${nextLevel} <span style="color: var(--gray); font-size: 0.8rem;">(slot calcolati in automatico)</span></h5>
       <div>
-        <label style="color: var(--gray); font-size: 0.9rem; margin-right: 0.5rem;">Slot:</label>
-        <input type="number" class="slots-input" min="0" value="0" />
-        <button type="button" onclick="removeSpellLevel('${sectionId}')" class="remove-spell-level" style="margin-left: 1rem;">Rimuovi</button>
+        <button type="button" onclick="removeSpellLevel('${sectionId}')" class="remove-spell-level">Rimuovi</button>
       </div>
     </div>
     <div class="spells-list">
