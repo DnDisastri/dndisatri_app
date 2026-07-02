@@ -1058,6 +1058,9 @@ function loadDashboard() {
 async function loadAnnouncements() {
   const el = document.getElementById('announcements-list');
   if (!el) return;
+  const dmBtn = currentUserRole === 'dm'
+    ? `<div class="character-actions" style="margin-bottom:0.75rem;"><button class="btn-success btn-lg" onclick="publishAnnouncement()">+ Nuovo Annuncio</button></div>`
+    : '';
   try {
     const snap = await getDocs(collection(db, 'notifications'));
     const items = [];
@@ -1067,18 +1070,39 @@ async function loadAnnouncements() {
     });
     items.sort((a, b) => ((b.createdAt && b.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0));
     if (items.length === 0) {
-      el.innerHTML = '<p style="color: var(--gray);">Nessun annuncio per ora.</p>';
+      el.innerHTML = dmBtn + '<p style="color: var(--gray);">Nessun annuncio per ora.</p>';
       return;
     }
-    el.innerHTML = items.slice(0, 8).map(n => {
+    el.innerHTML = dmBtn + items.slice(0, 8).map(n => {
       const date = n.createdAt ? new Date(n.createdAt.seconds * 1000).toLocaleString('it-IT') : '';
-      return `<div class="card"><p>${n.message}</p><p style="color:var(--gray); font-size:0.85rem;">${date}</p></div>`;
+      const del = currentUserRole === 'dm' ? `<button class="btn-danger" style="padding:0.1rem 0.5rem; float:right;" onclick="dmDeleteAnnouncement('${n.id}')">✕</button>` : '';
+      return `<div class="card">${del}<p>${n.message}</p><p style="color:var(--gray); font-size:0.85rem;">${date}</p></div>`;
     }).join('');
   } catch (e) {
     console.error('Errore annunci:', e);
-    el.innerHTML = '<p style="color: var(--gray);">Impossibile caricare gli annunci.</p>';
+    el.innerHTML = dmBtn + '<p style="color: var(--gray);">Impossibile caricare gli annunci.</p>';
   }
 }
+
+window.publishAnnouncement = async function() {
+  if (currentUserRole !== 'dm') { alert('Solo i DM possono pubblicare annunci!'); return; }
+  const msg = (prompt('Testo dell\'annuncio da pubblicare:') || '').trim();
+  if (!msg) return;
+  try {
+    showLoading();
+    await notify('all', `📣 ${msg}`, 'announcement');
+    hideLoading();
+    loadAnnouncements();
+    updateNotificationsCount();
+  } catch (e) { hideLoading(); console.error(e); alert('Errore nella pubblicazione'); }
+};
+
+window.dmDeleteAnnouncement = async function(id) {
+  if (currentUserRole !== 'dm') return;
+  if (!confirm('Eliminare questo annuncio?')) return;
+  try { showLoading(); await deleteDoc(doc(db, 'notifications', id)); hideLoading(); loadAnnouncements(); updateNotificationsCount(); }
+  catch (e) { hideLoading(); console.error(e); alert('Errore'); }
+};
 
 async function loadOpenCampaigns() {
   const el = document.getElementById('open-campaigns');
