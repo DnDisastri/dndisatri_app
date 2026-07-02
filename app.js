@@ -206,6 +206,100 @@ window.onClassChange = function(classSelectId, subclassSelectId) {
   populateSubclassSelect(classSelectId, subclassSelectId);
 };
 
+// === SPECIE (bonus di caratteristica = fatti; tratti = sintesi originali) ===
+const SPECIES = {
+  'Umano': { asi: { all: 1 }, speed: 9, traits: 'Versatile: +1 a tutte le caratteristiche. Velocità 9 m.' },
+  'Nano': { asi: { con: 2 }, speed: 7.5, traits: '+2 Costituzione. Scurovisione 18 m. Resistenza al veleno. Competenza con asce e martelli. Velocità 7,5 m.' },
+  'Elfo': { asi: { dex: 2 }, speed: 9, traits: '+2 Destrezza. Scurovisione 18 m. Vantaggio contro ammaliamento e immunità al sonno magico. Percezione competente.' },
+  'Halfling': { asi: { dex: 2 }, speed: 7.5, traits: '+2 Destrezza. Fortunato: ritira gli 1 sui d20 di attacco/prova/TS. Vantaggio contro lo spavento. Velocità 7,5 m.' },
+  'Dragonide': { asi: { str: 2, cha: 1 }, speed: 9, traits: '+2 Forza, +1 Carisma. Arma del soffio e resistenza a un tipo di danno in base al lignaggio.' },
+  'Gnomo': { asi: { int: 2 }, speed: 7.5, traits: '+2 Intelligenza. Scurovisione 18 m. Vantaggio ai TS di INT/SAG/CAR contro la magia. Velocità 7,5 m.' },
+  'Mezzelfo': { asi: { cha: 2 }, speed: 9, traits: '+2 Carisma e +1 a due caratteristiche a scelta (da assegnare a mano). Scurovisione. Due competenze in abilità.' },
+  'Mezzorco': { asi: { str: 2, con: 1 }, speed: 9, traits: '+2 Forza, +1 Costituzione. Scurovisione. Resistenza implacabile (resti a 1 PF una volta al giorno). Attacchi brutali.' },
+  'Tiefling': { asi: { cha: 2, int: 1 }, speed: 9, traits: '+2 Carisma, +1 Intelligenza. Scurovisione. Resistenza al fuoco. Conosce il trucchetto Taumaturgia.' }
+};
+
+function speciesBonus(name) {
+  const b = { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 };
+  const s = SPECIES[name];
+  if (!s) return b;
+  const asi = s.asi || {};
+  Object.keys(asi).forEach(k => {
+    if (k === 'all') Object.keys(b).forEach(a => { b[a] += asi.all; });
+    else if (b.hasOwnProperty(k)) b[k] += asi[k];
+  });
+  return b;
+}
+
+function populateSpeciesSelect(selected) {
+  const sel = document.getElementById('char-race');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Seleziona specie</option>' +
+    Object.keys(SPECIES).map(s => `<option value="${s}"${s === selected ? ' selected' : ''}>${s}</option>`).join('');
+}
+
+window.onSpeciesChange = function() {
+  const name = document.getElementById('char-race').value;
+  const s = SPECIES[name];
+  const el = document.getElementById('species-traits');
+  if (el) el.innerHTML = s ? s.traits : '';
+  const speedEl = document.getElementById('char-speed');
+  if (s && speedEl) speedEl.value = Math.round(s.speed / 0.3); // metri -> piedi
+  renderPointBuy();
+};
+
+// === POINT BUY (regola di gioco, non contenuto protetto) ===
+const PB_COST = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
+const PB_ABILITIES = [['str', 'Forza (FOR)'], ['dex', 'Destrezza (DES)'], ['con', 'Costituzione (COS)'], ['int', 'Intelligenza (INT)'], ['wis', 'Saggezza (SAG)'], ['cha', 'Carisma (CAR)']];
+let pbState = { str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 };
+
+function pbPointsUsed() {
+  return PB_ABILITIES.reduce((sum, [k]) => sum + (PB_COST[pbState[k]] || 0), 0);
+}
+
+function renderPointBuy() {
+  const container = document.getElementById('pointbuy');
+  if (!container) return;
+  const raceEl = document.getElementById('char-race');
+  const bonus = speciesBonus(raceEl ? raceEl.value : '');
+  const remaining = 27 - pbPointsUsed();
+  const remEl = document.getElementById('pb-remaining');
+  if (remEl) remEl.textContent = remaining;
+  container.innerHTML = PB_ABILITIES.map(([k, label]) => {
+    const base = pbState[k];
+    const total = base + bonus[k];
+    const canDec = base > 8;
+    const nextCost = (PB_COST[base + 1] || 99) - (PB_COST[base] || 0);
+    const canInc = base < 15 && remaining >= nextCost;
+    return `
+      <div class="pb-row">
+        <span class="pb-label">${label}</span>
+        <button type="button" class="pb-btn" ${canDec ? '' : 'disabled'} onclick="pbAdjust('${k}',-1)">−</button>
+        <span class="pb-value">${base}</span>
+        <button type="button" class="pb-btn" ${canInc ? '' : 'disabled'} onclick="pbAdjust('${k}',1)">+</button>
+        <span class="pb-total">${bonus[k] ? `+${bonus[k]} specie → ` : ''}<strong>${total}</strong> (${formatModifier(calculateModifier(total))})</span>
+      </div>`;
+  }).join('');
+  PB_ABILITIES.forEach(([k]) => { const inp = document.getElementById('char-' + k); if (inp) inp.value = pbState[k]; });
+}
+
+window.pbAdjust = function(k, delta) {
+  const base = pbState[k];
+  const target = base + delta;
+  if (target < 8 || target > 15) return;
+  if (delta > 0) {
+    const cost = (PB_COST[target] || 0) - (PB_COST[base] || 0);
+    if (27 - pbPointsUsed() < cost) return;
+  }
+  pbState[k] = target;
+  renderPointBuy();
+};
+
+function resetPointBuy() {
+  pbState = { str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 };
+  renderPointBuy();
+}
+
 // === TRACKER SLOT INCANTESIMO ===
 async function persistSlots(charId, used) {
   try {
@@ -1403,14 +1497,10 @@ window.showAddCharacter = function() {
   document.getElementById('char-name').value = '';
   populateClassSelect('char-class', '');
   populateSubclassSelect('char-class', 'char-subclass', '');
-  document.getElementById('char-race').value = '';
+  populateSpeciesSelect('');
+  document.getElementById('species-traits').innerHTML = '';
+  resetPointBuy();
   document.getElementById('char-background').value = '';
-  document.getElementById('char-str').value = '10';
-  document.getElementById('char-dex').value = '10';
-  document.getElementById('char-con').value = '10';
-  document.getElementById('char-int').value = '10';
-  document.getElementById('char-wis').value = '10';
-  document.getElementById('char-cha').value = '10';
   document.getElementById('char-ac').value = '10';
   document.getElementById('char-initiative').value = '0';
   document.getElementById('char-speed').value = '30';
@@ -1499,14 +1589,19 @@ window.handleAddCharacter = async function(event) {
     gp: 0,
     items: [],
     proficiencyBonus: calculateProficiencyBonus(level),
-    stats: {
-      str: parseInt(document.getElementById('char-str').value),
-      dex: parseInt(document.getElementById('char-dex').value),
-      con: parseInt(document.getElementById('char-con').value),
-      int: parseInt(document.getElementById('char-int').value),
-      wis: parseInt(document.getElementById('char-wis').value),
-      cha: parseInt(document.getElementById('char-cha').value)
-    },
+    stats: (() => {
+      const b = speciesBonus(document.getElementById('char-race').value);
+      const base = id => parseInt(document.getElementById(id).value) || 8;
+      return {
+        str: base('char-str') + b.str,
+        dex: base('char-dex') + b.dex,
+        con: base('char-con') + b.con,
+        int: base('char-int') + b.int,
+        wis: base('char-wis') + b.wis,
+        cha: base('char-cha') + b.cha
+      };
+    })(),
+    speciesTraits: (SPECIES[document.getElementById('char-race').value] || {}).traits || '',
     combat: {
       ac: parseInt(document.getElementById('char-ac').value),
       initiative: parseInt(document.getElementById('char-initiative').value),
@@ -1620,8 +1715,9 @@ window.showCharacterDetail = function(charId) {
       <p><strong>Classe:</strong> ${char.class}${char.subclass ? ` (${char.subclass})` : ''}</p>
       <p><strong>Livello:</strong> ${char.level || 1}</p>
       <p><strong>Specie:</strong> ${char.race}</p>
+      ${char.speciesTraits ? `<p style="color: var(--gray); font-size: 0.9rem;">${char.speciesTraits}</p>` : ''}
       ${char.background ? `<p><strong>Background:</strong> ${char.background}</p>` : ''}
-      
+
       <h4 style="margin-top: 1.5rem;">Caratteristiche</h4>
       <div class="character-stats-grid">
         ${['str', 'dex', 'con', 'int', 'wis', 'cha'].map(k => {

@@ -1332,6 +1332,59 @@ button.add-btn:hover {
   background: rgba(212, 66, 62, 0.5);
 }
 
+/* === POINT BUY === */
+.choice-info {
+  font-size: 0.85rem;
+  color: var(--gray);
+  background: rgba(0, 0, 0, 0.15);
+  border-left: 3px solid var(--red, #d4423e);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  margin: 0.5rem 0;
+}
+
+.pointbuy-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.pb-row {
+  display: grid;
+  grid-template-columns: 1.4fr auto auto auto 1.6fr;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(232, 213, 160, 0.15);
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+}
+
+.pb-label { color: var(--beige, #e8d5a0); font-weight: 500; }
+
+.pb-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--primary, #2c3e6e);
+  color: #fff;
+  border: 1px solid rgba(232, 213, 160, 0.3);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.pb-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.pb-value {
+  min-width: 2ch;
+  text-align: center;
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #fff;
+}
+
+.pb-total { text-align: right; color: var(--gray); font-size: 0.9rem; }
+
 /* === CHIP INCANTESIMI === */
 .spell-chip {
   display: inline-block;

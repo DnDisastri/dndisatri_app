@@ -158,7 +158,9 @@
                 <select id="char-class" required onchange="onClassChange('char-class','char-subclass')"></select>
                 <label>Sottoclasse</label>
                 <select id="char-subclass"></select>
-                <input type="text" id="char-race" placeholder="Specie (es. Umano)" list="races-list" required />
+                <label>Specie</label>
+                <select id="char-race" required onchange="onSpeciesChange()"></select>
+                <div id="species-traits" class="choice-info"></div>
                 <datalist id="races-list">
                   <option value="Umano"></option>
                   <option value="Elfo"></option>
@@ -193,33 +195,16 @@
               </div>
 
               <div class="form-section">
-                <h4>Caratteristiche (Punteggi)</h4>
-                <div class="stats-grid">
-                  <div>
-                    <label>Forza (STR)</label>
-                    <input type="number" id="char-str" min="1" max="30" value="10" required />
-                  </div>
-                  <div>
-                    <label>Destrezza (DEX)</label>
-                    <input type="number" id="char-dex" min="1" max="30" value="10" required />
-                  </div>
-                  <div>
-                    <label>Costituzione (CON)</label>
-                    <input type="number" id="char-con" min="1" max="30" value="10" required />
-                  </div>
-                  <div>
-                    <label>Intelligenza (INT)</label>
-                    <input type="number" id="char-int" min="1" max="30" value="10" required />
-                  </div>
-                  <div>
-                    <label>Saggezza (WIS)</label>
-                    <input type="number" id="char-wis" min="1" max="30" value="10" required />
-                  </div>
-                  <div>
-                    <label>Carisma (CHA)</label>
-                    <input type="number" id="char-cha" min="1" max="30" value="10" required />
-                  </div>
-                </div>
+                <h4>Caratteristiche — Point Buy</h4>
+                <p class="choice-info">Hai 27 punti. Ogni punteggio parte da 8 (massimo 15 prima dei bonus di specie). I punteggi da 9 a 13 costano 1 punto ciascuno; il 14 e il 15 ne costano 2 ciascuno. I bonus di specie si sommano dopo.</p>
+                <p style="margin:0.5rem 0;"><strong>Punti rimanenti: <span id="pb-remaining">27</span> / 27</strong></p>
+                <div id="pointbuy" class="pointbuy-grid"></div>
+                <input type="hidden" id="char-str" value="8" />
+                <input type="hidden" id="char-dex" value="8" />
+                <input type="hidden" id="char-con" value="8" />
+                <input type="hidden" id="char-int" value="8" />
+                <input type="hidden" id="char-wis" value="8" />
+                <input type="hidden" id="char-cha" value="8" />
               </div>
 
               <div class="form-section">
@@ -1062,6 +1047,6 @@
   </div>
 
   <!-- Firebase SDK (modular) -->
-  <script type="module" src="app.js?v=20"></script>
+  <script type="module" src="app.js?v=21"></script>
 </body>
 </html>
