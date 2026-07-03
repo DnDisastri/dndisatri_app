@@ -246,6 +246,163 @@ function subclassLevel(cls) {
   return 3;
 }
 
+// Sottoclassi da tutti i manuali (nomi = titoli; descrizioni = sintesi originali di tema/ruolo)
+const ALL_SUBCLASSES = {
+  'Barbaro': [
+    { name: 'Cammino del Berserker', desc: 'Furia sanguinaria: attacchi extra a costo della stanchezza.' },
+    { name: 'Cammino del Totem Guerriero', desc: 'Spiriti animali che donano resistenza e doni mistici.' },
+    { name: 'Cammino del Guardiano Ancestrale', desc: 'Gli antenati proteggono te e i tuoi alleati.' },
+    { name: 'Cammino dello Zelota', desc: 'Fervore divino: danni sacri e ritorno dalla morte.' },
+    { name: "Cammino dell'Araldo delle Tempeste", desc: 'Aure elementali che colpiscono chi ti circonda.' },
+    { name: 'Cammino della Bestia', desc: 'In ira ti spuntano artigli, zanne o coda.' },
+    { name: 'Cammino della Magia Selvaggia', desc: 'Effetti magici imprevedibili scatenati dalla furia.' },
+    { name: 'Cammino dei Giganti', desc: 'Attingi al potere dei giganti, crescendo di taglia.' }
+  ],
+  'Bardo': [
+    { name: 'Collegio della Sapienza', desc: 'Colto e versatile: ruba incantesimi e potenzia le abilità.' },
+    { name: 'Collegio del Valore', desc: 'Bardo guerriero: armature e attacchi extra.' },
+    { name: 'Collegio delle Spade', desc: 'Acrobazie di lama e danni in mischia.' },
+    { name: 'Collegio dei Sussurri', desc: 'Manipolazione e paura, quasi un assassino.' },
+    { name: "Collegio dell'Incanto", desc: 'Fascino irresistibile e presenza magnetica.' },
+    { name: 'Collegio della Creazione', desc: 'Canti che danno forma e vita alla realtà.' },
+    { name: "Collegio dell'Eloquenza", desc: 'Oratore perfetto: persuasione quasi infallibile.' }
+  ],
+  'Chierico': [
+    { name: 'Dominio della Conoscenza', desc: 'Sapere e divinazione; competenze potenziate.' },
+    { name: 'Dominio della Vita', desc: 'Il miglior guaritore: cure aumentate.' },
+    { name: 'Dominio della Guerra', desc: 'Chierico da battaglia: attacchi divini extra.' },
+    { name: 'Dominio della Tempesta', desc: 'Fulmini e tuoni contro chi ti colpisce.' },
+    { name: "Dominio dell'Inganno", desc: 'Illusioni, furtività e colpi a tradimento.' },
+    { name: 'Dominio della Luce', desc: 'Fuoco radioso e protezione dalle tenebre.' },
+    { name: 'Dominio della Natura', desc: 'Incantesimi druidici e dominio sugli animali.' },
+    { name: 'Dominio della Morte', desc: 'Necromanzia e danni potenziati.' },
+    { name: 'Dominio della Forgia', desc: 'Benedice armi e armature; resistenza al fuoco.' },
+    { name: 'Dominio della Tomba', desc: 'Confine tra vita e morte; nega i colpi critici.' },
+    { name: "Dominio dell'Ordine", desc: 'Autorità e comando; incanti di controllo.' },
+    { name: 'Dominio della Pace', desc: 'Legami protettivi che uniscono il gruppo.' },
+    { name: 'Dominio del Crepuscolo', desc: 'Scurovisione e riposo per gli alleati nel buio.' },
+    { name: 'Dominio Arcano', desc: 'Fonde magia arcana e divina.' }
+  ],
+  'Druido': [
+    { name: 'Circolo della Terra', desc: 'Incantatore versatile legato a un ambiente.' },
+    { name: 'Circolo della Luna', desc: 'Forme selvatiche potenti da mutaforma guerriero.' },
+    { name: 'Circolo dei Sogni', desc: 'Magia fatata: cure e brevi teletrasporti.' },
+    { name: 'Circolo del Pastore', desc: 'Evoca e potenzia bestie e spiriti.' },
+    { name: 'Circolo delle Spore', desc: 'Necromanzia fungina: combatti in mischia.' },
+    { name: 'Circolo delle Stelle', desc: 'Forme costellate per attacco, cura o sapere.' },
+    { name: 'Circolo del Fuoco Selvaggio', desc: 'Uno spirito di fuoco che cura e brucia.' }
+  ],
+  'Guerriero': [
+    { name: 'Campione', desc: 'Combattente diretto: critici più frequenti e atletismo.' },
+    { name: 'Maestro di Battaglia', desc: 'Manovre tattiche che controllano lo scontro.' },
+    { name: 'Cavaliere Mistico', desc: 'Fonde combattimento e magia arcana (incantatore 1/3).' },
+    { name: 'Cavaliere', desc: 'Difensore a cavallo che protegge gli alleati.' },
+    { name: 'Samurai', desc: 'Determinazione ferrea e raffiche di attacchi.' },
+    { name: 'Arciere Arcano', desc: 'Frecce infuse di magia con effetti speciali.' },
+    { name: 'Bannereto', desc: 'Comandante che ispira e cura i compagni.' },
+    { name: 'Guerriero Psionico', desc: 'Poteri mentali che potenziano attacco e difesa.' },
+    { name: 'Cavaliere Runico', desc: 'Rune giganti che ingrandiscono e rinforzano.' },
+    { name: "Cavaliere dell'Eco", desc: "Evoca un'eco spettrale di sé per colpire e spostarsi." }
+  ],
+  'Ladro': [
+    { name: 'Ladro', desc: 'Scassinatore agile: usa oggetti e fugge in fretta.' },
+    { name: 'Assassino', desc: 'Colpi mortali contro bersagli impreparati.' },
+    { name: 'Furfante Arcano', desc: 'Ladro con illusione e inganno (incantatore 1/3).' },
+    { name: 'Mente Superiore', desc: 'Stratega e falsario, colpisce aiutando gli altri.' },
+    { name: 'Spadaccino', desc: 'Duellante mobile e carismatico.' },
+    { name: 'Esploratore', desc: 'Ricognitore mobile, esperto di natura.' },
+    { name: 'Inquisitore', desc: 'Investigatore che smaschera bugie e debolezze.' },
+    { name: 'Fantasma', desc: 'Tocca la morte: danni necrotici e spettri.' },
+    { name: "Lama dell'Anima", desc: 'Lame psichiche e poteri telepatici.' }
+  ],
+  'Mago': [
+    { name: 'Abiurazione', desc: 'Scudo arcano protettivo che assorbe i danni.' },
+    { name: 'Ammaliamento', desc: 'Controllo mentale e fascino.' },
+    { name: 'Divinazione', desc: 'Prevede gli eventi e altera i tiri di dado.' },
+    { name: 'Evocazione', desc: 'Crea e piazza aree di effetto con precisione.' },
+    { name: 'Illusione', desc: 'Inganni sensoriali sempre più reali.' },
+    { name: 'Invocazione', desc: 'Danni magici massimizzati.' },
+    { name: 'Necromanzia', desc: 'Comanda i non morti e drena la vita.' },
+    { name: 'Trasmutazione', desc: 'Altera materia e forma delle cose.' },
+    { name: 'Magia da Guerra', desc: 'Equilibrio tra difesa e potenza offensiva.' },
+    { name: 'Canto di Lama', desc: 'Mago spadaccino agile e difensivo.' },
+    { name: 'Cronurgia', desc: 'Manipola il tempo in battaglia.' },
+    { name: 'Graviturgia', desc: 'Piega la gravità per attrarre o schiacciare.' },
+    { name: 'Ordine degli Scribi', desc: 'Il libro degli incantesimi prende vita.' }
+  ],
+  'Monaco': [
+    { name: 'Via della Mano Aperta', desc: 'Arti marziali pure: spinte, atterramenti e cura.' },
+    { name: "Via dell'Ombra", desc: 'Furtività, teletrasporti e oscurità.' },
+    { name: 'Via dei Quattro Elementi', desc: 'Incanala gli elementi nelle arti marziali.' },
+    { name: "Via dell'Anima Solare", desc: 'Raggi di energia radiante a distanza.' },
+    { name: 'Via del Kensei', desc: 'Maestria con armi scelte.' },
+    { name: 'Via del Maestro Ebbro', desc: 'Stile imprevedibile e schivate acrobatiche.' },
+    { name: 'Via della Lunga Morte', desc: 'Attinge alla morte per resistere e spaventare.' },
+    { name: 'Via della Misericordia', desc: 'Cura o infligge sofferenza con il tocco.' },
+    { name: 'Via del Sé Astrale', desc: "Un'entità spirituale combatte con te." }
+  ],
+  'Paladino': [
+    { name: 'Giuramento di Devozione', desc: 'Cavaliere sacro: onore e protezione.' },
+    { name: 'Giuramento degli Antichi', desc: 'Difensore della luce e della natura.' },
+    { name: 'Giuramento di Vendetta', desc: 'Cacciatore implacabile del male.' },
+    { name: 'Giuramento della Corona', desc: 'Fedele alla civiltà: tiene il fronte.' },
+    { name: 'Giuramento della Conquista', desc: 'Domina con il terrore e la forza.' },
+    { name: 'Giuramento della Redenzione', desc: 'Cerca la pace, la violenza per ultima.' },
+    { name: 'Giuramento della Gloria', desc: 'Eroe atletico che spinge il gruppo.' },
+    { name: 'Giuramento dei Guardiani', desc: 'Caccia le minacce extraplanari.' },
+    { name: 'Spezzagiuramenti', desc: 'Paladino caduto votato al male.' }
+  ],
+  'Ranger': [
+    { name: 'Cacciatore', desc: 'Specialista contro orde o grandi bestie.' },
+    { name: 'Signore delle Bestie', desc: 'Combatte al fianco di un compagno animale.' },
+    { name: 'Vagabondo Fatato', desc: 'Magia fatata: incanti e spostamenti.' },
+    { name: "Cacciatore nell'Ombra", desc: 'Agguati nel buio, letale nella sorpresa.' },
+    { name: "Viandante dell'Orizzonte", desc: 'Guerriero planare che teletrasporta.' },
+    { name: 'Sterminatore di Mostri', desc: 'Duellante che prevede e punisce i mostri.' },
+    { name: 'Custode di Sciami', desc: 'Uno sciame di creature lo aiuta in battaglia.' }
+  ],
+  'Stregone': [
+    { name: 'Discendenza Draconica', desc: 'Sangue di drago: più PF e danni elementali.' },
+    { name: 'Magia Selvaggia', desc: 'Potere caotico e imprevedibile.' },
+    { name: 'Anima Divina', desc: 'Magia sacra: cure e resistenza.' },
+    { name: 'Magia delle Ombre', desc: 'Oscurità, paura e un mastino spettrale.' },
+    { name: 'Stregoneria della Tempesta', desc: 'Vola e scatena vento e fulmini.' },
+    { name: 'Mente Aberrante', desc: 'Poteri psionici e telepatia.' },
+    { name: 'Anima Meccanica', desc: 'Ordine cosmico: precisione e protezione.' }
+  ],
+  'Warlock': [
+    { name: "Patrono: l'Immondo", desc: 'Patto infernale: PF temporanei e fuoco.' },
+    { name: "Patrono: l'Arcifata", desc: 'Incanto fatato: fascino e fughe.' },
+    { name: 'Patrono: il Grande Antico', desc: 'Orrori psichici e telepatia.' },
+    { name: 'Patrono: la Lama Maledetta', desc: 'Guerriero occulto con arma legata.' },
+    { name: "Patrono: l'Imperituro", desc: 'Sfida la morte, difficile da abbattere.' },
+    { name: 'Patrono: il Genio', desc: 'Doni elementali da un potente genio.' },
+    { name: 'Patrono: le Profondità', desc: 'Poteri abissali e tentacoli.' },
+    { name: 'Patrono: il Non Morto', desc: 'Legato a un lich o vampiro: orrore e resistenza.' }
+  ]
+};
+
+function subclassNamesFor(cls) {
+  if (ALL_SUBCLASSES[cls]) return ALL_SUBCLASSES[cls].map(s => s.name);
+  return (CLASSES[cls] && CLASSES[cls].subclasses) || [];
+}
+
+function subclassDesc(cls, name) {
+  const list = ALL_SUBCLASSES[cls];
+  if (!list) return '';
+  const found = list.find(s => s.name === name);
+  return found ? found.desc : '';
+}
+
+window.renderSubclassInfo = function() {
+  const el = document.getElementById('subclass-info');
+  if (!el) return;
+  const cls = document.getElementById('char-class').value;
+  const sub = document.getElementById('char-subclass').value;
+  const d = subclassDesc(cls, sub);
+  el.innerHTML = d ? d : '';
+};
+
 // Liste incantesimi per classe (fatti di gioco), limitate alla libreria interna
 const CLASS_SPELL_LIST = {
   'Mago': ['Dardo di Fuoco', 'Mano Magica', 'Luce', 'Prestidigitazione', 'Illusione Minore', 'Raggio di Gelo', 'Tocco Gelido', 'Dardo Incantato', 'Scudo', 'Armatura Magica', 'Mani Brucianti', 'Charme su Persone', 'Sonno', 'Individuazione del Magico', 'Nube di Nebbia', 'Raggio Rovente', 'Passo Velato', 'Invisibilità', 'Immagine Speculare', 'Blocca Persone', 'Frantumare', 'Palla di Fuoco', 'Fulmine', 'Controincantesimo', 'Dissolvi Magie', 'Volare', 'Porta Dimensionale', 'Polimorfia', 'Cono di Freddo', 'Muro di Forza'],
@@ -351,9 +508,10 @@ function populateSubclassSelect(classSelectId, subclassSelectId, selectedSub) {
   const cls = document.getElementById(classSelectId).value;
   const sub = document.getElementById(subclassSelectId);
   if (!sub) return;
-  const subs = (CLASSES[cls] && CLASSES[cls].subclasses) || [];
+  const subs = subclassNamesFor(cls);
   sub.innerHTML = '<option value="">— nessuna —</option>' +
     subs.map(s => `<option value="${s}"${s === selectedSub ? ' selected' : ''}>${s}</option>`).join('');
+  if (subclassSelectId === 'char-subclass') renderSubclassInfo();
 }
 
 window.onClassChange = function(classSelectId, subclassSelectId) {
@@ -394,6 +552,7 @@ function applyClassToCreation() {
 // === SPECIE (bonus di caratteristica = fatti; tratti = sintesi originali) ===
 const SPECIES = {
   'Umano': { asi: { all: 1 }, speed: 9, traits: 'Versatile: +1 a tutte le caratteristiche. Velocità 9 m.' },
+  'Umano (Variante)': { asi: {}, speed: 9, variant: true, traits: '+1 a due caratteristiche a scelta, una competenza in un\'abilità e un talento (al livello 1). Velocità 9 m.' },
   'Nano': { asi: { con: 2 }, speed: 7.5, traits: '+2 Costituzione. Scurovisione 18 m. Resistenza al veleno. Competenza con asce e martelli. Velocità 7,5 m.' },
   'Elfo': { asi: { dex: 2 }, speed: 9, traits: '+2 Destrezza. Scurovisione 18 m. Vantaggio contro ammaliamento e immunità al sonno magico. Percezione competente.' },
   'Halfling': { asi: { dex: 2 }, speed: 7.5, traits: '+2 Destrezza. Fortunato: ritira gli 1 sui d20 di attacco/prova/TS. Vantaggio contro lo spavento. Velocità 7,5 m.' },
@@ -413,6 +572,12 @@ function speciesBonus(name) {
     if (k === 'all') Object.keys(b).forEach(a => { b[a] += asi.all; });
     else if (b.hasOwnProperty(k)) b[k] += asi[k];
   });
+  if (s.variant) {
+    const a = document.getElementById('variant-abil-1');
+    const c = document.getElementById('variant-abil-2');
+    if (a && b.hasOwnProperty(a.value)) b[a.value] += 1;
+    if (c && b.hasOwnProperty(c.value)) b[c.value] += 1;
+  }
   return b;
 }
 
@@ -428,6 +593,21 @@ window.onSpeciesChange = function() {
   const s = SPECIES[name];
   const el = document.getElementById('species-traits');
   if (el) el.innerHTML = s ? s.traits : '';
+
+  const variantEl = document.getElementById('species-variant');
+  if (variantEl) {
+    if (s && s.variant) {
+      const opts = (sel) => [['str', 'FOR'], ['dex', 'DES'], ['con', 'COS'], ['int', 'INT'], ['wis', 'SAG'], ['cha', 'CAR']]
+        .map(([k, l]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${l}</option>`).join('');
+      variantEl.innerHTML = `
+        <div class="choice-info">Umano Variante: scegli le due caratteristiche a cui dare +1.</div>
+        <label>Prima (+1)</label><select id="variant-abil-1" onchange="renderPointBuy()">${opts('str')}</select>
+        <label>Seconda (+1)</label><select id="variant-abil-2" onchange="renderPointBuy()">${opts('con')}</select>`;
+    } else {
+      variantEl.innerHTML = '';
+    }
+  }
+
   const speedEl = document.getElementById('char-speed');
   if (s && speedEl) speedEl.value = Math.round(s.speed / 0.3); // metri -> piedi
   renderPointBuy();
@@ -1866,8 +2046,10 @@ window.showAddCharacter = function() {
   populateClassSelect('char-class', '');
   populateSubclassSelect('char-class', 'char-subclass', '');
   document.getElementById('class-info').innerHTML = '';
+  document.getElementById('subclass-info').innerHTML = '';
   populateSpeciesSelect('');
   document.getElementById('species-traits').innerHTML = '';
+  document.getElementById('species-variant').innerHTML = '';
   resetPointBuy();
   populateBackgroundSelect('');
   document.getElementById('background-info').innerHTML = '';
@@ -2136,6 +2318,7 @@ window.showCharacterDetail = function(charId) {
     
     <div class="character-info">
       <p><strong>Classe:</strong> ${char.class}${char.subclass ? ` (${char.subclass})` : ''}</p>
+      ${char.subclass && subclassDesc(char.class, char.subclass) ? `<p style="color: var(--gray); font-size: 0.9rem;">${subclassDesc(char.class, char.subclass)}</p>` : ''}
       <p><strong>Livello:</strong> ${char.level || 1}</p>
       <p><strong>Specie:</strong> ${char.race}</p>
       ${char.speciesTraits ? `<p style="color: var(--gray); font-size: 0.9rem;">${char.speciesTraits}</p>` : ''}
@@ -2631,7 +2814,7 @@ window.showLevelUpRequest = function(charId) {
     </div>
   ` : '';
 
-  const subs = (CLASSES[char.class] && CLASSES[char.class].subclasses) || [];
+  const subs = subclassNamesFor(char.class);
   const needsSubclass = newLevel === subclassLevel(char.class) && !char.subclass && subs.length > 0;
   const subclassBlock = needsSubclass ? `
     <div class="form-section">

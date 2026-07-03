@@ -159,10 +159,12 @@
                 <div id="class-info" class="choice-info"></div>
                 <div id="equip-choices"></div>
                 <label>Sottoclasse</label>
-                <select id="char-subclass"></select>
+                <select id="char-subclass" onchange="renderSubclassInfo()"></select>
+                <div id="subclass-info" class="choice-info"></div>
                 <label>Specie</label>
                 <select id="char-race" required onchange="onSpeciesChange()"></select>
                 <div id="species-traits" class="choice-info"></div>
+                <div id="species-variant"></div>
                 <datalist id="races-list">
                   <option value="Umano"></option>
                   <option value="Elfo"></option>
@@ -1067,6 +1069,6 @@
   </div>
 
   <!-- Firebase SDK (modular) -->
-  <script type="module" src="app.js?v=27"></script>
+  <script type="module" src="app.js?v=28"></script>
 </body>
 </html>

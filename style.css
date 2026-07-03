@@ -1367,6 +1367,18 @@ button.add-btn:hover {
   margin: 0.5rem 0;
 }
 
+/* Non mostrare i box informativi quando sono vuoti (niente riquadri vuoti) */
+.choice-info:empty {
+  display: none;
+}
+
+/* Menu a tendina delle scelte in creazione, coerenti col resto */
+#add-character-form select,
+#edit-character-form select {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
 .pointbuy-grid {
   display: flex;
   flex-direction: column;
