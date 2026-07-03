@@ -543,6 +543,24 @@ function applyClassToCreation() {
       <strong>Caratteristiche consigliate:</strong> ${rec || '—'}<br>
       <strong>Equipaggiamento iniziale:</strong> ${c.equip}${CLASS_CAPSTONE[document.getElementById('char-class').value] ? `<br><strong>Capstone:</strong> ${CLASS_CAPSTONE[document.getElementById('char-class').value]}` : ''}`;
   }
+
+  // La sottoclasse si sceglie al livello giusto: a livello 1 solo Chierico/Stregone/Warlock.
+  // Le altre classi la scelgono salendo di livello (Druido/Mago liv. 2, resto liv. 3).
+  const clsName = document.getElementById('char-class').value;
+  const sl = subclassLevel(clsName);
+  const subSel = document.getElementById('char-subclass');
+  const subInfo = document.getElementById('subclass-info');
+  if (subSel) {
+    if (sl > 1) {
+      subSel.value = '';
+      subSel.disabled = true;
+      if (subInfo) subInfo.innerHTML = `La sottoclasse di ${clsName} si sceglie al livello ${sl}: la sceglierai salendo di livello.`;
+    } else {
+      subSel.disabled = false;
+      renderSubclassInfo();
+    }
+  }
+
   renderPointBuy();
   renderEquipChoices();
   recomputeSkillAvailability();
@@ -2045,6 +2063,7 @@ window.showAddCharacter = function() {
   document.getElementById('char-name').value = '';
   populateClassSelect('char-class', '');
   populateSubclassSelect('char-class', 'char-subclass', '');
+  document.getElementById('char-subclass').disabled = false;
   document.getElementById('class-info').innerHTML = '';
   document.getElementById('subclass-info').innerHTML = '';
   populateSpeciesSelect('');
