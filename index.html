@@ -215,15 +215,8 @@
 
               <div class="form-section">
                 <h4>Statistiche di Combattimento</h4>
+                <div class="choice-info">Classe Armatura e Iniziativa sono calcolate in automatico (armatura equipaggiata + Destrezza). La velocità è impostata dalla specie.</div>
                 <div class="combat-grid">
-                  <div>
-                    <label>Classe Armatura (AC)</label>
-                    <input type="number" id="char-ac" min="1" max="30" value="10" required />
-                  </div>
-                  <div>
-                    <label>Iniziativa</label>
-                    <input type="number" id="char-initiative" value="0" required />
-                  </div>
                   <div>
                     <label>Velocità (ft)</label>
                     <input type="number" id="char-speed" min="0" value="30" required />
@@ -541,15 +534,8 @@
 
               <div class="form-section">
                 <h4>Statistiche Combattimento</h4>
+                <div class="choice-info">Classe Armatura e Iniziativa sono automatiche (armatura equipaggiata + Destrezza).</div>
                 <div class="combat-grid">
-                  <div>
-                    <label>AC</label>
-                    <input type="number" id="edit-char-ac" min="1" max="30" required />
-                  </div>
-                  <div>
-                    <label>Iniziativa</label>
-                    <input type="number" id="edit-char-initiative" required />
-                  </div>
                   <div>
                     <label>Velocità</label>
                     <input type="number" id="edit-char-speed" min="0" required />
@@ -1069,6 +1055,6 @@
   </div>
 
   <!-- Firebase SDK (modular) -->
-  <script type="module" src="app.js?v=29"></script>
+  <script type="module" src="app.js?v=30"></script>
 </body>
 </html>

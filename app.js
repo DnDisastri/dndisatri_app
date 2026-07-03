@@ -2079,8 +2079,6 @@ window.showAddCharacter = function() {
     const cb = document.getElementById('save-' + a);
     if (cb) { cb.checked = false; cb.disabled = false; }
   });
-  document.getElementById('char-ac').value = '10';
-  document.getElementById('char-initiative').value = '0';
   document.getElementById('char-speed').value = '30';
   document.getElementById('char-hp-max').value = '10';
   document.getElementById('char-class-features').value = '';
@@ -2182,8 +2180,8 @@ window.handleAddCharacter = async function(event) {
     })(),
     speciesTraits: (SPECIES[document.getElementById('char-race').value] || {}).traits || '',
     combat: {
-      ac: parseInt(document.getElementById('char-ac').value),
-      initiative: parseInt(document.getElementById('char-initiative').value),
+      ac: 10, // calcolata in automatico (effectiveAC) — valore memorizzato non usato
+      initiative: 0, // calcolata in automatico (mod. Destrezza)
       speed: parseInt(document.getElementById('char-speed').value),
       hpMax: parseInt(document.getElementById('char-hp-max').value),
       hpCurrent: parseInt(document.getElementById('char-hp-current').value) || parseInt(document.getElementById('char-hp-max').value),
@@ -2594,8 +2592,6 @@ window.showEditCharacter = function(charId) {
   document.getElementById('edit-char-int').value = stats.int || 10;
   document.getElementById('edit-char-wis').value = stats.wis || 10;
   document.getElementById('edit-char-cha').value = stats.cha || 10;
-  document.getElementById('edit-char-ac').value = combat.ac || 10;
-  document.getElementById('edit-char-initiative').value = combat.initiative || 0;
   document.getElementById('edit-char-speed').value = combat.speed || 30;
   document.getElementById('edit-char-hp-max').value = combat.hpMax || 10;
   document.getElementById('edit-char-hp-current').value = combat.hpCurrent !== undefined ? combat.hpCurrent : (combat.hpMax || 10);
@@ -2665,8 +2661,8 @@ window.handleEditCharacter = async function(event) {
       cha: parseInt(document.getElementById('edit-char-cha').value)
     },
     combat: {
-      ac: parseInt(document.getElementById('edit-char-ac').value),
-      initiative: parseInt(document.getElementById('edit-char-initiative').value),
+      ac: (char.combat && char.combat.ac) || 10, // automatica (effectiveAC)
+      initiative: (char.combat && char.combat.initiative) || 0, // automatica
       speed: parseInt(document.getElementById('edit-char-speed').value),
       hpMax: parseInt(document.getElementById('edit-char-hp-max').value),
       hpCurrent: parseInt(document.getElementById('edit-char-hp-current').value),
