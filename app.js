@@ -66,6 +66,23 @@ let notifUnreadCount = 0;
 let pendingCount = 0;
 let spellDescOverrides = {};
 
+// === SINCRONIZZAZIONE GOOGLE FOGLI (Apps Script Web App) ===
+// Incolla qui l'URL della Web App e il token scelto nello script; se vuoti, non fa nulla.
+const SHEET_WEBAPP_URL = '';
+const SHEET_TOKEN = '';
+function syncSheet(action, data) {
+  if (!SHEET_WEBAPP_URL) return;
+  try {
+    // text/plain evita il preflight CORS; no-cors = invio "fire-and-forget"
+    fetch(SHEET_WEBAPP_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ token: SHEET_TOKEN, action, data })
+    });
+  } catch (e) { console.error('Errore sync Google Fogli:', e); }
+}
+
 // === UTILITY FUNCTIONS ===
 function calculateModifier(score) {
   return Math.floor((score - 10) / 2);
@@ -2276,6 +2293,12 @@ window.handleAddCharacter = async function(event) {
   try {
     showLoading();
     await addDoc(collection(db, 'characters'), characterData);
+    syncSheet('personaggio_creato', {
+      player: currentUsername, email: currentUser.email,
+      character: characterData.name, class: characterData.class,
+      level: characterData.level, race: characterData.race,
+      background: characterData.background
+    });
     hideLoading();
     hideAddCharacter();
     loadCharacters();
