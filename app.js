@@ -648,6 +648,46 @@ function spellSlotsForCharacter(char) {
   return { pact: false, slots };
 }
 
+// Livello massimo di incantesimo lanciabile dal personaggio (0 se non incantatore o senza slot).
+function maxCastableSpellLevel(char) {
+  const info = spellSlotsForCharacter(char);
+  if (!info) return 0;
+  if (info.pact) return info.pactLevel || 0;
+  const keys = Object.keys(info.slots || {});
+  return keys.length ? Math.max.apply(null, keys.map(Number)) : 0;
+}
+
+// Vincoli incantesimi nel form di MODIFICA: nasconde la sezione ai non-incantatori,
+// blocca la caratteristica sulla classe, mostra CD/attacco e sopprime i livelli non ancora
+// lanciabili al livello reale del personaggio.
+function applyEditSpellConstraints(char) {
+  const section = document.getElementById('edit-spells-section');
+  if (!section) return;
+  const kind = casterType(char.class, char.subclass);
+  if (kind === 'none') { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  const ability = CLASS_SPELL_ABILITY[char.class] || (THIRD_CASTER_SUBCLASSES.includes(char.subclass) ? 'int' : '');
+  const abilitySel = document.getElementById('edit-char-spell-ability');
+  if (abilitySel && ability) { abilitySel.value = ability; abilitySel.disabled = true; }
+
+  const statsEl = document.getElementById('edit-spell-stats');
+  if (statsEl && ability) {
+    const stats = char.stats || {};
+    const prof = char.proficiencyBonus || calculateProficiencyBonus(char.level || 1);
+    const dc = calculateSpellDC(ability, prof, stats);
+    const atk = calculateSpellAttackBonus(ability, prof, stats);
+    statsEl.innerHTML = `<strong>CD Tiro Salvezza:</strong> ${dc} &nbsp;·&nbsp; <strong>Bonus Attacco Incantesimi:</strong> +${atk}`;
+  }
+
+  const maxL = maxCastableSpellLevel(char);
+  section.querySelectorAll('.spell-level-row').forEach(row => {
+    const ta = row.querySelector('.edit-spell-list');
+    const lvl = ta ? parseInt(ta.dataset.level) : 0;
+    row.style.display = (lvl > maxL) ? 'none' : '';
+  });
+}
+
 function populateClassSelect(selectId, selected) {
   const sel = document.getElementById(selectId);
   if (!sel) return;
@@ -2872,20 +2912,23 @@ window.showEditCharacter = function(charId) {
   // Populate spellcasting
   const spellcasting = char.spellcasting || {};
   document.getElementById('edit-char-spell-ability').value = spellcasting.ability || '';
-  document.getElementById('edit-char-cantrips').value = spellcasting.cantrips || '';
+  document.getElementById('edit-char-cantrips').value = spellNamesString(spellcasting.cantrips);
   
   for (let i = 1; i <= 9; i++) {
     const levelData = spellcasting[`level${i}`];
     const spellListElem = document.querySelector(`.edit-spell-list[data-level="${i}"]`);
     const spellSlotsElem = document.querySelector(`.edit-spell-slots[data-level="${i}"]`);
     if (spellListElem && spellSlotsElem) {
-      spellListElem.value = (levelData && levelData.spells) || '';
+      spellListElem.value = levelData ? spellNamesString(levelData.spells) : '';
       spellSlotsElem.value = (levelData && levelData.slots) || '';
     }
   }
   
   document.getElementById('edit-char-notes').value = char.notes || '';
-  
+
+  // Vincoli incantesimi nel form di modifica (sezione, caratteristica, CD, livelli disponibili)
+  applyEditSpellConstraints(char);
+
   // Populate skills
   if (char.skills) {
     populateSkillsForm(char.skills, 'edit-skill');

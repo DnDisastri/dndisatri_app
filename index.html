@@ -600,7 +600,7 @@
                 <button type="button" onclick="addWeaponRow()" class="btn-secondary">+ Aggiungi Arma</button>
               </div>
 
-              <div class="form-section">
+              <div class="form-section" id="edit-spells-section">
                 <h4>Incantesimi</h4>
                 <label>Caratteristica Incantatore</label>
                 <select id="edit-char-spell-ability">
@@ -609,7 +609,8 @@
                   <option value="wis">Saggezza</option>
                   <option value="cha">Carisma</option>
                 </select>
-  
+                <div id="edit-spell-stats" class="choice-info"></div>
+
               <label>Trucchetti</label>
               <textarea id="edit-char-cantrips" rows="2" placeholder="Lista trucchetti separati da virgola"></textarea>
   
@@ -1037,6 +1038,6 @@
   </div>
 
   <!-- Firebase SDK (modular) -->
-  <script type="module" src="app.js?v=34"></script>
+  <script type="module" src="app.js?v=35"></script>
 </body>
 </html>
