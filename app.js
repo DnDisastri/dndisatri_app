@@ -543,6 +543,10 @@ function populateSubclassSelect(classSelectId, subclassSelectId, selectedSub) {
 window.onClassChange = function(classSelectId, subclassSelectId) {
   populateSubclassSelect(classSelectId, subclassSelectId);
   if (classSelectId === 'char-class') applyClassToCreation();
+  else if (classSelectId === 'edit-char-class') {
+    const lvl = parseInt(document.getElementById('edit-char-level').value) || 1;
+    recomputeExpertiseAvailability('edit-skill', lvl);
+  }
 };
 
 function applyClassToCreation() {
@@ -2734,6 +2738,13 @@ window.showEditCharacter = function(charId) {
   if (char.skills) {
     populateSkillsForm(char.skills, 'edit-skill');
   }
+  // Gating expertise nel form di modifica: si basa sul livello reale del personaggio.
+  const editLevel = char.level || 1;
+  Object.keys(SKILLS_MAP).forEach(k => {
+    const prof = document.getElementById(`edit-skill-${k}-prof`);
+    if (prof) prof.onchange = () => recomputeExpertiseAvailability('edit-skill', editLevel);
+  });
+  recomputeExpertiseAvailability('edit-skill', editLevel);
   
   // Populate saving throws
   if (char.savingThrows) {
@@ -2779,7 +2790,7 @@ window.handleEditCharacter = async function(event) {
       hpTemp: parseInt(document.getElementById('edit-char-hp-temp').value) || 0
     },
     savingThrows: readSavingThrowsFromForm('edit-save'),
-    skills: readSkillsFromForm('edit-skill'),
+    skills: normalizeSkillsExpertise(readSkillsFromForm('edit-skill'), document.getElementById('edit-char-class').value.trim(), char.level || 1),
     classFeatures: document.getElementById('edit-char-class-features').value.trim(),
     subclassFeatures: document.getElementById('edit-char-subclass-features').value.trim(),
     inventory: document.getElementById('edit-char-inventory').value.trim(),
