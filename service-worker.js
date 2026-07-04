@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dndisastri-v39';
+const CACHE_NAME = 'dndisastri-v40';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

@@ -4530,6 +4530,8 @@ window.showGuildCharacter = function(charId) {
 
       <h4 style="margin-top: 1.5rem;">Combattimento</h4>
       <p><strong>Classe Armatura:</strong> ${effectiveAC(char)}</p>
+      <p><strong>Iniziativa:</strong> ${formatModifier(effectiveInitiative(char))}</p>
+      <p><strong>Velocità:</strong> ${(char.combat && char.combat.speed) || 30} ft</p>
       <p><strong>Punti Ferita Max:</strong> ${effectiveHpMax(char)}</p>
       <p><strong>Bonus Competenza:</strong> +${char.proficiencyBonus || calculateProficiencyBonus(char.level || 1)}</p>
 

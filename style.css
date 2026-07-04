@@ -1400,7 +1400,12 @@ button.add-btn:hover {
 #add-character-form select,
 #edit-character-form select {
   width: 100%;
+  max-width: 100%;
   margin-bottom: 0.5rem;
+  /* Testo lungo dell'opzione selezionata: tronca invece di sbordare dal layout */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Menu a tendina coerenti col resto del sito (freccia custom, niente stile nativo) */
@@ -1433,7 +1438,7 @@ select option {
 
 .pb-row {
   display: grid;
-  grid-template-columns: 1.4fr auto auto auto 1.6fr;
+  grid-template-columns: minmax(0, 1.4fr) 34px 3ch 34px minmax(0, 1.6fr);
   align-items: center;
   gap: 0.5rem;
   background: rgba(0, 0, 0, 0.15);
