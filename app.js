@@ -37,6 +37,9 @@ import {
   normalizeSpellName, SPELL_LIST, SPELL_LIB
 } from './src/data/spells.js?v=37';
 import { CLASSES, THIRD_CASTER_SUBCLASSES, CLASS_CAPSTONE } from './src/data/classes.js?v=37';
+import {
+  STAT_LABELS, PB_COST, PB_ABILITIES, SKILLS_MAP, SKILLS_ITALIAN, SAVE_NAMES
+} from './src/data/character-basics.js?v=39';
 
 // Firebase config
 const firebaseConfig = {
@@ -132,7 +135,7 @@ function effectiveStats(char) {
   return stats;
 }
 
-const STAT_LABELS = { str: 'FOR', dex: 'DES', con: 'COS', int: 'INT', wis: 'SAG', cha: 'CAR' };
+// STAT_LABELS → src/data/character-basics.js
 
 // PF massimi EFFICACI: se un oggetto magico modifica la COS, i PF massimi
 // salgono/scendono di (Δmod COS) × livello finché l'oggetto è equipaggiato.
@@ -759,8 +762,7 @@ window.onSpeciesChange = function() {
 };
 
 // === POINT BUY (regola di gioco, non contenuto protetto) ===
-const PB_COST = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
-const PB_ABILITIES = [['str', 'Forza (FOR)'], ['dex', 'Destrezza (DES)'], ['con', 'Costituzione (COS)'], ['int', 'Intelligenza (INT)'], ['wis', 'Saggezza (SAG)'], ['cha', 'Carisma (CAR)']];
+// PB_COST, PB_ABILITIES → src/data/character-basics.js
 let pbState = { str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 };
 
 function pbPointsUsed() {
@@ -1673,47 +1675,7 @@ function calculateProficiencyBonus(level) {
 }
 
 // Skills mapping to ability scores
-const SKILLS_MAP = {
-  athletics: 'str',
-  acrobatics: 'dex',
-  sleightOfHand: 'dex',
-  stealth: 'dex',
-  arcana: 'int',
-  history: 'int',
-  investigation: 'int',
-  nature: 'int',
-  religion: 'int',
-  animalHandling: 'wis',
-  insight: 'wis',
-  medicine: 'wis',
-  perception: 'wis',
-  survival: 'wis',
-  deception: 'cha',
-  intimidation: 'cha',
-  performance: 'cha',
-  persuasion: 'cha'
-};
-
-const SKILLS_ITALIAN = {
-  athletics: 'Atletica',
-  acrobatics: 'Acrobazia',
-  sleightOfHand: 'Rapidità di Mano',
-  stealth: 'Furtività',
-  arcana: 'Arcano',
-  history: 'Storia',
-  investigation: 'Indagare',
-  nature: 'Natura',
-  religion: 'Religione',
-  animalHandling: 'Addestrare Animali',
-  insight: 'Intuizione',
-  medicine: 'Medicina',
-  perception: 'Percezione',
-  survival: 'Sopravvivenza',
-  deception: 'Inganno',
-  intimidation: 'Intimidire',
-  performance: 'Intrattenere',
-  persuasion: 'Persuasione'
-};
+// SKILLS_MAP, SKILLS_ITALIAN → src/data/character-basics.js
 
 function calculateSkillBonus(stats, skill, proficient, expertise, proficiencyBonus) {
   const ability = SKILLS_MAP[skill];
@@ -1750,14 +1712,7 @@ function populateSkillsForm(skills, prefix = 'skill') {
 }
 
 // === SAVING THROWS ===
-const SAVE_NAMES = {
-  str: 'Forza',
-  dex: 'Destrezza',
-  con: 'Costituzione',
-  int: 'Intelligenza',
-  wis: 'Saggezza',
-  cha: 'Carisma'
-};
+// SAVE_NAMES → src/data/character-basics.js
 
 function readSavingThrowsFromForm(prefix = 'save') {
   const savingThrows = {};
