@@ -474,14 +474,139 @@ const BG_FEATURE = {
   'Monello': 'Segreti della Città: ti muovi tra i vicoli al doppio della velocità normale.'
 };
 
-function renderClassSpellList() {
-  const el = document.getElementById('class-spell-list');
+// Caratteristica da incantatore per classe (fatto di gioco). Terzo-caster (sottoclassi) usano Intelligenza.
+const CLASS_SPELL_ABILITY = {
+  'Mago': 'int', 'Chierico': 'wis', 'Druido': 'wis', 'Bardo': 'cha',
+  'Stregone': 'cha', 'Warlock': 'cha', 'Paladino': 'cha', 'Ranger': 'wis'
+};
+
+// Trucchetti e incantesimi noti a LIVELLO 1. Solo classi che a liv.1 hanno già incantesimi.
+// 'prepared' = mod(caratteristica) + livello, calcolato a runtime. Paladino/Ranger (half caster)
+// e i terzo-caster non compaiono: iniziano a lanciare più avanti.
+const SPELLS_KNOWN_L1 = {
+  'Bardo':    { cantrips: 2, spells: 4 },
+  'Chierico': { cantrips: 3, spells: 'prepared' },
+  'Druido':   { cantrips: 2, spells: 'prepared' },
+  'Mago':     { cantrips: 3, spells: 6 },
+  'Stregone': { cantrips: 4, spells: 2 },
+  'Warlock':  { cantrips: 2, spells: 2 }
+};
+
+// Punteggio corrente di una caratteristica nel form di creazione (base point-buy + bonus di specie).
+function currentSpellStat(ability) {
+  if (!ability) return 10;
+  const el = document.getElementById('char-' + ability);
+  const base = el ? (parseInt(el.value) || 8) : 8;
+  const b = speciesBonus(document.getElementById('char-race').value);
+  return base + (b[ability] || 0);
+}
+
+// Aggiorna CD incantesimo e bonus di attacco nel form di creazione (dipendono dagli stat).
+function updateCreationSpellStats() {
+  const el = document.getElementById('creation-spell-stats');
   if (!el) return;
+  const ability = document.getElementById('char-spell-ability').value;
+  if (!ability) { el.innerHTML = ''; return; }
+  const stats = {};
+  ['str', 'dex', 'con', 'int', 'wis', 'cha'].forEach(a => { stats[a] = currentSpellStat(a); });
+  const prof = calculateProficiencyBonus(1);
+  const dc = calculateSpellDC(ability, prof, stats);
+  const atk = calculateSpellAttackBonus(ability, prof, stats);
+  el.innerHTML = `<strong>CD Tiro Salvezza:</strong> ${dc} &nbsp;·&nbsp; <strong>Bonus Attacco Incantesimi:</strong> +${atk}`;
+}
+
+// Quando si sceglie un incantesimo da un menù a tendina, precompila la descrizione (editabile).
+window.onCreationSpellSelect = function(sel) {
+  const row = sel.closest('.cc-spell-row');
+  const ta = row ? row.querySelector('textarea') : null;
+  const name = sel.value ? decodeURIComponent(sel.value) : '';
+  if (ta) ta.value = name ? spellDefaultDesc(name) : '';
+};
+
+// Costruisce dinamicamente la sezione Incantesimi in creazione, vincolata a classe e livello 1.
+function renderCreationSpells() {
+  const body = document.getElementById('creation-spells-body');
+  const section = document.getElementById('creation-spells-section');
+  const abilityInput = document.getElementById('char-spell-ability');
+  if (!body || !section) return;
+  // Preserva le scelte già fatte (il re-render avviene anche al variare degli stat).
+  const grabRows = (selector) => Array.from(body.querySelectorAll(selector)).map(s => {
+    const row = s.closest('.cc-spell-row');
+    const ta = row ? row.querySelector('textarea') : null;
+    return { v: s.value, d: ta ? ta.value : '' };
+  });
+  const prev = { cantrips: grabRows('.cc-cantrip-select'), spells: grabRows('.cc-spell-select') };
+  const restoreRows = (selector, saved) => {
+    body.querySelectorAll(selector).forEach((sel, i) => {
+      if (!saved[i] || !saved[i].v) return;
+      sel.value = saved[i].v;
+      if (sel.value === saved[i].v) {
+        const ta = sel.closest('.cc-spell-row').querySelector('textarea');
+        if (ta) ta.value = saved[i].d || spellDefaultDesc(decodeURIComponent(saved[i].v));
+      }
+    });
+  };
   const cls = document.getElementById('char-class').value;
-  const list = CLASS_SPELL_LIST[cls];
-  if (!list || !list.length) { el.innerHTML = ''; return; }
-  el.innerHTML = `<div class="choice-info"><strong>Incantesimi di ${cls}</strong> — tocca per la descrizione, poi scrivi sopra quelli che il tuo personaggio conosce.</div>` +
-    '<div>' + list.map(n => `<span class="spell-chip" onclick="openSpellInfo('${encodeURIComponent(n)}')">${n}</span>`).join(' ') + '</div>';
+  const subEl = document.getElementById('char-subclass');
+  const sub = subEl ? subEl.value : '';
+  const kind = casterType(cls, sub); // 'none' | 'full' | 'half' | 'pact' | 'third'
+
+  if (!cls || kind === 'none') {
+    section.style.display = 'none';
+    body.innerHTML = '';
+    if (abilityInput) abilityInput.value = '';
+    return;
+  }
+  section.style.display = '';
+  const ability = CLASS_SPELL_ABILITY[cls] || (THIRD_CASTER_SUBCLASSES.includes(sub) ? 'int' : '');
+  if (abilityInput) abilityInput.value = ability;
+
+  const abilityNames = { int: 'Intelligenza', wis: 'Saggezza', cha: 'Carisma' };
+  let html = `<p><strong>Caratteristica Incantatore:</strong> ${abilityNames[ability] || ability} <span style="color:var(--gray);">(determinata dalla classe)</span></p>`;
+  html += `<div id="creation-spell-stats" class="choice-info"></div>`;
+
+  const known = SPELLS_KNOWN_L1[cls];
+  if (!known) {
+    html += `<p style="color:var(--gray);">${cls} inizia a lanciare incantesimi dal livello 2: a livello 1 non conosce trucchetti né incantesimi.</p>`;
+    body.innerHTML = html;
+    updateCreationSpellStats();
+    return;
+  }
+
+  const list = CLASS_SPELL_LIST[cls] || [];
+  const cantripOpts = list.filter(n => spellLevelOf(n) === 0);
+  const lvl1Opts = list.filter(n => spellLevelOf(n) === 1);
+  const resolveCount = (v) => {
+    if (v === 'prepared') return Math.max(1, calculateModifier(currentSpellStat(ability)) + 1);
+    return v;
+  };
+  const nCantrips = resolveCount(known.cantrips);
+  const nSpells = resolveCount(known.spells);
+  const optHtml = (opts) => '<option value="">— nessuno —</option>' +
+    opts.map(n => `<option value="${encodeURIComponent(n)}">${n}</option>`).join('');
+
+  html += `<h5 style="margin-top:1rem;">Trucchetti (${nCantrips})</h5>`;
+  for (let i = 0; i < nCantrips; i++) {
+    html += `<div class="cc-spell-row" style="margin-bottom:0.6rem;">
+      <select class="cc-cantrip-select choice-select" onchange="onCreationSpellSelect(this)">${optHtml(cantripOpts)}</select>
+      <textarea class="cc-cantrip-desc" rows="2" placeholder="Descrizione (personalizzabile)" style="width:100%; margin-top:0.3rem;"></textarea>
+    </div>`;
+  }
+
+  const prepared = known.spells === 'prepared';
+  html += `<h5 style="margin-top:1rem;">Incantesimi di 1° livello (${nSpells}${prepared ? ' preparati' : ''})</h5>`;
+  for (let i = 0; i < nSpells; i++) {
+    html += `<div class="cc-spell-row" style="margin-bottom:0.6rem;">
+      <select class="cc-spell-select choice-select" data-level="1" onchange="onCreationSpellSelect(this)">${optHtml(lvl1Opts)}</select>
+      <textarea class="cc-spell-desc" rows="2" placeholder="Descrizione (personalizzabile)" style="width:100%; margin-top:0.3rem;"></textarea>
+    </div>`;
+  }
+  html += `<p style="color:var(--gray); font-size:0.85rem;">Gli incantesimi di livello superiore si sbloccano salendo di livello.</p>`;
+
+  body.innerHTML = html;
+  restoreRows('.cc-cantrip-select', prev.cantrips);
+  restoreRows('.cc-spell-select', prev.spells);
+  updateCreationSpellStats();
 }
 
 // Tabelle slot: [slot liv.1, liv.2, ...] indicizzate per livello del personaggio
@@ -594,7 +719,7 @@ function applyClassToCreation() {
   renderPointBuy();
   renderEquipChoices();
   recomputeSkillAvailability();
-  renderClassSpellList();
+  renderCreationSpells();
 }
 
 // === SPECIE (bonus di caratteristica = fatti; tratti = sintesi originali) ===
@@ -697,6 +822,7 @@ function renderPointBuy() {
       </div>`;
   }).join('');
   PB_ABILITIES.forEach(([k]) => { const inp = document.getElementById('char-' + k); if (inp) inp.value = pbState[k]; });
+  if (document.getElementById('creation-spells-body')) renderCreationSpells();
 }
 
 window.pbAdjust = function(k, delta) {
@@ -1071,15 +1197,48 @@ async function loadSpellOverrides() {
   } catch (e) { console.error('Errore descrizioni incantesimi:', e); }
 }
 
-function renderSpellChips(str) {
-  return (str || '').split(',').map(s => s.trim()).filter(Boolean)
-    .map(name => `<span class="spell-chip" onclick="openSpellInfo('${encodeURIComponent(name)}')">${name}</span>`).join(' ');
+// Livello di un incantesimo dedotto dalla libreria: 0 = trucchetto, altrimenti "liv. N".
+function spellLevelOf(name) {
+  const d = SPELL_LIB[normalizeSpellName(name)] || '';
+  if (/trucchetto/i.test(d)) return 0;
+  const m = d.match(/liv\.\s*(\d)/i);
+  return m ? parseInt(m[1], 10) : 1;
 }
 
-window.openSpellInfo = function(encName) {
+// Descrizione di default (override DM se presente, altrimenti libreria).
+function spellDefaultDesc(name) {
+  const key = normalizeSpellName(name);
+  return spellDescOverrides[key] || SPELL_LIB[key] || '';
+}
+
+// Normalizza un campo incantesimi al nuovo formato: array di {name, desc}.
+// Accetta: array di {name,desc}, array di stringhe, o stringa legacy separata da virgole.
+function spellEntryList(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) {
+    return val.map(e => (typeof e === 'string' ? { name: e.trim() } : e)).filter(e => e && e.name);
+  }
+  return String(val).split(',').map(s => s.trim()).filter(Boolean).map(name => ({ name }));
+}
+
+// Solo i nomi, come stringa separata da virgole (per PDF/legacy).
+function spellNamesString(val) {
+  return spellEntryList(val).map(e => e.name).join(', ');
+}
+
+function renderSpellChips(val) {
+  return spellEntryList(val).map(({ name, desc }) => {
+    const enc = encodeURIComponent(name);
+    const dattr = desc ? `,'${encodeURIComponent(desc)}'` : '';
+    return `<span class="spell-chip" onclick="openSpellInfo('${enc}'${dattr})">${name}</span>`;
+  }).join(' ');
+}
+
+window.openSpellInfo = function(encName, encDesc) {
   const name = decodeURIComponent(encName);
   const key = normalizeSpellName(name);
-  const desc = spellDescOverrides[key] || SPELL_LIB[key];
+  const custom = encDesc ? decodeURIComponent(encDesc) : '';
+  const desc = custom || spellDescOverrides[key] || SPELL_LIB[key];
   document.getElementById('generic-content').innerHTML = `
     <h3>${name}</h3>
     ${desc ? `<p style="white-space:pre-wrap;">${desc}</p>` : '<p style="color:var(--gray);">Descrizione non ancora disponibile.</p>'}
@@ -1435,13 +1594,14 @@ async function exportCharacterToPDF(char) {
     }
     
     // Trucchetti
-    if (spellcasting.cantrips) {
+    const cantripsStr = spellNamesString(spellcasting.cantrips);
+    if (cantripsStr) {
       doc.setFont(undefined, 'bold');
       doc.text('Trucchetti:', 15, y);
       y += lineHeight;
       doc.setFont(undefined, 'normal');
-      
-      const cantripLines = doc.splitTextToSize(spellcasting.cantrips, 180);
+
+      const cantripLines = doc.splitTextToSize(cantripsStr, 180);
       doc.text(cantripLines, 15, y);
       y += cantripLines.length * lineHeight + 3;
     }
@@ -1449,19 +1609,20 @@ async function exportCharacterToPDF(char) {
     // Incantesimi per livello
     for (let i = 1; i <= 9; i++) {
       const levelData = spellcasting[`level${i}`];
-      if (levelData && (levelData.spells || levelData.slots)) {
+      const levelSpellsStr = levelData ? spellNamesString(levelData.spells) : '';
+      if (levelData && (levelSpellsStr || levelData.slots)) {
         if (y > 250) {
           doc.addPage();
           y = 20;
         }
-        
+
         doc.setFont(undefined, 'bold');
         doc.text(`Livello ${i}${levelData.slots ? ` (Slot: ${levelData.slots})` : ''}:`, 15, y);
         y += lineHeight;
         doc.setFont(undefined, 'normal');
-        
-        if (levelData.spells) {
-          const spellLines = doc.splitTextToSize(levelData.spells, 180);
+
+        if (levelSpellsStr) {
+          const spellLines = doc.splitTextToSize(levelSpellsStr, 180);
           doc.text(spellLines, 15, y);
           y += spellLines.length * lineHeight + 3;
         } else {
@@ -2181,7 +2342,6 @@ window.showAddCharacter = function() {
   populateBackgroundSelect('');
   document.getElementById('background-info').innerHTML = '';
   document.getElementById('equip-choices').innerHTML = '';
-  document.getElementById('class-spell-list').innerHTML = '';
   // Riabilita i tiri salvezza (verranno bloccati alla scelta della classe)
   ['str', 'dex', 'con', 'int', 'wis', 'cha'].forEach(a => {
     const cb = document.getElementById('save-' + a);
@@ -2215,18 +2375,10 @@ window.showAddCharacter = function() {
     </div>
   `;
   
-  // Reset spellcasting
+  // Reset spellcasting (la sezione si ricostruisce alla scelta della classe)
   document.getElementById('char-spell-ability').value = '';
-  
-  // Reset trucchetti - lascia solo un input vuoto
-  const cantripsContainer = document.getElementById('cantrips-container');
-  cantripsContainer.innerHTML = '<input type="text" placeholder="Nome trucchetto" class="cantrip-input" style="width: 100%; margin-bottom: 0.5rem;" />';
-  
-  // Reset livelli incantesimi - svuota completamente
-  const spellLevelsContainer = document.getElementById('spell-levels-container');
-  spellLevelsContainer.innerHTML = '';
-  spellLevelCounter = 0;
-  
+  renderCreationSpells();
+
   // Reset skills
   resetSkillsForm('skill');
   recomputeSkillAvailability();
@@ -2306,34 +2458,34 @@ window.handleAddCharacter = async function(event) {
     createdAt: serverTimestamp()
   };
 
-  // Raccogli incantesimi
+  // Raccogli incantesimi dai menù a tendina (vincolati a classe/livello). Formato: {name, desc}.
   const spellcasting = {
     ability: document.getElementById('char-spell-ability').value
   };
-  
-  // Raccogli trucchetti dal nuovo sistema dinamico
-  const cantripInputs = document.querySelectorAll('#cantrips-container .cantrip-input');
-  const cantrips = Array.from(cantripInputs)
-    .map(input => input.value.trim())
-    .filter(val => val !== '')
-    .join(', ');
-  if (cantrips) {
-    spellcasting.cantrips = cantrips;
-  }
-  
-  // Raccogli livelli incantesimi dal nuovo sistema dinamico
-  const spellLevelSections = document.querySelectorAll('#spell-levels-container .spell-level-section');
-  spellLevelSections.forEach(section => {
-    const level = parseInt(section.dataset.level);
-    const spellInputs = section.querySelectorAll('.spell-input');
-    const spells = Array.from(spellInputs)
-      .map(input => input.value.trim())
-      .filter(val => val !== '')
-      .join(', ');
+  const seenSpells = new Set();
+  const readSpellRow = (sel) => {
+    const name = sel.value ? decodeURIComponent(sel.value) : '';
+    if (!name || seenSpells.has(name)) return null; // evita duplicati
+    seenSpells.add(name);
+    const row = sel.closest('.cc-spell-row');
+    const ta = row ? row.querySelector('textarea') : null;
+    return { name, desc: (ta && ta.value.trim()) || spellDefaultDesc(name) };
+  };
 
-    if (spells) {
-      spellcasting[`level${level}`] = { spells };
-    }
+  const cantrips = [];
+  document.querySelectorAll('#creation-spells-body .cc-cantrip-select').forEach(sel => {
+    const entry = readSpellRow(sel);
+    if (entry) cantrips.push(entry);
+  });
+  if (cantrips.length) spellcasting.cantrips = cantrips;
+
+  document.querySelectorAll('#creation-spells-body .cc-spell-select').forEach(sel => {
+    const entry = readSpellRow(sel);
+    if (!entry) return;
+    const level = parseInt(sel.dataset.level) || 1;
+    const key = `level${level}`;
+    if (!spellcasting[key]) spellcasting[key] = { spells: [] };
+    spellcasting[key].spells.push(entry);
   });
 
   // Aggiungere ai characterData

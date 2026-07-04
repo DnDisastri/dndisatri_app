@@ -312,30 +312,10 @@
                 <button type="button" onclick="addWeaponRow()" class="btn-secondary">+ Aggiungi Arma</button>
               </div>
 
-              <div class="form-section">
+              <div class="form-section" id="creation-spells-section">
                 <h4>Incantesimi</h4>
-                <div id="class-spell-list"></div>
-                <label>Caratteristica Incantatore</label>
-                <select id="char-spell-ability">
-                  <option value="">Nessuna</option>
-                  <option value="int">Intelligenza</option>
-                  <option value="wis">Saggezza</option>
-                  <option value="cha">Carisma</option>
-                </select>
-  
-                <div style="margin-top: 1rem;">
-                  <label>Trucchetti</label>
-                  <div id="cantrips-container">
-                    <input type="text" placeholder="Nome trucchetto" class="cantrip-input" style="width: 100%; margin-bottom: 0.5rem;" />
-                  </div>
-                  <button type="button" onclick="addCantripRow()" class="btn-secondary">+ Aggiungi Trucchetto</button>
-                </div>
-  
-                <div id="spell-levels-container" style="margin-top: 1.5rem;">
-                  <!-- I livelli verranno aggiunti dinamicamente -->
-                </div>
-                
-                <button type="button" onclick="addSpellLevel()" class="btn-secondary" style="margin-top: 1rem;">+ Aggiungi Livello Incantesimi</button>
+                <input type="hidden" id="char-spell-ability" value="" />
+                <div id="creation-spells-body"></div>
               </div>
 
               <div class="form-section">
@@ -1057,6 +1037,6 @@
   </div>
 
   <!-- Firebase SDK (modular) -->
-  <script type="module" src="app.js?v=33"></script>
+  <script type="module" src="app.js?v=34"></script>
 </body>
 </html>
