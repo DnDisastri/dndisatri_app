@@ -256,6 +256,15 @@ function casterType(cls, subclass) {
   return c.caster;
 }
 
+// Numero di abilità in cui la classe può avere Esperto (doppia competenza) al dato livello.
+// Ladro: 2 dal liv.1, 4 dal liv.6. Bardo: 2 dal liv.3, 4 dal liv.10. Le altre classi: nessuna.
+function expertiseCountFor(cls, level) {
+  level = level || 1;
+  if (cls === 'Ladro') return level >= 6 ? 4 : 2;
+  if (cls === 'Bardo') { if (level >= 10) return 4; if (level >= 3) return 2; return 0; }
+  return 0;
+}
+
 // Livello a cui una classe sceglie la sottoclasse (1 = Chierico/Stregone/Warlock, 2 = Druido/Mago, 3 = resto)
 function subclassLevel(cls) {
   if (['Chierico', 'Stregone', 'Warlock'].includes(cls)) return 1;
@@ -787,10 +796,11 @@ function recomputeSkillAvailability() {
     const cb = document.getElementById('skill-' + k + '-prof');
     if (!cb) return;
     if (bgSkills.includes(k)) { cb.checked = true; cb.disabled = true; cb.onchange = null; }
-    else if (classFrom.includes(k)) { cb.disabled = false; cb.onchange = enforceClassSkillLimit; }
+    else if (classFrom.includes(k)) { cb.disabled = false; cb.onchange = onCreationSkillProfChange; }
     else { cb.checked = false; cb.disabled = true; cb.onchange = null; }
   });
   enforceClassSkillLimit();
+  recomputeExpertiseAvailability('skill', 1);
 }
 
 function enforceClassSkillLimit() {
@@ -809,6 +819,83 @@ function enforceClassSkillLimit() {
   });
   if (counter) counter.innerHTML = `Abilità di classe: <strong>${chosen.length} / ${cls.skills.count}</strong>` +
     (bgSkills.length ? ` · dal background (bloccate): ${bgSkills.map(s => SKILLS_ITALIAN[s]).join(', ')}` : '');
+}
+
+// Handler creazione: al cambio di una competenza aggiorna anche il limite di classe e l'expertise.
+function onCreationSkillProfChange() {
+  enforceClassSkillLimit();
+  recomputeExpertiseAvailability('skill', 1);
+}
+
+// === SCELTE ESPERTO (doppia competenza; solo alcune classi/livelli; solo su abilità competenti) ===
+// prefix: 'skill' (creazione) o 'edit-skill' (modifica). Il livello determina il numero consentito.
+function recomputeExpertiseAvailability(prefix, level) {
+  prefix = prefix || 'skill';
+  level = level || 1;
+  const clsInputId = prefix === 'skill' ? 'char-class' : 'edit-char-class';
+  const clsEl = document.getElementById(clsInputId);
+  const cls = clsEl ? clsEl.value : '';
+  const cap = expertiseCountFor(cls, level);
+  Object.keys(SKILLS_MAP).forEach(k => {
+    const exp = document.getElementById(`${prefix}-${k}-exp`);
+    const prof = document.getElementById(`${prefix}-${k}-prof`);
+    if (!exp) return;
+    const eligible = cap > 0 && prof && prof.checked;
+    if (!eligible) {
+      exp.checked = false;
+      exp.disabled = true;
+      exp.onchange = null;
+    } else {
+      exp.onchange = () => enforceExpertiseLimit(prefix, level); // disabled gestito da enforce
+    }
+  });
+  enforceExpertiseLimit(prefix, level);
+}
+
+function enforceExpertiseLimit(prefix, level) {
+  prefix = prefix || 'skill';
+  level = level || 1;
+  const clsInputId = prefix === 'skill' ? 'char-class' : 'edit-char-class';
+  const clsEl = document.getElementById(clsInputId);
+  const cls = clsEl ? clsEl.value : '';
+  const cap = expertiseCountFor(cls, level);
+  const counterId = prefix === 'skill' ? 'exp-counter' : 'edit-exp-counter';
+  const counter = document.getElementById(counterId);
+  // Solo le abilità in cui si è competenti sono candidabili all'expertise.
+  const eligibleKeys = Object.keys(SKILLS_MAP).filter(k => {
+    const prof = document.getElementById(`${prefix}-${k}-prof`);
+    return cap > 0 && prof && prof.checked;
+  });
+  const chosen = eligibleKeys.filter(k => {
+    const exp = document.getElementById(`${prefix}-${k}-exp`);
+    return exp && exp.checked;
+  });
+  eligibleKeys.forEach(k => {
+    const exp = document.getElementById(`${prefix}-${k}-exp`);
+    if (exp) exp.disabled = (!exp.checked && chosen.length >= cap);
+  });
+  if (counter) {
+    if (!cls) counter.innerHTML = '';
+    else counter.innerHTML = cap > 0
+      ? `Esperto (doppia competenza): <strong>${chosen.length} / ${cap}</strong>`
+      : 'Nessuna expertise disponibile per questa classe a questo livello.';
+  }
+}
+
+// Guardia lato salvataggio: azzera expertise non consentite (classe/livello sbagliati,
+// abilità non competente, o oltre il limite consentito). Difesa a valle della UI.
+function normalizeSkillsExpertise(skills, cls, level) {
+  if (!skills) return skills;
+  const cap = expertiseCountFor(cls, level || 1);
+  let used = 0;
+  Object.keys(skills).forEach(k => {
+    const s = skills[k];
+    if (s && s.expertise) {
+      if (cap > 0 && s.proficient && used < cap) used++;
+      else s.expertise = false;
+    }
+  });
+  return skills;
 }
 
 // === SCELTE EQUIPAGGIAMENTO INIZIALE (liste di oggetti = fatti) ===
@@ -2153,7 +2240,7 @@ window.handleAddCharacter = async function(event) {
   if (!currentUser) return;
   
   const level = 1;
-  const skills = readSkillsFromForm('skill');
+  const skills = normalizeSkillsExpertise(readSkillsFromForm('skill'), document.getElementById('char-class').value.trim(), level);
   const savingThrows = readSavingThrowsFromForm('save');
   
   // Raccogli armi
