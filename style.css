@@ -727,18 +727,32 @@ button.add-btn:hover {
   border-radius: 6px;
 }
 
-.weapon-name,
-.weapon-damage {
+.weapon-row input,
+.weapon-row select {
   padding: 0.5rem;
+  background: var(--dark);
+  color: var(--beige);
+  border: 2px solid var(--navy);
 }
 
-.weapon-ability {
-  padding: 0.5rem;
+.weapon-row select option {
+  background: var(--dark);
+  color: var(--beige);
 }
 
 .weapon-bonus {
-  padding: 0.5rem;
   width: 100%;
+}
+
+/* Su schermi piccoli la griglia a 5 colonne diventa illeggibile: impila i campi */
+@media (max-width: 600px) {
+  .weapon-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .weapon-row .weapon-name,
+  .weapon-row .weapon-damage {
+    grid-column: 1 / -1;
+  }
 }
 
 .btn-remove-weapon {
@@ -1288,15 +1302,21 @@ button.add-btn:hover {
 }
 
 .app-menu-toggle {
-  background: var(--primary, #2c3e6e);
+  background: var(--red);
   color: #fff;
-  border: 1px solid rgba(232, 213, 160, 0.35);
-  border-radius: 10px;
-  padding: 0.55rem 0.9rem;
-  font-size: 1rem;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.4rem;
+  font-size: 1.05rem;
+  font-weight: 600;
   cursor: pointer;
   text-align: left;
   white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.app-menu-toggle:hover {
+  background: #b83632;
 }
 
 .app-menu-panel {
@@ -1318,18 +1338,22 @@ button.add-btn:hover {
 }
 
 .menu-item {
-  background: rgba(44, 62, 110, 0.5);
+  background: var(--navy, #2c3e6e);
   color: var(--beige, #e8d5a0);
   border: 1px solid rgba(232, 213, 160, 0.25);
   border-radius: 8px;
-  padding: 0.7rem 1rem;
+  padding: 0.95rem 1.15rem;
   text-align: left;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 1.08rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
 }
 
 .menu-item:hover {
-  background: rgba(212, 66, 62, 0.5);
+  background: var(--red);
+  color: #fff;
+  border-color: var(--red);
 }
 
 /* Menu responsivo: su schermi piccoli diventa a tutta larghezza sotto l'header */
