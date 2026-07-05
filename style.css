@@ -839,8 +839,8 @@ button.add-btn:hover {
 
 .character-stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
   margin: 1rem 0;
 }
 
@@ -853,15 +853,16 @@ button.add-btn:hover {
 }
 
 .stat-box .stat-label {
-  font-size: 0.8rem;
-  color: var(--gray);
+  font-size: 0.9rem;
+  color: var(--beige);
   display: block;
+  margin-bottom: 0.2rem;
 }
 
 .stat-box .stat-value {
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   font-weight: bold;
-  color: var(--red);
+  color: var(--beige);
   display: block;
 }
 
@@ -1070,7 +1071,7 @@ button.add-btn:hover {
   }
 
   .character-stats-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .character-actions {
@@ -1408,16 +1409,20 @@ button.add-btn:hover {
   white-space: nowrap;
 }
 
-/* Menu a tendina coerenti col resto del sito (freccia custom, niente stile nativo) */
+/* Menu a tendina coerenti col menù generale del sito (scuro navy + beige, freccia custom) */
 select {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
+  background-color: #1a2440;
+  color: var(--beige);
+  border-color: rgba(232, 213, 160, 0.35);
   background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%228%22%3E%3Cpath%20d%3D%22M1%201%20L6%206%20L11%201%22%20stroke%3D%22%23e8d5a0%22%20fill%3D%22none%22%20stroke-width%3D%222%22%2F%3E%3C%2Fsvg%3E");
   background-repeat: no-repeat;
   background-position: right 0.85rem center;
   padding-right: 2.2rem;
   cursor: pointer;
+  color-scheme: dark; /* forza il popup nativo delle opzioni in tema scuro */
 }
 
 select:disabled {
@@ -1426,7 +1431,7 @@ select:disabled {
 }
 
 select option {
-  background: var(--dark);
+  background: #1a2440;
   color: var(--beige);
 }
 
@@ -1438,7 +1443,7 @@ select option {
 
 .pb-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) 34px 3ch 34px minmax(0, 1.6fr);
+  grid-template-columns: 34px 3ch 34px minmax(0, 1fr);
   align-items: center;
   gap: 0.5rem;
   background: rgba(0, 0, 0, 0.15);
@@ -1447,6 +1452,8 @@ select option {
   padding: 0.4rem 0.6rem;
 }
 
+/* Abilità + totale allineati a destra, dopo i quadrati (− valore +) a sinistra */
+.pb-info { text-align: right; }
 .pb-label { color: var(--beige, #e8d5a0); font-weight: 500; }
 
 .pb-btn {

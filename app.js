@@ -611,11 +611,10 @@ function renderPointBuy() {
     const rec = recommended.includes(k) ? ' <span title="Consigliata per questa classe" style="color: var(--red);">★</span>' : '';
     return `
       <div class="pb-row">
-        <span class="pb-label">${label}${rec}</span>
         <button type="button" class="pb-btn" ${canDec ? '' : 'disabled'} onclick="pbAdjust('${k}',-1)">−</button>
         <span class="pb-value">${base}</span>
         <button type="button" class="pb-btn" ${canInc ? '' : 'disabled'} onclick="pbAdjust('${k}',1)">+</button>
-        <span class="pb-total">${bonus[k] ? `+${bonus[k]} specie → ` : ''}<strong>${total}</strong> (${formatModifier(calculateModifier(total))})</span>
+        <span class="pb-info"><span class="pb-label">${label}${rec}</span> <span class="pb-total">${bonus[k] ? `+${bonus[k]} specie → ` : ''}<strong>${total}</strong> (${formatModifier(calculateModifier(total))})</span></span>
       </div>`;
   }).join('');
   PB_ABILITIES.forEach(([k]) => { const inp = document.getElementById('char-' + k); if (inp) inp.value = pbState[k]; });
