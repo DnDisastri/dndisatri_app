@@ -47,6 +47,7 @@ import { CLASS_EQUIP } from './src/data/equipment.js?v=40';
 import { ARMOR, SHIELDS, WEAPONS_DATA } from './src/data/combat.js?v=41';
 import { CLASS_START, BG_START } from './src/data/starting-items.js?v=41';
 import { RECOMMENDED_BUILDS, DEFAULT_MARKET } from './src/data/catalog.js?v=41';
+import { calculateModifier, formatModifier, casterType, expertiseCountFor, subclassLevel, spellSlotsForCharacter, maxCastableSpellLevel, getProficiencyBonus, calculateSpellDC, calculateSpellAttackBonus, calculateWeaponAttackBonus, calculateProficiencyBonus, calculateSkillBonus, calculateSavingThrow } from './src/rules/calc.js?v=43';
 
 // Firebase config
 const firebaseConfig = {
@@ -102,13 +103,9 @@ function syncSheet(action, data) {
 }
 
 // === UTILITY FUNCTIONS ===
-function calculateModifier(score) {
-  return Math.floor((score - 10) / 2);
-}
+// calculateModifier -> src/rules/calc.js
 
-function formatModifier(mod) {
-  return mod >= 0 ? `+${mod}` : `${mod}`;
-}
+// formatModifier -> src/rules/calc.js
 
 // === LEVEL UP / ASI / DADO VITA ===
 const ASI_LEVELS = [4, 8, 12, 16, 19];
@@ -225,28 +222,14 @@ window.unequipItem = async function(charId, slot) {
 // === CLASSI E SOTTOCLASSI UFFICIALI (D&D 5e) ===
 // CLASSES, THIRD_CASTER_SUBCLASSES → src/data/classes.js
 
-function casterType(cls, subclass) {
-  const c = CLASSES[cls];
-  if (!c) return 'none';
-  if (c.caster === 'none') return THIRD_CASTER_SUBCLASSES.includes(subclass) ? 'third' : 'none';
-  return c.caster;
-}
+// casterType -> src/rules/calc.js
 
 // Numero di abilità in cui la classe può avere Esperto (doppia competenza) al dato livello.
 // Ladro: 2 dal liv.1, 4 dal liv.6. Bardo: 2 dal liv.3, 4 dal liv.10. Le altre classi: nessuna.
-function expertiseCountFor(cls, level) {
-  level = level || 1;
-  if (cls === 'Ladro') return level >= 6 ? 4 : 2;
-  if (cls === 'Bardo') { if (level >= 10) return 4; if (level >= 3) return 2; return 0; }
-  return 0;
-}
+// expertiseCountFor -> src/rules/calc.js
 
 // Livello a cui una classe sceglie la sottoclasse (1 = Chierico/Stregone/Warlock, 2 = Druido/Mago, 3 = resto)
-function subclassLevel(cls) {
-  if (['Chierico', 'Stregone', 'Warlock'].includes(cls)) return 1;
-  if (['Druido', 'Mago'].includes(cls)) return 2;
-  return 3;
-}
+// subclassLevel -> src/rules/calc.js
 
 // Sottoclassi da tutti i manuali (nomi = titoli; descrizioni = sintesi originali di tema/ruolo)
 // ALL_SUBCLASSES -> src/data/subclasses.js
@@ -401,30 +384,10 @@ function renderCreationSpells() {
 // FULL/HALF/THIRD_CASTER_SLOTS, WARLOCK_SLOTS → src/data/spells.js
 
 // Restituisce le info sugli slot del personaggio, o null se non è un incantatore.
-function spellSlotsForCharacter(char) {
-  const type = casterType(char.class, char.subclass);
-  const level = char.level || 1;
-  if (type === 'none') return null;
-  if (type === 'pact') {
-    const w = WARLOCK_SLOTS[level] || WARLOCK_SLOTS[1];
-    return { pact: true, pactCount: w[0], pactLevel: w[1] };
-  }
-  const table = type === 'full' ? FULL_CASTER_SLOTS : type === 'half' ? HALF_CASTER_SLOTS : THIRD_CASTER_SLOTS;
-  const arr = table[level];
-  if (!arr) return { pact: false, slots: {} };
-  const slots = {};
-  arr.forEach((n, i) => { if (n > 0) slots[i + 1] = n; });
-  return { pact: false, slots };
-}
+// spellSlotsForCharacter -> src/rules/calc.js
 
 // Livello massimo di incantesimo lanciabile dal personaggio (0 se non incantatore o senza slot).
-function maxCastableSpellLevel(char) {
-  const info = spellSlotsForCharacter(char);
-  if (!info) return 0;
-  if (info.pact) return info.pactLevel || 0;
-  const keys = Object.keys(info.slots || {});
-  return keys.length ? Math.max.apply(null, keys.map(Number)) : 0;
-}
+// maxCastableSpellLevel -> src/rules/calc.js
 
 // Vincoli incantesimi nel form di MODIFICA: nasconde la sezione ai non-incantatori,
 // blocca la caratteristica sulla classe, mostra CD/attacco e sopprime i livelli non ancora
@@ -928,33 +891,15 @@ window.dmEditSpellDescription = async function(encName) {
 // ===================================================================
 
 // === CALCOLI BONUS COMPETENZA ===
-function getProficiencyBonus(level) {
-  if (level >= 17) return 6;
-  if (level >= 13) return 5;
-  if (level >= 9) return 4;
-  if (level >= 5) return 3;
-  return 2;
-}
+// getProficiencyBonus -> src/rules/calc.js
 
 // === CALCOLI SPELL DC E BONUS ===
-function calculateSpellDC(spellAbility, profBonus, stats) {
-  if (!spellAbility || !stats) return 0;
-  const abilityMod = calculateModifier(stats[spellAbility] || 10);
-  return 8 + abilityMod + profBonus;
-}
+// calculateSpellDC -> src/rules/calc.js
 
-function calculateSpellAttackBonus(spellAbility, profBonus, stats) {
-  if (!spellAbility || !stats) return 0;
-  const abilityMod = calculateModifier(stats[spellAbility] || 10);
-  return abilityMod + profBonus;
-}
+// calculateSpellAttackBonus -> src/rules/calc.js
 
 // === CALCOLI WEAPON ATTACK BONUS ===
-function calculateWeaponAttackBonus(attackStat, weaponBonus, profBonus, stats) {
-  if (!attackStat || !stats) return 0;
-  const abilityMod = calculateModifier(stats[attackStat] || 10);
-  return abilityMod + profBonus + (weaponBonus || 0);
-}
+// calculateWeaponAttackBonus -> src/rules/calc.js
 
 // === EXPORT PDF ===
 async function exportCharacterToPDF(char) {
@@ -1405,24 +1350,12 @@ async function exportCharacterToPDF(char) {
 // Aggiungi questa funzione globale
 window.exportCharacterToPDF = exportCharacterToPDF;
 
-function calculateProficiencyBonus(level) {
-  return Math.floor((level - 1) / 4) + 2;
-}
+// calculateProficiencyBonus -> src/rules/calc.js
 
 // Skills mapping to ability scores
 // SKILLS_MAP, SKILLS_ITALIAN → src/data/character-basics.js
 
-function calculateSkillBonus(stats, skill, proficient, expertise, proficiencyBonus) {
-  const ability = SKILLS_MAP[skill];
-  const abilityScore = stats[ability] || 10;
-  const abilityMod = calculateModifier(abilityScore);
-  
-  let bonus = abilityMod;
-  if (proficient) bonus += proficiencyBonus;
-  if (expertise) bonus += proficiencyBonus;
-  
-  return bonus;
-}
+// calculateSkillBonus -> src/rules/calc.js
 
 function readSkillsFromForm(prefix = 'skill') {
   const skills = {};
@@ -1465,11 +1398,7 @@ function populateSavingThrowsForm(savingThrows, prefix = 'save') {
   });
 }
 
-function calculateSavingThrow(stats, ability, proficient, profBonus) {
-  const abilityScore = stats[ability] || 10;
-  const abilityMod = calculateModifier(abilityScore);
-  return abilityMod + (proficient ? profBonus : 0);
-}
+// calculateSavingThrow -> src/rules/calc.js
 
 function resetSkillsForm(prefix = 'skill') {
   Object.keys(SKILLS_MAP).forEach(skill => {
