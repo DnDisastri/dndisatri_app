@@ -40,6 +40,10 @@ import { CLASSES, THIRD_CASTER_SUBCLASSES, CLASS_CAPSTONE } from './src/data/cla
 import {
   STAT_LABELS, PB_COST, PB_ABILITIES, SKILLS_MAP, SKILLS_ITALIAN, SAVE_NAMES
 } from './src/data/character-basics.js?v=39';
+import { ALL_SUBCLASSES } from './src/data/subclasses.js?v=40';
+import { SPECIES } from './src/data/species.js?v=40';
+import { BACKGROUNDS, BG_FEATURE } from './src/data/backgrounds.js?v=40';
+import { CLASS_EQUIP } from './src/data/equipment.js?v=40';
 
 // Firebase config
 const firebaseConfig = {
@@ -268,140 +272,7 @@ function subclassLevel(cls) {
 }
 
 // Sottoclassi da tutti i manuali (nomi = titoli; descrizioni = sintesi originali di tema/ruolo)
-const ALL_SUBCLASSES = {
-  'Barbaro': [
-    { name: 'Cammino del Berserker', desc: 'Furia sanguinaria: attacchi extra a costo della stanchezza.' },
-    { name: 'Cammino del Totem Guerriero', desc: 'Spiriti animali che donano resistenza e doni mistici.' },
-    { name: 'Cammino del Guardiano Ancestrale', desc: 'Gli antenati proteggono te e i tuoi alleati.' },
-    { name: 'Cammino dello Zelota', desc: 'Fervore divino: danni sacri e ritorno dalla morte.' },
-    { name: "Cammino dell'Araldo delle Tempeste", desc: 'Aure elementali che colpiscono chi ti circonda.' },
-    { name: 'Cammino della Bestia', desc: 'In ira ti spuntano artigli, zanne o coda.' },
-    { name: 'Cammino della Magia Selvaggia', desc: 'Effetti magici imprevedibili scatenati dalla furia.' },
-    { name: 'Cammino dei Giganti', desc: 'Attingi al potere dei giganti, crescendo di taglia.' }
-  ],
-  'Bardo': [
-    { name: 'Collegio della Sapienza', desc: 'Colto e versatile: ruba incantesimi e potenzia le abilità.' },
-    { name: 'Collegio del Valore', desc: 'Bardo guerriero: armature e attacchi extra.' },
-    { name: 'Collegio delle Spade', desc: 'Acrobazie di lama e danni in mischia.' },
-    { name: 'Collegio dei Sussurri', desc: 'Manipolazione e paura, quasi un assassino.' },
-    { name: "Collegio dell'Incanto", desc: 'Fascino irresistibile e presenza magnetica.' },
-    { name: 'Collegio della Creazione', desc: 'Canti che danno forma e vita alla realtà.' },
-    { name: "Collegio dell'Eloquenza", desc: 'Oratore perfetto: persuasione quasi infallibile.' }
-  ],
-  'Chierico': [
-    { name: 'Dominio della Conoscenza', desc: 'Sapere e divinazione; competenze potenziate.' },
-    { name: 'Dominio della Vita', desc: 'Il miglior guaritore: cure aumentate.' },
-    { name: 'Dominio della Guerra', desc: 'Chierico da battaglia: attacchi divini extra.' },
-    { name: 'Dominio della Tempesta', desc: 'Fulmini e tuoni contro chi ti colpisce.' },
-    { name: "Dominio dell'Inganno", desc: 'Illusioni, furtività e colpi a tradimento.' },
-    { name: 'Dominio della Luce', desc: 'Fuoco radioso e protezione dalle tenebre.' },
-    { name: 'Dominio della Natura', desc: 'Incantesimi druidici e dominio sugli animali.' },
-    { name: 'Dominio della Morte', desc: 'Necromanzia e danni potenziati.' },
-    { name: 'Dominio della Forgia', desc: 'Benedice armi e armature; resistenza al fuoco.' },
-    { name: 'Dominio della Tomba', desc: 'Confine tra vita e morte; nega i colpi critici.' },
-    { name: "Dominio dell'Ordine", desc: 'Autorità e comando; incanti di controllo.' },
-    { name: 'Dominio della Pace', desc: 'Legami protettivi che uniscono il gruppo.' },
-    { name: 'Dominio del Crepuscolo', desc: 'Scurovisione e riposo per gli alleati nel buio.' },
-    { name: 'Dominio Arcano', desc: 'Fonde magia arcana e divina.' }
-  ],
-  'Druido': [
-    { name: 'Circolo della Terra', desc: 'Incantatore versatile legato a un ambiente.' },
-    { name: 'Circolo della Luna', desc: 'Forme selvatiche potenti da mutaforma guerriero.' },
-    { name: 'Circolo dei Sogni', desc: 'Magia fatata: cure e brevi teletrasporti.' },
-    { name: 'Circolo del Pastore', desc: 'Evoca e potenzia bestie e spiriti.' },
-    { name: 'Circolo delle Spore', desc: 'Necromanzia fungina: combatti in mischia.' },
-    { name: 'Circolo delle Stelle', desc: 'Forme costellate per attacco, cura o sapere.' },
-    { name: 'Circolo del Fuoco Selvaggio', desc: 'Uno spirito di fuoco che cura e brucia.' }
-  ],
-  'Guerriero': [
-    { name: 'Campione', desc: 'Combattente diretto: critici più frequenti e atletismo.' },
-    { name: 'Maestro di Battaglia', desc: 'Manovre tattiche che controllano lo scontro.' },
-    { name: 'Cavaliere Mistico', desc: 'Fonde combattimento e magia arcana (incantatore 1/3).' },
-    { name: 'Cavaliere', desc: 'Difensore a cavallo che protegge gli alleati.' },
-    { name: 'Samurai', desc: 'Determinazione ferrea e raffiche di attacchi.' },
-    { name: 'Arciere Arcano', desc: 'Frecce infuse di magia con effetti speciali.' },
-    { name: 'Bannereto', desc: 'Comandante che ispira e cura i compagni.' },
-    { name: 'Guerriero Psionico', desc: 'Poteri mentali che potenziano attacco e difesa.' },
-    { name: 'Cavaliere Runico', desc: 'Rune giganti che ingrandiscono e rinforzano.' },
-    { name: "Cavaliere dell'Eco", desc: "Evoca un'eco spettrale di sé per colpire e spostarsi." }
-  ],
-  'Ladro': [
-    { name: 'Ladro', desc: 'Scassinatore agile: usa oggetti e fugge in fretta.' },
-    { name: 'Assassino', desc: 'Colpi mortali contro bersagli impreparati.' },
-    { name: 'Furfante Arcano', desc: 'Ladro con illusione e inganno (incantatore 1/3).' },
-    { name: 'Mente Superiore', desc: 'Stratega e falsario, colpisce aiutando gli altri.' },
-    { name: 'Spadaccino', desc: 'Duellante mobile e carismatico.' },
-    { name: 'Esploratore', desc: 'Ricognitore mobile, esperto di natura.' },
-    { name: 'Inquisitore', desc: 'Investigatore che smaschera bugie e debolezze.' },
-    { name: 'Fantasma', desc: 'Tocca la morte: danni necrotici e spettri.' },
-    { name: "Lama dell'Anima", desc: 'Lame psichiche e poteri telepatici.' }
-  ],
-  'Mago': [
-    { name: 'Abiurazione', desc: 'Scudo arcano protettivo che assorbe i danni.' },
-    { name: 'Ammaliamento', desc: 'Controllo mentale e fascino.' },
-    { name: 'Divinazione', desc: 'Prevede gli eventi e altera i tiri di dado.' },
-    { name: 'Evocazione', desc: 'Crea e piazza aree di effetto con precisione.' },
-    { name: 'Illusione', desc: 'Inganni sensoriali sempre più reali.' },
-    { name: 'Invocazione', desc: 'Danni magici massimizzati.' },
-    { name: 'Necromanzia', desc: 'Comanda i non morti e drena la vita.' },
-    { name: 'Trasmutazione', desc: 'Altera materia e forma delle cose.' },
-    { name: 'Magia da Guerra', desc: 'Equilibrio tra difesa e potenza offensiva.' },
-    { name: 'Canto di Lama', desc: 'Mago spadaccino agile e difensivo.' },
-    { name: 'Cronurgia', desc: 'Manipola il tempo in battaglia.' },
-    { name: 'Graviturgia', desc: 'Piega la gravità per attrarre o schiacciare.' },
-    { name: 'Ordine degli Scribi', desc: 'Il libro degli incantesimi prende vita.' }
-  ],
-  'Monaco': [
-    { name: 'Via della Mano Aperta', desc: 'Arti marziali pure: spinte, atterramenti e cura.' },
-    { name: "Via dell'Ombra", desc: 'Furtività, teletrasporti e oscurità.' },
-    { name: 'Via dei Quattro Elementi', desc: 'Incanala gli elementi nelle arti marziali.' },
-    { name: "Via dell'Anima Solare", desc: 'Raggi di energia radiante a distanza.' },
-    { name: 'Via del Kensei', desc: 'Maestria con armi scelte.' },
-    { name: 'Via del Maestro Ebbro', desc: 'Stile imprevedibile e schivate acrobatiche.' },
-    { name: 'Via della Lunga Morte', desc: 'Attinge alla morte per resistere e spaventare.' },
-    { name: 'Via della Misericordia', desc: 'Cura o infligge sofferenza con il tocco.' },
-    { name: 'Via del Sé Astrale', desc: "Un'entità spirituale combatte con te." }
-  ],
-  'Paladino': [
-    { name: 'Giuramento di Devozione', desc: 'Cavaliere sacro: onore e protezione.' },
-    { name: 'Giuramento degli Antichi', desc: 'Difensore della luce e della natura.' },
-    { name: 'Giuramento di Vendetta', desc: 'Cacciatore implacabile del male.' },
-    { name: 'Giuramento della Corona', desc: 'Fedele alla civiltà: tiene il fronte.' },
-    { name: 'Giuramento della Conquista', desc: 'Domina con il terrore e la forza.' },
-    { name: 'Giuramento della Redenzione', desc: 'Cerca la pace, la violenza per ultima.' },
-    { name: 'Giuramento della Gloria', desc: 'Eroe atletico che spinge il gruppo.' },
-    { name: 'Giuramento dei Guardiani', desc: 'Caccia le minacce extraplanari.' },
-    { name: 'Spezzagiuramenti', desc: 'Paladino caduto votato al male.' }
-  ],
-  'Ranger': [
-    { name: 'Cacciatore', desc: 'Specialista contro orde o grandi bestie.' },
-    { name: 'Signore delle Bestie', desc: 'Combatte al fianco di un compagno animale.' },
-    { name: 'Vagabondo Fatato', desc: 'Magia fatata: incanti e spostamenti.' },
-    { name: "Cacciatore nell'Ombra", desc: 'Agguati nel buio, letale nella sorpresa.' },
-    { name: "Viandante dell'Orizzonte", desc: 'Guerriero planare che teletrasporta.' },
-    { name: 'Sterminatore di Mostri', desc: 'Duellante che prevede e punisce i mostri.' },
-    { name: 'Custode di Sciami', desc: 'Uno sciame di creature lo aiuta in battaglia.' }
-  ],
-  'Stregone': [
-    { name: 'Discendenza Draconica', desc: 'Sangue di drago: più PF e danni elementali.' },
-    { name: 'Magia Selvaggia', desc: 'Potere caotico e imprevedibile.' },
-    { name: 'Anima Divina', desc: 'Magia sacra: cure e resistenza.' },
-    { name: 'Magia delle Ombre', desc: 'Oscurità, paura e un mastino spettrale.' },
-    { name: 'Stregoneria della Tempesta', desc: 'Vola e scatena vento e fulmini.' },
-    { name: 'Mente Aberrante', desc: 'Poteri psionici e telepatia.' },
-    { name: 'Anima Meccanica', desc: 'Ordine cosmico: precisione e protezione.' }
-  ],
-  'Warlock': [
-    { name: "Patrono: l'Immondo", desc: 'Patto infernale: PF temporanei e fuoco.' },
-    { name: "Patrono: l'Arcifata", desc: 'Incanto fatato: fascino e fughe.' },
-    { name: 'Patrono: il Grande Antico', desc: 'Orrori psichici e telepatia.' },
-    { name: 'Patrono: la Lama Maledetta', desc: 'Guerriero occulto con arma legata.' },
-    { name: "Patrono: l'Imperituro", desc: 'Sfida la morte, difficile da abbattere.' },
-    { name: 'Patrono: il Genio', desc: 'Doni elementali da un potente genio.' },
-    { name: 'Patrono: le Profondità', desc: 'Poteri abissali e tentacoli.' },
-    { name: 'Patrono: il Non Morto', desc: 'Legato a un lich o vampiro: orrore e resistenza.' }
-  ]
-};
+// ALL_SUBCLASSES -> src/data/subclasses.js
 
 function subclassNamesFor(cls) {
   if (ALL_SUBCLASSES[cls]) return ALL_SUBCLASSES[cls].map(s => s.name);
@@ -429,21 +300,7 @@ window.renderSubclassInfo = function() {
 // CLASS_CAPSTONE → src/data/classes.js
 
 // Privilegio del background — sintesi originali
-const BG_FEATURE = {
-  'Accolito': 'Rifugio dei Fedeli: templi affini offrono ospitalità a te e ai tuoi compagni.',
-  'Ciarlatano': 'Falsa Identità: possiedi una seconda identità documentata e credibile.',
-  'Criminale': 'Contatto Criminale: hai una rete affidabile nel mondo del crimine.',
-  'Intrattenitore': 'Richiesto ovunque: trovi sempre da esibirti in cambio di vitto e alloggio.',
-  'Eroe Popolano': 'Ospitalità Rustica: la gente comune ti offre riparo e protezione.',
-  'Artigiano di Gilda': 'Appartenenza alla Gilda: sostegno, alloggio e contatti dalla tua gilda.',
-  'Eremita': 'Scoperta: dal tuo isolamento hai appreso un segreto unico e importante.',
-  'Nobile': 'Posizione di Privilegio: sei accolto con rispetto dall\'alta società.',
-  'Forestiero': 'Viandante: ti orienti sempre e puoi procurare cibo per il gruppo.',
-  'Sapiente': 'Ricercatore: sai dove e da chi ottenere le informazioni che ti mancano.',
-  'Marinaio': 'Passaggio in Nave: puoi ottenere un imbarco gratuito per te e i compagni.',
-  'Soldato': 'Grado Militare: i soldati riconoscono la tua autorità di ex commilitone.',
-  'Monello': 'Segreti della Città: ti muovi tra i vicoli al doppio della velocità normale.'
-};
+// BG_FEATURE -> src/data/backgrounds.js
 
 // CLASS_SPELL_ABILITY, SPELLS_KNOWN_L1 → src/data/spells.js
 
@@ -698,18 +555,7 @@ function applyClassToCreation() {
 }
 
 // === SPECIE (bonus di caratteristica = fatti; tratti = sintesi originali) ===
-const SPECIES = {
-  'Umano': { asi: { all: 1 }, speed: 9, traits: 'Versatile: +1 a tutte le caratteristiche. Velocità 9 m.' },
-  'Umano (Variante)': { asi: {}, speed: 9, variant: true, traits: '+1 a due caratteristiche a scelta, una competenza in un\'abilità e un talento (al livello 1). Velocità 9 m.' },
-  'Nano': { asi: { con: 2 }, speed: 7.5, traits: '+2 Costituzione. Scurovisione 18 m. Resistenza al veleno. Competenza con asce e martelli. Velocità 7,5 m.' },
-  'Elfo': { asi: { dex: 2 }, speed: 9, traits: '+2 Destrezza. Scurovisione 18 m. Vantaggio contro ammaliamento e immunità al sonno magico. Percezione competente.' },
-  'Halfling': { asi: { dex: 2 }, speed: 7.5, traits: '+2 Destrezza. Fortunato: ritira gli 1 sui d20 di attacco/prova/TS. Vantaggio contro lo spavento. Velocità 7,5 m.' },
-  'Dragonide': { asi: { str: 2, cha: 1 }, speed: 9, traits: '+2 Forza, +1 Carisma. Arma del soffio e resistenza a un tipo di danno in base al lignaggio.' },
-  'Gnomo': { asi: { int: 2 }, speed: 7.5, traits: '+2 Intelligenza. Scurovisione 18 m. Vantaggio ai TS di INT/SAG/CAR contro la magia. Velocità 7,5 m.' },
-  'Mezzelfo': { asi: { cha: 2 }, speed: 9, traits: '+2 Carisma e +1 a due caratteristiche a scelta (da assegnare a mano). Scurovisione. Due competenze in abilità.' },
-  'Mezzorco': { asi: { str: 2, con: 1 }, speed: 9, traits: '+2 Forza, +1 Costituzione. Scurovisione. Resistenza implacabile (resti a 1 PF una volta al giorno). Attacchi brutali.' },
-  'Tiefling': { asi: { cha: 2, int: 1 }, speed: 9, traits: '+2 Carisma, +1 Intelligenza. Scurovisione. Resistenza al fuoco. Conosce il trucchetto Taumaturgia.' }
-};
+// SPECIES -> src/data/species.js
 
 function speciesBonus(name) {
   const b = { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 };
@@ -817,21 +663,7 @@ function resetPointBuy() {
 }
 
 // === BACKGROUND (competenze = fatti; equipaggiamento = sintesi originali) ===
-const BACKGROUNDS = {
-  'Accolito': { skills: ['insight', 'religion'], gp: 15, equip: 'Simbolo sacro, libro di preghiere, 5 bastoncini d\'incenso, vesti, abiti comuni. 2 linguaggi.' },
-  'Ciarlatano': { skills: ['deception', 'sleightOfHand'], gp: 15, equip: 'Abiti eleganti, kit da travestimento, attrezzatura per una truffa. Strumenti: kit da falsario e da trucco.' },
-  'Criminale': { skills: ['deception', 'stealth'], gp: 15, equip: 'Piede di porco, abiti scuri col cappuccio. Strumenti: un gioco e arnesi da scasso.' },
-  'Intrattenitore': { skills: ['acrobatics', 'performance'], gp: 15, equip: 'Uno strumento musicale, il favore di un ammiratore, un costume. Strumenti: kit da trucco.' },
-  'Eroe Popolano': { skills: ['animalHandling', 'survival'], gp: 10, equip: 'Strumenti da artigiano, una pala, una pentola di ferro, abiti comuni. Competenza: veicoli terrestri.' },
-  'Artigiano di Gilda': { skills: ['insight', 'persuasion'], gp: 15, equip: 'Strumenti da artigiano, lettera di presentazione della gilda, abiti da viaggio. 1 linguaggio.' },
-  'Eremita': { skills: ['medicine', 'religion'], gp: 5, equip: 'Custodia con appunti, coperta, kit da erborista, abiti comuni. 1 linguaggio.' },
-  'Nobile': { skills: ['history', 'persuasion'], gp: 25, equip: 'Abiti eleganti, anello con sigillo, pergamena del casato. Strumenti: un gioco. 1 linguaggio.' },
-  'Forestiero': { skills: ['athletics', 'survival'], gp: 10, equip: 'Un bastone, una trappola, uno strumento musicale, abiti da viaggio. 1 linguaggio.' },
-  'Sapiente': { skills: ['arcana', 'history'], gp: 10, equip: 'Boccetta d\'inchiostro, penna, coltellino, lettera di un collega defunto, abiti comuni. 2 linguaggi.' },
-  'Marinaio': { skills: ['athletics', 'perception'], gp: 10, equip: 'Verga di ferro, corda di seta, portafortuna, abiti comuni. Strumenti: navigatore e veicoli acquatici.' },
-  'Soldato': { skills: ['athletics', 'intimidation'], gp: 10, equip: 'Insegna di grado, trofeo di guerra, un gioco di dadi, abiti comuni. Strumenti: un gioco e veicoli terrestri.' },
-  'Monello': { skills: ['sleightOfHand', 'stealth'], gp: 10, equip: 'Coltellino, mappa della città natale, un topo domestico, un souvenir dei genitori, abiti comuni. Strumenti: kit da trucco e arnesi da scasso.' }
-};
+// BACKGROUNDS -> src/data/backgrounds.js
 
 // Equipaggiamento iniziale STRUTTURATO (liste di oggetti = fatti di gioco)
 const CLASS_START = {
@@ -1003,53 +835,7 @@ function normalizeSkillsExpertise(skills, cls, level) {
 }
 
 // === SCELTE EQUIPAGGIAMENTO INIZIALE (liste di oggetti = fatti) ===
-const CLASS_EQUIP = {
-  'Barbaro': { fixed: [], choices: [
-    { label: 'Arma principale', options: [{ label: 'Ascia Bipenne', items: [{ name: 'Ascia Bipenne', category: 'Armi' }] }, { label: 'Arma da guerra (Spada Lunga)', items: [{ name: 'Spada Lunga', category: 'Armi' }] }] },
-    { label: 'Armi secondarie', options: [{ label: 'Due Asce da Battaglia', items: [{ name: 'Ascia da Battaglia', category: 'Armi', qty: 2 }] }, { label: 'Arma semplice (Lancia)', items: [{ name: 'Lancia', category: 'Armi' }] }] }
-  ] },
-  'Bardo': { fixed: [{ name: 'Armatura di Cuoio', category: 'Armature' }, { name: 'Pugnale', category: 'Armi' }, { name: 'Strumento Musicale', category: 'Kit e Strumenti' }], choices: [
-    { label: 'Arma', options: [{ label: 'Stocco (Spada Corta)', items: [{ name: 'Spada Corta', category: 'Armi' }] }, { label: 'Spada Lunga', items: [{ name: 'Spada Lunga', category: 'Armi' }] }] }
-  ] },
-  'Chierico': { fixed: [{ name: 'Scudo', category: 'Armature' }, { name: 'Simbolo Sacro', category: 'Varie' }], choices: [
-    { label: 'Arma', options: [{ label: 'Mazza', items: [{ name: 'Mazza', category: 'Armi' }] }, { label: 'Martello da Guerra', items: [{ name: 'Martello da Guerra', category: 'Armi' }] }] },
-    { label: 'Armatura', options: [{ label: 'Corazza di Scaglie', items: [{ name: 'Corazza di Scaglie', category: 'Armature' }] }, { label: 'Armatura di Cuoio', items: [{ name: 'Armatura di Cuoio', category: 'Armature' }] }] },
-    { label: 'A distanza', options: [{ label: 'Balestra Leggera', items: [{ name: 'Balestra Leggera', category: 'Armi' }] }, { label: 'Arma semplice (Mazza)', items: [{ name: 'Mazza', category: 'Armi' }] }] }
-  ] },
-  'Druido': { fixed: [{ name: 'Armatura di Cuoio', category: 'Armature' }, { name: 'Kit da Erborista', category: 'Kit e Strumenti' }], choices: [
-    { label: 'Scudo o arma', options: [{ label: 'Scudo di legno (Scudo)', items: [{ name: 'Scudo', category: 'Armature' }] }, { label: 'Arma semplice (Lancia)', items: [{ name: 'Lancia', category: 'Armi' }] }] },
-    { label: 'Arma da mischia', options: [{ label: 'Lancia', items: [{ name: 'Lancia', category: 'Armi' }] }, { label: 'Mazza', items: [{ name: 'Mazza', category: 'Armi' }] }] }
-  ] },
-  'Guerriero': { fixed: [], choices: [
-    { label: 'Armatura', options: [{ label: 'Cotta di Maglia', items: [{ name: 'Cotta di Maglia', category: 'Armature' }] }, { label: 'Cuoio + Arco Lungo', items: [{ name: 'Armatura di Cuoio', category: 'Armature' }, { name: 'Arco Lungo', category: 'Armi' }] }] },
-    { label: 'Arma principale', options: [{ label: 'Arma da guerra + Scudo', items: [{ name: 'Spada Lunga', category: 'Armi' }, { name: 'Scudo', category: 'Armature' }] }, { label: 'Due armi da guerra', items: [{ name: 'Spada Lunga', category: 'Armi' }, { name: 'Ascia da Battaglia', category: 'Armi' }] }] },
-    { label: 'A distanza', options: [{ label: 'Balestra Leggera', items: [{ name: 'Balestra Leggera', category: 'Armi' }] }, { label: 'Due Asce da Battaglia', items: [{ name: 'Ascia da Battaglia', category: 'Armi', qty: 2 }] }] }
-  ] },
-  'Ladro': { fixed: [{ name: 'Armatura di Cuoio', category: 'Armature' }, { name: 'Pugnale', category: 'Armi', qty: 2 }, { name: 'Arnesi da Scasso', category: 'Kit e Strumenti' }], choices: [
-    { label: 'Arma principale', options: [{ label: 'Stocco (Spada Corta)', items: [{ name: 'Spada Corta', category: 'Armi' }] }, { label: 'Spada Corta', items: [{ name: 'Spada Corta', category: 'Armi' }] }] },
-    { label: 'A distanza', options: [{ label: 'Arco Corto', items: [{ name: 'Arco Corto', category: 'Armi' }] }, { label: 'Spada Corta', items: [{ name: 'Spada Corta', category: 'Armi' }] }] }
-  ] },
-  'Mago': { fixed: [{ name: 'Libro degli Incantesimi', category: 'Varie' }, { name: 'Focus Arcano', category: 'Varie' }], choices: [
-    { label: 'Arma', options: [{ label: 'Bastone Ferrato (Pugnale)', items: [{ name: 'Pugnale', category: 'Armi' }] }, { label: 'Pugnale', items: [{ name: 'Pugnale', category: 'Armi' }] }] }
-  ] },
-  'Monaco': { fixed: [], choices: [
-    { label: 'Arma', options: [{ label: 'Spada Corta', items: [{ name: 'Spada Corta', category: 'Armi' }] }, { label: 'Arma semplice (Lancia)', items: [{ name: 'Lancia', category: 'Armi' }] }] }
-  ] },
-  'Paladino': { fixed: [{ name: 'Cotta di Maglia', category: 'Armature' }, { name: 'Simbolo Sacro', category: 'Varie' }], choices: [
-    { label: 'Arma principale', options: [{ label: 'Arma da guerra + Scudo', items: [{ name: 'Spada Lunga', category: 'Armi' }, { name: 'Scudo', category: 'Armature' }] }, { label: 'Due armi da guerra', items: [{ name: 'Spada Lunga', category: 'Armi' }, { name: 'Ascia da Battaglia', category: 'Armi' }] }] },
-    { label: 'Secondaria', options: [{ label: 'Giavellotti (Lancia)', items: [{ name: 'Lancia', category: 'Armi' }] }, { label: 'Arma da mischia semplice (Mazza)', items: [{ name: 'Mazza', category: 'Armi' }] }] }
-  ] },
-  'Ranger': { fixed: [{ name: 'Arco Lungo', category: 'Armi' }], choices: [
-    { label: 'Armatura', options: [{ label: 'Corazza di Scaglie', items: [{ name: 'Corazza di Scaglie', category: 'Armature' }] }, { label: 'Armatura di Cuoio', items: [{ name: 'Armatura di Cuoio', category: 'Armature' }] }] },
-    { label: 'Armi da mischia', options: [{ label: 'Due Spade Corte', items: [{ name: 'Spada Corta', category: 'Armi', qty: 2 }] }, { label: 'Due Lance', items: [{ name: 'Lancia', category: 'Armi', qty: 2 }] }] }
-  ] },
-  'Stregone': { fixed: [{ name: 'Focus Arcano', category: 'Varie' }, { name: 'Pugnale', category: 'Armi', qty: 2 }], choices: [
-    { label: 'Arma', options: [{ label: 'Balestra Leggera', items: [{ name: 'Balestra Leggera', category: 'Armi' }] }, { label: 'Arma semplice (Mazza)', items: [{ name: 'Mazza', category: 'Armi' }] }] }
-  ] },
-  'Warlock': { fixed: [{ name: 'Armatura di Cuoio', category: 'Armature' }, { name: 'Focus Arcano', category: 'Varie' }, { name: 'Pugnale', category: 'Armi', qty: 2 }], choices: [
-    { label: 'Arma', options: [{ label: 'Balestra Leggera', items: [{ name: 'Balestra Leggera', category: 'Armi' }] }, { label: 'Arma semplice (Mazza)', items: [{ name: 'Mazza', category: 'Armi' }] }] }
-  ] }
-};
+// CLASS_EQUIP -> src/data/equipment.js
 
 function renderEquipChoices() {
   const el = document.getElementById('equip-choices');
