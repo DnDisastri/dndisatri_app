@@ -1,0 +1,55 @@
+// === CATALOGHI (build consigliate + mercato di default) ===
+
+export const RECOMMENDED_BUILDS = [
+  { name: 'Guerriero Campione', tag: 'Semplice · Robusto', cls: 'Guerriero', sub: 'Campione', abil: 'FOR e COS', note: 'Ideale per iniziare: tanti PF, critici migliorati e poche decisioni. Spada Lunga + Scudo + Cotta di Maglia.' },
+  { name: 'Ladro Assassino', tag: 'Furtivo · Critici', cls: 'Ladro', sub: 'Assassino', abil: 'DES, poi COS/SAG', note: 'Danni enormi in apertura con Attacco Furtivo e sorpresa. Punta su Furtività e Rapidità di Mano.' },
+  { name: 'Mago Evocatore', tag: 'Controllo · Area', cls: 'Mago', sub: 'Evocazione', abil: 'INT, poi DES/COS', note: 'Domini il campo con incantesimi ad area (Palla di Fuoco) e Controincantesimo. Fragile: resta a distanza.' },
+  { name: 'Chierico della Vita', tag: 'Guaritore · Supporto', cls: 'Chierico', sub: 'Dominio della Vita', abil: 'SAG e COS', note: 'Il miglior curatore: tiene in piedi il gruppo. Buona CA con armatura media + scudo.' },
+  { name: 'Paladino della Devozione', tag: 'Tank sacro · Danni', cls: 'Paladino', sub: 'Giuramento di Devozione', abil: 'FOR, CAR e COS', note: 'Resistente e devastante con la Punizione Divina; aura che protegge gli alleati.' },
+  { name: 'Barbaro Totem', tag: 'Bruto · Resistente', cls: 'Barbaro', sub: 'Cammino del Totem Guerriero', abil: 'FOR e COS', note: 'In ira dimezza i danni subiti: prima linea inarrestabile, semplice da giocare.' },
+  { name: 'Stregone Draconico', tag: 'Blaster · Carisma', cls: 'Stregone', sub: 'Discendenza Draconica', abil: 'CAR e COS', note: 'Danni elementali potenziati e più PF del mago. Poche opzioni ma efficaci.' },
+  { name: 'Bardo della Sapienza', tag: 'Jolly · Supporto', cls: 'Bardo', sub: 'Collegio della Sapienza', abil: 'CAR, poi DES', note: 'Fa un po\' di tutto: cura, controllo, abilità sociali e "furto" di incantesimi altrui.' }
+];
+
+export const DEFAULT_MARKET = [
+  { name: 'Pozione di Cura', category: 'Pozioni', price: 50, stock: null, details: 'Recupera 2d4+2 punti ferita bevendola (azione).' },
+  { name: 'Antitossina', category: 'Pozioni', price: 50, stock: null, details: 'Vantaggio ai tiri salvezza contro il veleno per 1 ora.' },
+  { name: 'Veleno Base (fiala)', category: 'Veleni', price: 100, stock: null, details: 'Applicato a un\'arma: +1d4 danni da veleno per 1 minuto (TS Costituzione CD 10).' },
+  { name: 'Pugnale', category: 'Armi', price: 2, stock: null, details: 'Arma semplice. 1d4 perforante. Accurata, leggera, da lancio (6/18 m).' },
+  { name: 'Spada Corta', category: 'Armi', price: 10, stock: null, details: 'Arma da guerra. 1d6 perforante. Accurata, leggera.' },
+  { name: 'Spada Lunga', category: 'Armi', price: 15, stock: null, details: 'Arma da guerra. 1d8 tagliente (1d10 impugnata a due mani), versatile.' },
+  { name: 'Spadone', category: 'Armi', price: 50, stock: null, details: 'Arma da guerra a due mani. 2d6 tagliente, pesante.' },
+  { name: 'Ascia da Battaglia', category: 'Armi', price: 10, stock: null, details: 'Arma da guerra. 1d8 tagliente (1d10 a due mani), versatile.' },
+  { name: 'Ascia Bipenne', category: 'Armi', price: 30, stock: null, details: 'Arma da guerra a due mani. 1d12 tagliente, pesante.' },
+  { name: 'Mazza', category: 'Armi', price: 5, stock: null, details: 'Arma semplice. 1d6 contundente.' },
+  { name: 'Martello da Guerra', category: 'Armi', price: 15, stock: null, details: 'Arma da guerra. 1d8 contundente (1d10 a due mani), versatile.' },
+  { name: 'Maglio', category: 'Armi', price: 10, stock: null, details: 'Arma da guerra a due mani. 2d6 contundente, pesante.' },
+  { name: 'Lancia', category: 'Armi', price: 1, stock: null, details: 'Arma semplice. 1d6 perforante, da lancio (6/18 m), versatile.' },
+  { name: 'Alabarda', category: 'Armi', price: 20, stock: null, details: 'Arma da guerra a due mani. 1d10 tagliente, portata, pesante.' },
+  { name: 'Arco Corto', category: 'Armi', price: 25, stock: null, details: 'Arma semplice a distanza. 1d6 perforante (24/96 m).' },
+  { name: 'Arco Lungo', category: 'Armi', price: 50, stock: null, details: 'Arma da guerra a distanza. 1d8 perforante (45/180 m), pesante.' },
+  { name: 'Balestra Leggera', category: 'Armi', price: 25, stock: null, details: 'Arma semplice a distanza. 1d8 perforante (24/96 m), ricarica.' },
+  { name: 'Balestra Pesante', category: 'Armi', price: 50, stock: null, details: 'Arma da guerra a distanza. 1d10 perforante (30/120 m), pesante, ricarica.' },
+  { name: 'Armatura Imbottita', category: 'Armature', price: 5, stock: null, details: 'Leggera. CA 11 + mod. DES. Svantaggio a Furtività.' },
+  { name: 'Armatura di Cuoio', category: 'Armature', price: 10, stock: null, details: 'Leggera. CA 11 + mod. DES.' },
+  { name: 'Cuoio Borchiato', category: 'Armature', price: 45, stock: null, details: 'Leggera. CA 12 + mod. DES.' },
+  { name: 'Corazza di Scaglie', category: 'Armature', price: 50, stock: null, details: 'Media. CA 14 + mod. DES (max +2). Svantaggio a Furtività.' },
+  { name: 'Corpetto (Corazza a Bande)', category: 'Armature', price: 400, stock: null, details: 'Media. CA 14 + mod. DES (max +2).' },
+  { name: 'Mezza Armatura', category: 'Armature', price: 750, stock: null, details: 'Media. CA 15 + mod. DES (max +2). Svantaggio a Furtività.' },
+  { name: 'Cotta di Maglia', category: 'Armature', price: 75, stock: null, details: 'Pesante. CA 16. Richiede FOR 13. Svantaggio a Furtività.' },
+  { name: 'Armatura a Piastre', category: 'Armature', price: 1500, stock: null, details: 'Pesante. CA 18. Richiede FOR 15. Svantaggio a Furtività.' },
+  { name: 'Scudo', category: 'Armature', price: 10, stock: null, details: '+2 alla Classe Armatura.' },
+  { name: 'Pozione di Cura Superiore', category: 'Pozioni Rare', price: 150, stock: 5, details: 'Recupera 4d4+4 punti ferita bevendola (azione).' },
+  { name: 'Arma +1', category: 'Oggetti Magici', price: 1000, stock: 2, details: '+1 ai tiri per colpire e ai danni effettuati con quest\'arma.' },
+  { name: 'Armatura +1', category: 'Oggetti Magici', price: 1500, stock: 1, details: '+1 alla Classe Armatura fornita dall\'armatura.' },
+  { name: 'Scudo +1', category: 'Oggetti Magici', price: 500, stock: 1, details: '+3 alla Classe Armatura (scudo potenziato).' },
+  { name: 'Arnesi da Scasso', category: 'Kit e Strumenti', price: 20, stock: null, details: 'Con competenza: prove per forzare serrature e disinnescare trappole.' },
+  { name: 'Forniture da Alchimista', category: 'Kit e Strumenti', price: 700, stock: null, details: 'Materiali per preparare e identificare sostanze alchemiche.' },
+  { name: 'Kit da Erborista', category: 'Kit e Strumenti', price: 5, stock: null, details: 'Per identificare piante e preparare rimedi e antidoti.' },
+  { name: 'Kit del Guaritore', category: 'Kit e Strumenti', price: 5, stock: null, details: 'Dieci usi: stabilizza una creatura morente senza tiro.' },
+  { name: 'Kit da Trucco', category: 'Kit e Strumenti', price: 25, stock: null, details: 'Per creare travestimenti convincenti.' },
+  { name: 'Kit da Falsario', category: 'Kit e Strumenti', price: 15, stock: null, details: 'Per contraffare documenti e sigilli.' },
+  { name: 'Strumenti da Navigatore', category: 'Kit e Strumenti', price: 25, stock: null, details: 'Per orientarsi e tracciare rotte in mare.' },
+  { name: 'Strumenti da Artigiano', category: 'Kit e Strumenti', price: 15, stock: null, details: 'Set generico per un mestiere artigiano.' }
+];
+
