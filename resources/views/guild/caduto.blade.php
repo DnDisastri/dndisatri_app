@@ -71,13 +71,7 @@
             </p>
         @endif
     </x-panel>
-
-    {{-- La scheda resta leggibile: di un caduto si vede quello che si vede di
-         chiunque altro (P14), e serve a ricordarsi con che cosa girava.
-
-         È rimasta **l'unica** azione della pagina, e per questo è larga tutta:
-         il ritorno alla Gilda che le stava accanto è salito in cima, dove si
-         trova senza cercarlo. --}}
+    
     <x-button variant="secondary" size="lg" full
               :href="route('characters.show', $character)">
         La sua scheda
