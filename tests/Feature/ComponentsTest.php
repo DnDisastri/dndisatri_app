@@ -36,7 +36,7 @@ it('lascia dichiarare un tipo diverso', function () {
     expect($html)->toContain('type="button"')
         ->and($html)->not->toContain('type="submit"');
 });
-// Le proprietà che scelgono una variante sostituiscono le classi predefinite dello stesso asse invece di accodarle.
+
 it('sostituisce la misura invece di accodarla', function () {
     $piccolo = resa('<x-button size="sm">Piccolo</x-button>');
 
@@ -51,7 +51,7 @@ it('sostituisce il tono invece di accodarlo', function () {
     expect($secondario)->toContain('border-line')
         ->and($secondario)->not->toContain('bg-active');
 });
-// Le classi di layout passate dal chiamante devono invece aggiungersi a quelle proprie del componente.
+
 it('accoda le classi che aggiungono, senza perdere le sue', function () {
     $html = resa('<x-button class="flex-1">Salva</x-button>');
 
@@ -71,7 +71,7 @@ it('dà tre toni alla pillola, e uno solo per volta', function () {
         ->and($allarme)->not->toContain('bg-off')
         ->and($allarme)->not->toContain('bg-accent-soft');
 });
-// Il tono neutro usa `quiet` perché `off` non garantisce contrasto sufficiente per testo leggibile.
+
 it('la pillola senza tono è quella neutra, e usa un colore leggibile', function () {
     $html = resa('<x-badge>Conclusa</x-badge>');
 
@@ -88,7 +88,7 @@ it('mostra la vetrina fuori produzione', function () {
         ->assertSee('Secondario')
         ->assertSee('Difficile');
 });
-// Un attributo booleano falso non deve essere renderizzato: in HTML anche `disabled=""` disabilita il controllo.
+
 it('spegne il pulsante solo quando glielo si chiede', function () {
     expect(resa('<x-button :disabled="true">Avanti</x-button>'))->toContain('disabled')
         ->and(resa('<x-button :disabled="false">Avanti</x-button>'))->not->toContain('disabled=');
@@ -111,7 +111,7 @@ it('sostituisce l\'imbottitura invece di accodarla', function () {
         ->and($stretta)->not->toContain('p-4')
         ->and($stretta)->not->toContain('p-6');
 });
-// `padding="none"` permette al chiamante di gestire l'imbottitura senza lasciare classi concorrenti.
+
 it('sa non mettere nessuna imbottitura', function () {
     $nuda = resa('<x-card padding="none">Contenuto</x-card>');
 
@@ -149,7 +149,7 @@ it('il manifesto tiene l\'angolo quasi vivo in basso a destra', function () {
         ->and($html)->toContain('rounded-br-poster-cut')
         ->and($html)->not->toContain('rounded-card');
 });
-// Il velo mantiene leggibile il testo anche su immagini caricate dagli utenti con luminosità imprevedibile.
+
 it('il manifesto vela sempre l\'immagine, anche quando non ce n\'è una', function () {
     $conFoto = resa('<x-poster href="#" title="Un evento" image="/x.jpg" />');
     $senza = resa('<x-poster href="#" title="Un evento" />');
