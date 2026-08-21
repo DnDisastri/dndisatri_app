@@ -76,6 +76,13 @@ node_modules/
 /storage/*.key
 /storage/pail
 
+# Published Filament assets
+/public/css/filament/
+/public/fonts/filament/
+/public/js/filament/
+/public/fonts-manifest.json
+/public/fonts-manifest.dev.json
+
 # Laravel / PHP caches
 /.phpunit.cache/
 .phpunit.result.cache
