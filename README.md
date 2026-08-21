@@ -1,227 +1,269 @@
-# D&Disastri - PWA per Gestione Personaggi D&D
+# D&Disastri
 
-## 🎲 Panoramica
-Webapp MVP per gestire personaggi D&D, quest e memoriale degli eroi caduti.
+Gestionale Laravel per D&Disastri, dedicato alla gestione di personaggi, campagne, quest, sessioni di gioco, mercato interno, scambi, contenuti della gilda e strumenti per Dungeon Master e amministratori.
 
-## 📋 Prerequisiti Completati
-- ✅ Firebase Project creato (`dndisastri-app`)
-- ✅ Firebase Authentication abilitato (Email/Password)
-- ✅ Firestore Database creato (Standard Edition)
-- ✅ Firebase Hosting configurato
+L'applicazione è una riscrittura completa della precedente PWA basata su Firebase.
 
-## 🚀 Deploy Immediato
+## Stack
 
-### 1. Configurazione Firestore Rules
-Prima di fare il deploy, devi impostare le regole di sicurezza:
+* PHP >= 8.3
+* Laravel 13
+* Blade
+* Livewire
+* Filament 5
+* Spatie Laravel Permission
+* Spatie Laravel Activitylog
+* Tailwind CSS 4
+* Vite 8
+* SQLite in sviluppo locale
+* MySQL negli ambienti online
+* Pest per i test
 
-1. Vai su [Firebase Console](https://console.firebase.google.com/project/dndisastri-app/firestore)
-2. Clicca su "Rules" (Regole)
-3. Copia e incolla il contenuto di `firestore.rules`
-4. Clicca "Publish" (Pubblica)
+## Storia del progetto
 
-### 2. Deploy su Firebase Hosting
+La versione precedente basata su Firebase è conservata nel tag:
+
+`legacy-firebase-final`
+
+La riscrittura Laravel è stata sviluppata inizialmente nella repository separata:
+
+`dndisastri-app-demo`
+
+Lo snapshot scelto per la migrazione è identificato dal tag:
+
+`laravel-migration-ready`
+
+Il codice Laravel è stato successivamente ricostruito nella repository ufficiale attraverso nuovi commit organizzati per area funzionale, senza importare la cronologia Git della repository demo.
+
+## Installazione locale
+
+Installare le dipendenze PHP:
 
 ```bash
-# Assicurati di essere nella directory del progetto
-cd /path/to/dndisastri
-
-# Deploy
-firebase deploy --only hosting:dndisastri-app
+composer install
 ```
 
-L'app sarà disponibile su: `https://dndisastri-app.web.app`
+Installare le dipendenze frontend:
 
-### 3. Configurare il primo Dungeon Master
-
-Dopo il primo deploy:
-
-1. Registra il primo account (questo sarà il DM)
-2. Vai su [Firestore Console](https://console.firebase.google.com/project/dndisastri-app/firestore/data)
-3. Trova il documento dell'utente nella collection `users`
-4. Modifica il campo `role` da `player` a `dm`
-5. Salva
-
-Ora quel utente può:
-- Creare quest
-- Dichiarare morti i personaggi
-
-**IMPORTANTE:** Solo i DM possono creare quest e dichiarare morti i personaggi!
-
-## 📱 Installazione come App
-
-### Android
-1. Apri `https://dndisastri-app.web.app` in Chrome
-2. Tocca il menu (⋮) → "Aggiungi a schermata Home"
-3. L'app si aprirà in fullscreen come app nativa
-
-### iOS
-1. Apri `https://dndisastri-app.web.app` in Safari
-2. Tocca il pulsante "Condividi" (icona con freccia)
-3. Scorri e tocca "Aggiungi a schermata Home"
-
-## 🎨 Design & Colori
-Colori dal logo D&Disastri:
-- **Navy Blue**: `#2c3e6e` (primario)
-- **Rosso**: `#d4423e` (accenti)
-- **Beige**: `#e8d5a0` (testo)
-- **Dark**: `#111111` (sfondo)
-
-## 🏗️ Struttura del Progetto
-
-```
-dndisastri-app/
-├── index.html          # Struttura HTML
-├── style.css           # Stili con colori dal logo
-├── app.js              # Logica + Firebase integration
-├── manifest.json       # PWA manifest
-├── service-worker.js   # Service worker per offline
-├── logo.jpg            # Logo dell'app
-├── firestore.rules     # Regole di sicurezza Firestore
-├── firebase.json       # Configurazione hosting
-└── .firebaserc         # Configurazione progetto
+```bash
+npm install
 ```
 
-## 📊 Database Structure
+Creare il file di configurazione locale:
 
-### Collection: `users`
-```javascript
-{
-  uid: string,
-  username: string,
-  email: string,
-  role: string,          // 'player' or 'dm'
-  createdAt: timestamp
-}
+```bash
+cp .env.example .env
 ```
 
-### Collection: `characters`
-```javascript
-{
-  userId: string,        // uid del proprietario
-  name: string,
-  class: string,
-  level: number,
-  race: string,
-  notes: string,
-  isDead: boolean,
-  createdAt: timestamp,
-  deathDate: timestamp   // solo se isDead = true
-}
+Generare la chiave dell'applicazione:
+
+```bash
+php artisan key:generate
 ```
 
-### Collection: `quests`
-```javascript
-{
-  createdBy: string,     // uid del creatore
-  title: string,
-  description: string,
-  difficulty: string,    // Facile, Media, Difficile, Epica
-  isCompleted: boolean,
-  createdAt: timestamp
-}
+Lo sviluppo locale usa SQLite. Creare il database se non esiste:
+
+```bash
+php -r "file_exists('database/database.sqlite') || touch('database/database.sqlite');"
 ```
 
-## 🔐 Sicurezza e Regole
+Eseguire le migration:
 
-### Ruoli Utente
-- **Player (default)**: 
-  - Può creare UN SOLO personaggio attivo
-  - Può visualizzare tutte le quest
-  - Può visualizzare tutti i personaggi (per Hall of Fallen Heroes)
-  - NON può creare quest
-  - NON può dichiarare morti i personaggi
+```bash
+php artisan migrate
+```
 
-- **Dungeon Master (DM)**:
-  - Può creare quest illimitate
-  - Può dichiarare morti QUALSIASI personaggio
-  - Ha controllo completo sulla campagna
+Collegare lo storage pubblico:
 
-### Regole Firestore
-- Authentication richiesta per tutte le operazioni
-- Un player può avere solo UN personaggio attivo alla volta
-- Solo i DM possono modificare il campo `isDead` dei personaggi
-- Solo i DM possono creare/modificare/eliminare quest
-- Tutti possono leggere tutti i personaggi (per Hall of Fallen Heroes)
+```bash
+php artisan storage:link
+```
 
-## ✨ Funzionalità
+Compilare gli asset:
 
-### Autenticazione
-- [x] Registrazione con email/password
-- [x] Login
-- [x] Logout
-- [x] Username personalizzato
+```bash
+npm run build
+```
 
-### Personaggi
-- [x] Creazione personaggio
-- [x] Lista personaggi vivi
-- [x] Dettaglio personaggio
-- [x] Dichiarazione morte (irreversibile)
-- [x] Vista sola lettura per personaggi morti
+Avviare l'applicazione:
 
-### Quest
-- [x] Creazione quest
-- [x] Lista quest
-- [x] Badge difficoltà
+```bash
+php artisan serve
+```
 
-### Hall of Fallen Heroes
-- [x] Vista globale personaggi morti
-- [x] Memoriale pubblico
-- [x] Ordinamento per data di morte
+## Dati locali opzionali
 
-## 🛠️ Tecnologie
-- **Frontend**: HTML, CSS, Vanilla JavaScript
-- **Backend**: Firebase (Auth + Firestore)
-- **Hosting**: Firebase Hosting
-- **PWA**: Service Worker, Web Manifest
+Per creare ruoli, catalogo del mercato e dati utili allo sviluppo locale:
 
-## 📈 Prossimi Step (Post-MVP)
-- [ ] Modifica personaggi esistenti
-- [ ] Completamento quest
-- [ ] Gestione XP e progressione
-- [ ] Upload avatar personaggi
-- [ ] Sistema di notifiche
-- [ ] Statistiche personaggi
-- [ ] Export/Import personaggi
-- [ ] Ricerca e filtri
+```bash
+php artisan db:seed
+```
 
-## 🐛 Troubleshooting
+I dati di sviluppo non devono essere utilizzati negli ambienti online.
 
-### "Firebase not defined"
-Assicurati di avere una connessione internet - i moduli Firebase vengono caricati da CDN.
+Per creare manualmente un amministratore:
 
-### "Permission denied"
-Verifica che le regole Firestore siano state pubblicate correttamente.
+```bash
+php artisan dndisastri:admin
+```
 
-### "Authentication error"
-Controlla che Authentication sia abilitato nella Firebase Console.
+Il comando richiede le credenziali direttamente nel terminale e non le salva nella repository.
 
-### App non si installa
-- Android: usa Chrome (non altri browser)
-- iOS: usa Safari (non Chrome)
+## Test
 
-## 💰 Costi
-**Zero costi** con i limiti gratuiti:
-- Authentication: illimitato
-- Firestore: 50K letture/giorno, 20K scritture/giorno
-- Hosting: 10GB storage, 360MB/giorno bandwidth
+Per eseguire la suite completa:
 
-## 📝 Note di Sviluppo
-- Nessun framework necessario (intenzionale)
-- Codice mantenibile e leggibile
-- Deploy rapido (< 1 minuto)
-- Facilmente estendibile
+```bash
+php artisan test
+```
 
-## 🎯 Obiettivo MVP
-✅ App funzionante subito
-✅ Installabile su mobile
-✅ Gestione personaggi completa
-✅ Sistema quest base
-✅ Memoriale fallen heroes
+oppure:
 
-## 📞 Contatti
-Per domande o supporto sul progetto D&Disastri.
+```bash
+composer test
+```
 
----
+Prima di distribuire una nuova versione devono passare almeno:
 
-**Versione**: 1.0.0 (MVP)  
-**Ultimo aggiornamento**: Febbraio 2026
+```bash
+composer validate --strict
+php artisan test
+npm run build
+```
+
+## Dati D&D
+
+Le regole e i dati di riferimento si trovano principalmente in:
+
+```text
+app/Domain/Dnd/
+config/dnd/
+```
+
+Comprendono classi, sottoclassi, specie, background, equipaggiamento, incantesimi e regole utilizzate dalla scheda personaggio.
+
+Le descrizioni presenti nel progetto sono contenuti sintetici/originali e non riproducono integralmente testo editoriale ufficiale.
+
+## Pannello amministrativo
+
+Il pannello Filament è disponibile su:
+
+```text
+/admin
+```
+
+L'accesso dipende dal ruolo e dalle policy dell'applicazione.
+
+Il primo amministratore di una nuova installazione va creato da terminale:
+
+```bash
+php artisan dndisastri:admin
+```
+
+## Database
+
+### Sviluppo
+
+SQLite:
+
+```env
+DB_CONNECTION=sqlite
+```
+
+### Ambienti online
+
+MySQL:
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=...
+DB_PORT=3306
+DB_DATABASE=...
+DB_USERNAME=...
+DB_PASSWORD=...
+```
+
+Le credenziali non devono essere versionate.
+
+## Staging e produzione
+
+La destinazione prevista è SupportHost, piano Condiviso 2.
+
+Lo staging utilizza un database separato e un sottodominio dedicato, ma viene eseguito con comportamento da produzione:
+
+```env
+APP_ENV=production
+APP_DEBUG=false
+```
+
+`APP_URL`, database e altre configurazioni devono invece riferirsi all'ambiente specifico.
+
+Installazione delle dipendenze PHP sul server:
+
+```bash
+composer install --no-dev --optimize-autoloader
+```
+
+Pubblicazione degli asset Filament:
+
+```bash
+php artisan filament:assets
+```
+
+Migration:
+
+```bash
+php artisan migrate --force
+```
+
+Seeder di base:
+
+```bash
+php artisan db:seed --force
+```
+
+In ambiente `production` il seeding standard crea i ruoli e il catalogo iniziale del mercato senza caricare i dati di sviluppo.
+
+Collegamento dello storage:
+
+```bash
+php artisan storage:link
+```
+
+Gli asset Vite vengono compilati localmente:
+
+```bash
+npm run build
+```
+
+La directory risultante:
+
+```text
+public/build/
+```
+
+deve essere distribuita sul server separatamente perché non è versionata nella repository.
+
+## Cache Laravel
+
+Dopo aver completato la configurazione dell'ambiente online è possibile utilizzare:
+
+```bash
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+Dopo modifiche alla configurazione può essere utile azzerarle con:
+
+```bash
+php artisan optimize:clear
+```
+
+## Documentazione della migrazione
+
+Lo stato e la strategia del passaggio dalla vecchia applicazione Firebase alla versione Laravel sono documentati in:
+
+```text
+docs/LARAVEL-MIGRATION.md
+```
