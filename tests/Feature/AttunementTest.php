@@ -156,8 +156,8 @@ describe('l\'approvazione di un oggetto magico', function () {
 
         $fresh = $character->fresh();
 
-        expect($fresh->ownsItem('Cintura del Gigante'))->toBeTrue().
-            ->and($fresh->effectiveScores()->score(Ability::Str))->toBe(14);
+        expect($fresh->ownsItem('Cintura del Gigante'))->toBeTrue()
+        ->and($fresh->effectiveScores()->score(Ability::Str))->toBe(14);
     });
 });
 
