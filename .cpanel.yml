@@ -1,0 +1,9 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/dndisast/staging.dndisastri.it/
+    - /bin/cp artisan $DEPLOYPATH
+    - /bin/cp composer.json composer.lock $DEPLOYPATH
+    - /bin/cp .env.example $DEPLOYPATH
+    - /bin/cp package.json package-lock.json vite.config.js $DEPLOYPATH
+    - /bin/cp -R app bootstrap config database public resources routes storage $DEPLOYPATH
