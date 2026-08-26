@@ -85,20 +85,6 @@ document.addEventListener('click', (evento) => {
 
 segnaAttivo(leggi());
 
-/*
- * Il pallino acceso sulla presentazione (P0).
- *
- * È un **miglioramento**, non il meccanismo: lo slider scorre col dito grazie
- * a `snap-x`, e i pallini sono collegamenti che portano alla loro
- * illustrazione anche senza una riga di javascript. Questo pezzo aggiunge la
- * sola cosa che il CSS non sa fare — dire quale si sta guardando — e se non
- * gira non si rompe niente: resta acceso il primo.
- *
- * Il conto è una divisione e non un `IntersectionObserver`: le illustrazioni
- * sono larghe quanto lo slider, quindi quella che si guarda è
- * `scrollLeft / larghezza` arrotondato. Meno pezzi, e nessuna soglia da
- * indovinare.
- */
 const slider = document.getElementById('benvenuto');
 
 if (slider) {
@@ -112,11 +98,50 @@ if (slider) {
         });
     };
 
-    /*
-     * `passive`: dice al browser che non fermeremo lo scorrimento, e può
-     * continuare a scorrere senza aspettare che questa funzione finisca. Su un
-     * telefono è la differenza fra uno scorrimento liscio e uno a scatti.
-     */
+    // passive: non blocchiamo lo scroll, così su mobile resta fluido.
     slider.addEventListener('scroll', segnaIllustrazione, { passive: true });
     segnaIllustrazione();
+
+    const quante = slider.children.length;
+    const menoMovimento = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    if (quante > 1 && !menoMovimento.matches) {
+        const INTERVALLO = 5000;
+        const PAUSA = 8000;
+
+        let giro = null;
+        let ripresa = null;
+
+        const avanza = () => {
+            const corrente = Math.round(slider.scrollLeft / slider.clientWidth);
+            const prossima = (corrente + 1) % quante;
+            slider.scrollTo({ left: prossima * slider.clientWidth, behavior: 'smooth' });
+        };
+
+        const avvia = () => {
+            clearInterval(giro);
+            giro = setInterval(avanza, INTERVALLO);
+        };
+
+        const ferma = () => {
+            clearInterval(giro);
+            giro = null;
+        };
+
+        // Un'interazione ferma il giro; riparte dopo PAUSA di quiete.
+        const interazione = () => {
+            ferma();
+            clearTimeout(ripresa);
+            ripresa = setTimeout(avvia, PAUSA);
+        };
+
+        ['pointerdown', 'wheel', 'keydown'].forEach((evento) =>
+            slider.addEventListener(evento, interazione, { passive: true }));
+
+        document.addEventListener('visibilitychange', () => {
+            document.hidden ? ferma() : avvia();
+        });
+
+        avvia();
+    }
 }

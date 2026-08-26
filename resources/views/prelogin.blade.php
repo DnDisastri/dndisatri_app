@@ -1,20 +1,19 @@
 @section('title', config('app.name').' Qui il caos vince sempre')
-{{-- Landing autonoma: non usa i layout dell'app per permettere alle illustrazioni di occupare l'intero viewport. --}}
+{{-- Landing fuori dai layout dell'app: le illustrazioni occupano tutto il viewport. --}}
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     @include('partials.testa')
 </head>
-<body class="min-h-screen bg-page antialiased">
+<body class="h-[100dvh] overflow-hidden bg-page antialiased">
 
-<div class="relative mx-auto flex min-h-screen max-w-md flex-col justify-end overflow-hidden">
-{{-- Lo slider usa CSS scroll-snap; i pallini restano link funzionanti senza JS, che aggiorna solo lo stato attivo. --}}
+<div class="relative mx-auto flex h-full max-w-md flex-col justify-end overflow-hidden">
     <div id="benvenuto"
          class="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto scroll-smooth
                 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         @forelse ($illustrazioni as $i => $illustrazione)
-            <div id="benvenuto-{{ $i + 1 }}" class="h-full w-full shrink-0 snap-center">
-{{-- Illustrazione decorativa: il contenuto testuale comunica già il messaggio. --}}
+            <div id="benvenuto-{{ $i + 1 }}" class="h-full w-full shrink-0 snap-center snap-always">
+{{-- alt vuoto: illustrazione decorativa, il testo sotto comunica già il messaggio. --}}
                 <img src="{{ asset('images/prelogin/'.$illustrazione) }}" alt=""
                      class="h-full w-full object-cover">
             </div>
