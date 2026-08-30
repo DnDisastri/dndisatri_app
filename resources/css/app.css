@@ -1,0 +1,276 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+/* =========================================================================
+ * 1. LE TINTE
+ *
+ * Vengono dal logo: i giocatori riconoscono questi colori. Si dichiarano qui
+ * una volta sola e **non si usano nelle pagine** — le pagine usano i ruoli
+ * del blocco 3. Vedi docs/GRAFICA.md.
+ *
+ * Navy e rosso esistono in due versioni perché su fondo scuro le originali
+ * non reggono il contrasto: 1,68:1 e 3,85:1. Non è una preferenza, è la
+ * soglia sotto cui una parte delle persone non legge.
+ * ========================================================================= */
+:root {
+    --tinta-navy: #2c3e6e;
+    --tinta-navy-chiaro: #4c63a6;
+    --tinta-rosso: #d4423e;
+    --tinta-rosso-chiaro: #e4605c;
+    --tinta-crema: #e8d5a0;
+
+    --tinta-carta: #f5f5f5;
+    --tinta-bianco: #ffffff;
+    --tinta-inchiostro: #1a1a1a;
+    --tinta-inchiostro-fondo: #111111;
+}
+
+/* =========================================================================
+ * 2. I RUOLI, NEI DUE TEMI
+ *
+ * Il tema chiaro è quello scritto qui; lo scuro lo ridefinisce sotto.
+ * L'ordine conta: prima il sistema operativo, poi `data-theme` sul tag html,
+ * che vince sempre perché è una scelta esplicita di chi guarda.
+ * ========================================================================= */
+:root {
+    --ui-page: var(--tinta-carta);
+    --ui-surface: var(--tinta-bianco);
+    --ui-line: #d9d9d9;
+
+    --ui-fg: var(--tinta-inchiostro);
+    --ui-muted: #666666;
+
+    --ui-primary: var(--tinta-navy);
+    --ui-on-primary: var(--tinta-carta);
+    /* Le icone che stanno su un fondo primario senza essere quella attiva:
+       si devono vedere (4,97:1 sul navy) ma non competere col rosso. */
+    --ui-on-primary-soft: #a9b6d6;
+
+    --ui-active: var(--tinta-rosso);
+    --ui-on-active: var(--tinta-bianco);
+
+    --ui-accent: var(--tinta-crema);
+
+    /* Gli elementi spenti non sono da leggere, sono da riconoscere: per
+       questo sono esentati dai requisiti di contrasto. */
+    --ui-off: #afb5c6;
+    --ui-off-fg: #6e7a9a;
+
+    /* Stesso fondo di `off`, ma il testo si legge: è per le cose sottotono
+       che vanno comunque lette — la pillola «Conclusa», un fatto senza peso.
+       Prende il testo dal navy della palette: 5,0:1 sul suo fondo. */
+    --ui-quiet: #afb5c6;
+    --ui-on-quiet: var(--tinta-navy);
+
+    --ui-accent-soft: var(--tinta-crema);
+    --ui-on-accent-soft: #5a4a1e;
+    --ui-danger-soft: #ead9d8;
+    --ui-on-danger-soft: #8c2c29;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --ui-page: var(--tinta-inchiostro-fondo);
+        --ui-surface: var(--tinta-inchiostro);
+        --ui-line: #333333;
+
+        --ui-fg: var(--tinta-carta);
+        /* Non `#666666`: su fondo scuro fa 3,03:1 e sparisce. */
+        --ui-muted: #a0a0a0;
+
+        --ui-primary: var(--tinta-navy-chiaro);
+        --ui-on-primary: var(--tinta-carta);
+        /* Più chiara che in tema chiaro: il navy sotto è già schiarito, e la
+           stessa tinta ci sparirebbe sopra (3,64:1 così). */
+        --ui-on-primary-soft: #c3cce3;
+
+        --ui-active: var(--tinta-rosso-chiaro);
+        /* Quasi nero sopra il rosso schiarito: 5,08:1 contro i 3,43:1 del
+           bianco. A occhio sembra strano, si legge meglio. */
+        --ui-on-active: var(--tinta-inchiostro);
+
+        --ui-off: #3a3a3a;
+        --ui-off-fg: #757575;
+
+        /* 4,77:1 sul grigio spento: sottotono ma leggibile. */
+        --ui-quiet: #3a3a3a;
+        --ui-on-quiet: #a2a8b6;
+
+        --ui-accent-soft: #2e2917;
+        --ui-on-accent-soft: var(--tinta-crema);
+        --ui-danger-soft: #301a19;
+        --ui-on-danger-soft: var(--tinta-rosso-chiaro);
+    }
+}
+
+/* La scelta esplicita batte il sistema, in tutte e due le direzioni. */
+:root[data-theme='dark'] {
+    --ui-page: var(--tinta-inchiostro-fondo);
+    --ui-surface: var(--tinta-inchiostro);
+    --ui-line: #333333;
+    --ui-fg: var(--tinta-carta);
+    --ui-muted: #a0a0a0;
+    --ui-primary: var(--tinta-navy-chiaro);
+    --ui-on-primary: var(--tinta-carta);
+    --ui-on-primary-soft: #c3cce3;
+    --ui-active: var(--tinta-rosso-chiaro);
+    --ui-on-active: var(--tinta-inchiostro);
+    --ui-off: #3a3a3a;
+    --ui-off-fg: #757575;
+    --ui-quiet: #3a3a3a;
+    --ui-on-quiet: #a2a8b6;
+    --ui-accent-soft: #2e2917;
+    --ui-on-accent-soft: var(--tinta-crema);
+    --ui-danger-soft: #301a19;
+    --ui-on-danger-soft: var(--tinta-rosso-chiaro);
+}
+
+:root[data-theme='light'] {
+    --ui-page: var(--tinta-carta);
+    --ui-surface: var(--tinta-bianco);
+    --ui-line: #d9d9d9;
+    --ui-fg: var(--tinta-inchiostro);
+    --ui-muted: #666666;
+    --ui-primary: var(--tinta-navy);
+    --ui-on-primary: var(--tinta-carta);
+    --ui-on-primary-soft: #a9b6d6;
+    --ui-active: var(--tinta-rosso);
+    --ui-on-active: var(--tinta-bianco);
+    --ui-off: #afb5c6;
+    --ui-off-fg: #6e7a9a;
+    --ui-quiet: #afb5c6;
+    --ui-on-quiet: var(--tinta-navy);
+    --ui-accent-soft: var(--tinta-crema);
+    --ui-on-accent-soft: #5a4a1e;
+    --ui-danger-soft: #ead9d8;
+    --ui-on-danger-soft: #8c2c29;
+}
+
+/* =========================================================================
+ * 3. I RUOLI COME CLASSI
+ *
+ * `inline` fa sì che le utility puntino alla variabile invece di copiarne il
+ * valore: senza, il tema resterebbe quello del momento in cui Tailwind ha
+ * compilato, e cambiarlo a schermo non farebbe niente.
+ *
+ * Da qui nascono bg-page, text-fg, border-line, bg-primary, text-on-primary…
+ * ========================================================================= */
+@theme inline {
+    /*
+     * Due caratteri con due mestieri: Quicksand per leggere, Bowlby One per i
+     * titoli. Bowlby è largo e pesantissimo — funziona su tre parole e
+     * diventa illeggibile su un paragrafo, quindi non è mai il predefinito.
+     */
+    --font-sans: 'Quicksand', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+        sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+
+    --font-display: 'Bowlby One', 'Quicksand', ui-sans-serif, system-ui, sans-serif;
+
+    --color-page: var(--ui-page);
+    --color-surface: var(--ui-surface);
+    --color-line: var(--ui-line);
+
+    --color-fg: var(--ui-fg);
+    --color-muted: var(--ui-muted);
+
+    --color-primary: var(--ui-primary);
+    --color-on-primary: var(--ui-on-primary);
+    --color-on-primary-soft: var(--ui-on-primary-soft);
+
+    --color-active: var(--ui-active);
+    --color-on-active: var(--ui-on-active);
+
+    --color-accent: var(--ui-accent);
+
+    --color-off: var(--ui-off);
+    --color-off-fg: var(--ui-off-fg);
+
+    --color-quiet: var(--ui-quiet);
+    --color-on-quiet: var(--ui-on-quiet);
+
+    --color-accent-soft: var(--ui-accent-soft);
+    --color-on-accent-soft: var(--ui-on-accent-soft);
+    --color-danger-soft: var(--ui-danger-soft);
+    --color-on-danger-soft: var(--ui-on-danger-soft);
+
+    /*
+     * L'angolo delle card: `rounded-card`, 18px.
+     *
+     * Sta qui e non scritto nelle viste perché è la misura che decide la forma
+     * di tutta l'applicazione — cambiarla vuol dire cambiare una riga, non
+     * cercare `rounded-xl` in trenta file.
+     *
+     * **I riquadri d'immagine non la usano**: hanno una forma loro, qui sotto,
+     * ed è voluto che restino fermi quando questa misura si muove.
+     *
+     * **La scatola dentro una card non usa questa.** Due angoli concentrici
+     * sono paralleli solo se quello interno vale l'esterno meno l'imbottitura:
+     * 18 meno i 16 del `p-4` fa 2, cioè `rounded-[2px]`. Con lo stesso raggio su
+     * tutti e due, l'angolo interno sembra più stretto di quello esterno anche
+     * se il numero è identico — quindi se questa misura cambia, va rifatto
+     * anche il conto dentro `<x-inset>`.
+     */
+    --radius-card: 1.125rem;
+
+    /*
+     * L'angolo dei riquadri d'immagine: `rounded-poster` più
+     * `rounded-br-poster-cut`, cioè 30, 30, 8, 30.
+     *
+     * È la forma dei manifesti — eventi, campagne — e delle mappe: le cose che
+     * sono **tutte immagine**, dove il testo sta sopra o sotto e la card è la
+     * figura. L'angolo quasi vivo in basso a destra è quello che le distingue
+     * dalle card normali, e basta averne due appaiate per vedere che è voluto.
+     *
+     * Gli 8px non sono uno zero mancato: un angolo perfettamente vivo accanto
+     * a tre tondi si legge come un errore di allineamento, un raccordo minimo
+     * lo fa sembrare una scelta, e a occhio nudo resta un angolo.
+     *
+     * Sono due token e non uno perché l'angolo tagliato è la firma: se un
+     * giorno cambia il raggio grande, quello piccolo non deve seguirlo per
+     * conto suo.
+     */
+    --radius-poster: 30px;
+    --radius-poster-cut: 8px;
+}
+
+@layer base {
+    html {
+        color-scheme: light dark;
+    }
+
+    /*
+     * I titoli in Bowlby One, e il peso resta 400: il carattere ha un solo
+     * peso, e chiedergliene un altro produrrebbe un grassetto finto disegnato
+     * dal browser, che su un carattere già pesantissimo si impasta.
+     */
+    h1,
+    h2 {
+        font-family: var(--font-display);
+        font-weight: 400;
+        letter-spacing: 0.01em;
+    }
+
+    body {
+        background-color: var(--ui-page);
+        color: var(--ui-fg);
+    }
+
+    ::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: var(--ui-page);
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: var(--ui-primary);
+        border-radius: 5px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--ui-active);
+    }
+}
