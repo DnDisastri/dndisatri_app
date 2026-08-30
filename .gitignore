@@ -103,3 +103,9 @@ auth.json
 # Operating system files
 .DS_Store
 Thumbs.db
+
+# graphify (grafo rigenerabile)
+/graphify-out/
+
+# Documentazione fuori dal repo
+/docs/
