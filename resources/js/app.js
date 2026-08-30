@@ -1,17 +1,6 @@
-/*
- * La scelta del tema.
- *
- * Applicarla al primo caricamento **non** è compito di questo file: gira con
- * `defer`, quindi dopo il primo disegno, e chi ha scelto il tema scuro
- * vedrebbe un lampo bianco a ogni pagina. Quel pezzo sta in linea
- * nell'intestazione (`partials/tema.blade.php`). Qui c'è solo quello che
- * succede quando si clicca, che per definizione è dopo il caricamento.
- *
- * Tre stati e non due. «Automatico» non è un ripiego per chi non ha scelto: è
- * la scelta giusta per quasi tutti, perché segue il telefono che di sera passa
- * a scuro da solo. Chiaro e scuro servono a chi quel comportamento non lo
- * vuole, ed è una minoranza — per questo l'automatico è il valore di partenza.
- */
+// Tema
+
+// Il tema iniziale è applicato in tema.blade.php per evitare il flash bianco.
 const CHIAVE = 'dndisastri:tema';
 
 function leggi() {
@@ -34,22 +23,14 @@ function applica(scelta) {
     try {
         scelta === 'auto' ? localStorage.removeItem(CHIAVE) : localStorage.setItem(CHIAVE, scelta);
     } catch (e) {
-        // Niente da salvare: la scelta vale per questa visita e basta.
+        // La scelta resta valida solo per questa visita.
     }
 
     barraDelBrowser(scelta);
     segnaAttivo(scelta);
 }
 
-/*
- * La striscia colorata attorno alla pagina sul telefono.
- *
- * L'intestazione ne dichiara due, una per `prefers-color-scheme`, e vanno
- * benissimo finché il tema è automatico. Quando invece si forza il contrario
- * del sistema restano indietro, e si vede: pagina scura e barra del browser
- * bianca. Il browser usa **la prima** che combacia, quindi la nostra va messa
- * in cima; tolto il vincolo, le due originali tornano a comandare.
- */
+// La theme-color forzata precede quelle automatiche e viene rimossa in auto.
 function barraDelBrowser(scelta) {
     document.querySelector('meta[name="theme-color"][data-forzata]')?.remove();
 
@@ -70,11 +51,6 @@ function segnaAttivo(scelta) {
     });
 }
 
-/*
- * Delega invece di un ascoltatore per pulsante: i comandi vivono dentro un
- * `details` che il browser non stampa finché è chiuso, e agganciarli al
- * caricamento significherebbe non trovarli.
- */
 document.addEventListener('click', (evento) => {
     const pulsante = evento.target.closest('[data-tema]');
 
@@ -85,20 +61,8 @@ document.addEventListener('click', (evento) => {
 
 segnaAttivo(leggi());
 
-/*
- * Il pallino acceso sulla presentazione (P0).
- *
- * È un **miglioramento**, non il meccanismo: lo slider scorre col dito grazie
- * a `snap-x`, e i pallini sono collegamenti che portano alla loro
- * illustrazione anche senza una riga di javascript. Questo pezzo aggiunge la
- * sola cosa che il CSS non sa fare — dire quale si sta guardando — e se non
- * gira non si rompe niente: resta acceso il primo.
- *
- * Il conto è una divisione e non un `IntersectionObserver`: le illustrazioni
- * sono larghe quanto lo slider, quindi quella che si guarda è
- * `scrollLeft / larghezza` arrotondato. Meno pezzi, e nessuna soglia da
- * indovinare.
- */
+// Slider di benvenuto
+
 const slider = document.getElementById('benvenuto');
 
 if (slider) {
@@ -112,11 +76,68 @@ if (slider) {
         });
     };
 
-    /*
-     * `passive`: dice al browser che non fermeremo lo scorrimento, e può
-     * continuare a scorrere senza aspettare che questa funzione finisca. Su un
-     * telefono è la differenza fra uno scorrimento liscio e uno a scatti.
-     */
+    // Non blocca lo scroll su mobile.
     slider.addEventListener('scroll', segnaIllustrazione, { passive: true });
     segnaIllustrazione();
+
+    const quante = slider.children.length;
+    const menoMovimento = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    if (quante > 1 && !menoMovimento.matches) {
+        const INTERVALLO = 5000;
+        const PAUSA = 8000;
+
+        let giro = null;
+        let ripresa = null;
+
+        const avanza = () => {
+            const corrente = Math.round(slider.scrollLeft / slider.clientWidth);
+            const prossima = (corrente + 1) % quante;
+            slider.scrollTo({ left: prossima * slider.clientWidth, behavior: 'smooth' });
+        };
+
+        const avvia = () => {
+            clearInterval(giro);
+            giro = setInterval(avanza, INTERVALLO);
+        };
+
+        const ferma = () => {
+            clearInterval(giro);
+            giro = null;
+        };
+
+        // Dopo un'interazione, l'autoplay riparte dopo PAUSA.
+        const interazione = () => {
+            ferma();
+            clearTimeout(ripresa);
+            ripresa = setTimeout(avvia, PAUSA);
+        };
+
+        ['pointerdown', 'wheel', 'keydown'].forEach((evento) =>
+            slider.addEventListener(evento, interazione, { passive: true }));
+
+        document.addEventListener('visibilitychange', () => {
+            document.hidden ? ferma() : avvia();
+        });
+
+        avvia();
+    }
 }
+
+// Visibilità password
+
+document.querySelectorAll('[data-toggle-password]').forEach((bottone) => {
+    const campo = bottone.closest('.relative')?.querySelector('input');
+    const occhio = bottone.querySelector('[data-eye]');
+    const occhioChiuso = bottone.querySelector('[data-eye-closed]');
+
+    if (!campo || !occhio || !occhioChiuso) return;
+
+    bottone.addEventListener('click', () => {
+        const rivela = campo.type === 'password';
+        campo.type = rivela ? 'text' : 'password';
+        occhio.classList.toggle('hidden', rivela);
+        occhioChiuso.classList.toggle('hidden', !rivela);
+        bottone.setAttribute('aria-label', rivela ? 'Nascondi password' : 'Mostra password');
+    });
+});

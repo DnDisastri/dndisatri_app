@@ -3,34 +3,15 @@
     $canPanel = auth()->user()->isDm() || auth()->user()->isAdmin();
 @endphp
 
-{{--
-    L'intestazione del mockup: il logo a sinistra, due cerchi a destra.
-
-    Non ha un fondo suo — è la pagina che si vede sotto — perché con la barra
-    di navigazione in basso il peso visivo sta lì, e due strisce colorate una
-    sopra e una sotto stringerebbero il contenuto.
-
-    Il resto delle voci sta nel menù `⋯`: in cima ci arrivano solo le due cose
-    che si guardano decine di volte al giorno.
-
-    `relative z-40` non è ornamentale, ed è il seguito di `backdrop-blur`: la
-    sfocatura **crea un contesto di impilamento**, e senza uno z qui lo `z-50`
-    del menù resterebbe prigioniero là dentro. Non competerebbe più con la
-    pagina ma solo con gli altri figli dell'intestazione — e siccome
-    l'intestazione viene prima di `<main>` nel documento, tutto il contenuto le
-    verrebbe disegnato sopra. Il menù finiva sotto le card e sotto le
-    locandine: non perché perdesse, ma perché venivano dopo.
---}}
+{{-- backdrop-blur crea uno stacking context: z-40 mantiene l'header sopra al main. --}}
 <header class="relative z-40 flex items-center justify-between gap-3 bg-page/90 px-4 py-3 backdrop-blur">
-    {{-- Il logo vero non c'è ancora: finché manca il file, al suo posto sta
-         un segnaposto. Deciso qui e non nel browser, così non si sporca la
-         console con un 404 a ogni pagina. --}}
+    {{-- Evita un 404 usando un fallback se logo.png manca. --}}
     <a href="{{ route('home') }}" title="{{ config('app.name') }}">
         @if (file_exists(public_path('logo.png')))
             <img src="{{ asset('logo.png') }}" alt="{{ config('app.name') }}"
-                 class="h-11 w-11 rounded-full object-cover">
+                 class="h-11 w-11 rounded-card object-cover">
         @else
-            <span class="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-sm font-bold text-on-primary">
+            <span class="flex h-11 w-11 items-center justify-center rounded-card bg-primary text-sm font-bold text-on-primary">
                 D&D
             </span>
         @endif
@@ -41,9 +22,6 @@
            class="relative flex h-12 w-12 items-center justify-center rounded-full bg-primary text-on-primary transition hover:opacity-90">
             <x-icona :is="\App\Enums\Icon::Notifications" class="h-6 w-6" />
 
-            {{-- Il pallino è tutto il meccanismo: dice che c'è qualcosa di
-                 nuovo e sparisce quando la pagina è stata aperta. Il bordo lo
-                 stacca dal cerchio che ha sotto, o si confonderebbe. --}}
             @if ($unread > 0)
                 <span class="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full
                              border-2 border-page bg-active px-1 text-[10px] font-bold text-on-active">
@@ -52,8 +30,7 @@
             @endif
         </a>
 
-        {{-- Il menù di tutto il resto. `details` fa da solo apertura e
-             chiusura: nessun javascript da mantenere per un elenco di link. --}}
+        {{-- details gestisce il menu senza JavaScript. --}}
         <details class="relative">
             <summary title="Menù"
                      class="flex h-12 w-12 cursor-pointer list-none items-center justify-center rounded-full
@@ -61,20 +38,12 @@
                 <x-icona :is="\App\Enums\Icon::Menu" class="h-7 w-7" />
             </summary>
 
-            {{-- `z-10` e non `z-50`: qui dentro basta stare sopra ai due
-                 cerchi, perché a portare tutta l'intestazione sopra la pagina
-                 ci pensa lo z sul tag qui sopra. Un `z-50` a questo punto
-                 sembrerebbe fare qualcosa e non farebbe niente. --}}
+            {{-- z-10 basta all'interno dello stacking context dell'header. --}}
             <nav class="absolute right-0 z-10 mt-2 w-52 overflow-hidden rounded-xl border border-line bg-surface shadow-lg shadow-black/10">
                 <p class="border-b border-line px-4 py-3 text-sm text-muted">
                     {{ auth()->user()->name }}
                 </p>
 
-                {{-- Ogni voce col suo segno: l'occhio ci arriva prima che la
-                     parola si legga. «Caduti» non c'è più — i caduti stanno
-                     nella Gilda, con i vivi (P13, P15b), e un secondo ingresso
-                     alla stessa pagina era una riga in più che non portava da
-                     nessuna parte di diverso. --}}
                 @foreach ([
                     ['Gilda', route('guild.index'), \App\Enums\Icon::Guild],
                     ['Build consigliate', route('builds.index'), \App\Enums\Icon::Builds],
@@ -94,15 +63,7 @@
                     </a>
                 @endif
 
-                {{-- Il tema. Tre stati e non un interruttore a due: «automatico»
-                     segue il telefono, che di sera passa a scuro da solo, ed è
-                     la scelta giusta per quasi tutti. Chiaro e scuro servono a
-                     chi quel comportamento non lo vuole.
-
-                     Sono tre pulsanti in fila e non una tendina perché lo stato
-                     attuale si deve **vedere**, non aprire. Li accende
-                     `resources/js/app.js` con `aria-pressed`, che dice la stessa
-                     cosa a chi guarda e a chi ascolta. --}}
+                {{-- Auto segue il tema di sistema; app.js aggiorna aria-pressed. --}}
                 <div class="border-t border-line px-4 py-3">
                     <p class="mb-2 text-xs uppercase tracking-wide text-muted">Tema</p>
 
