@@ -249,6 +249,17 @@ describe('il tracker di combattimento', function () {
             ->and($mob['traits'])->toBe('Fuga astuta.');
     });
 
+    it('non pesca un mostro legato a un altro tavolo', function () {
+        $altroTavolo = Campaign::factory()->create(['dm_id' => User::factory()->dm()->create()->id]);
+        $estraneo = Monster::factory()->create(['name' => 'Estraneo', 'campaign_id' => $altroTavolo->id]);
+
+        $comp = Livewire::actingAs($this->dm)
+            ->test(CombatTracker::class, ['session' => $this->prossima])
+            ->call('aggiungiDalBestiario', $estraneo->id);
+
+        expect(collect($comp->get('combattenti'))->firstWhere('nome', 'Estraneo'))->toBeNull();
+    });
+
     it('salvando al volo, il mostro entra anche nel bestiario', function () {
         Livewire::actingAs($this->dm)
             ->test(CombatTracker::class, ['session' => $this->prossima])

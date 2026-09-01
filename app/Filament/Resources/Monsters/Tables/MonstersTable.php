@@ -31,19 +31,27 @@ class MonstersTable
                     ->label('Attacchi')
                     ->state(fn (Monster $record) => collect($record->attacks ?? [])
                         ->pluck('nome')->filter()->implode(', '))
-                    ->placeholder('—')
+                    ->placeholder('Vuoto')
                     ->toggleable(),
+
+                TextColumn::make('campaign.title')
+                    ->label('Campagna')
+                    ->badge()
+                    ->color(fn (Monster $record) => $record->isPublic() ? 'success' : 'gray')
+                    ->formatStateUsing(fn (?string $state) => $state ?? 'Pubblico')
+                    ->default('Pubblico'),
 
                 TextColumn::make('createdBy.name')
                     ->label('Scritto da')
                     ->placeholder('la gilda')
-                    ->toggleable(),
+                    ->toggleable()
+                    ->visibleFrom('md'),
             ])
             ->recordActions([
                 EditAction::make(),
             ])
             ->emptyStateHeading('Bestiario vuoto')
             ->emptyStateDescription('Aggiungi i mostri che rivedi: al tavolo li peschi invece di riscriverli.')
-            ->modifyQueryUsing(fn ($query) => $query->with('createdBy'));
+            ->modifyQueryUsing(fn ($query) => $query->with(['createdBy', 'campaign']));
     }
 }
