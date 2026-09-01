@@ -30,7 +30,8 @@ class CampaignsTable
                 TextColumn::make('dm.name')
                     ->label('Dungeon master')
                     ->searchable()
-                    ->placeholder('—'),
+                    ->placeholder('Vuoto')
+                    ->visibleFrom('md'),
 
                 TextColumn::make('stato')
                     ->label('Stato')
@@ -41,12 +42,14 @@ class CampaignsTable
                 TextColumn::make('quests_count')
                     ->label('Quest')
                     ->counts('quests')
-                    ->alignCenter(),
+                    ->alignCenter()
+                    ->visibleFrom('md'),
 
                 TextColumn::make('sessions_count')
                     ->label('Sessioni')
                     ->counts('sessions')
-                    ->alignCenter(),
+                    ->alignCenter()
+                    ->visibleFrom('md'),
             ])
             ->filters([
                 TernaryFilter::make('aperte')
@@ -63,8 +66,7 @@ class CampaignsTable
             ->recordActions([
                 EditAction::make(),
 
-                // Chiudere una campagna è irreversibile: passa da una conferma
-                // e resta disponibile solo finché è aperta.
+                // Irreversibile: conferma richiesta, solo su campagne aperte.
                 Action::make('concludi')
                     ->label('Concludi')
                     ->icon(Icon::Archive)

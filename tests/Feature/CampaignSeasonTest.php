@@ -57,13 +57,16 @@ describe('lo sfondo della campagna', function () {
         expect($campagna->backgroundUrl())->toBeNull();
     });
 
-    it('la pagina disegna lo sfondo e il velo', function () {
-        $campagna = Campaign::factory()->create(['background_path' => 'campagne/sfondi/pergamena.jpg']);
+    it('la pagina disegna lo sfondo e il velo, con l\'opacità scelta', function () {
+        $campagna = Campaign::factory()->create([
+            'background_path' => 'campagne/sfondi/pergamena.jpg',
+            'background_opacity' => 40,
+        ]);
 
         $this->actingAs(User::factory()->player()->create())
             ->get(route('campaigns.show', $campagna))
             ->assertOk()
             ->assertSee('pergamena.jpg')
-            ->assertSee('bg-page/85', false);
+            ->assertSee('opacity: 0.4', false);
     });
 });

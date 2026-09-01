@@ -13,7 +13,7 @@ use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
 #[Fillable([
-    'title', 'slug', 'description', 'cover_path', 'background_path', 'season',
+    'title', 'slug', 'description', 'cover_path', 'background_path', 'background_opacity', 'season',
     'quest_giver', 'quest_giver_description', 'quest_giver_photo',
     'dm_id', 'created_by', 'ended_at',
 ])]
@@ -36,6 +36,7 @@ class Campaign extends Model
         return [
             'ended_at' => 'datetime',
             'season' => 'integer',
+            'background_opacity' => 'integer',
         ];
     }
 
@@ -156,6 +157,12 @@ class Campaign extends Model
         return $this->background_path
             ? Storage::disk('public')->url($this->background_path)
             : $this->coverUrl();
+    }
+
+    /** L'opacità del velo sullo sfondo, 0-1 (default 0.85). */
+    public function backgroundVeil(): float
+    {
+        return (int) ($this->background_opacity ?? 85) / 100;
     }
 
     // === Query ===

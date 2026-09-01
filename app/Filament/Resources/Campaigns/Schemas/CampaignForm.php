@@ -6,8 +6,10 @@ use App\Models\Campaign;
 use App\Models\User;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Slider;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Str;
@@ -19,36 +21,41 @@ class CampaignForm
         return $schema->components([
             Section::make('Il tavolo')
                 ->schema([
-                    TextInput::make('title')
-                        ->label('Titolo')
-                        ->required()
-                        ->maxLength(255)
-                        ->live(onBlur: true)
-                        ->afterStateUpdated(function ($state, $set, $context) {
-                            if ($context === 'create') {
-                                $set('slug', Str::slug((string) $state));
-                            }
-                        }),
+                    Grid::make(3)
+                        ->columnSpanFull()
+                        ->schema([
+                            TextInput::make('title')
+                                ->label('Titolo')
+                                ->required()
+                                ->maxLength(255)
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(function ($state, $set, $context) {
+                                    if ($context === 'create') {
+                                        $set('slug', Str::slug((string) $state));
+                                    }
+                                }),
 
-                    TextInput::make('slug')
-                        ->label('Indirizzo')
-                        ->required()
-                        ->maxLength(255)
-                        ->unique(ignoreRecord: true),
+                            TextInput::make('slug')
+                                ->label('Link')
+                                ->required()
+                                ->maxLength(255)
+                                ->unique(ignoreRecord: true)
+                                ->helperText('Si scrive da solo dal titolo. Modificalo solo se vuoi: è la parte finale dell\'indirizzo della pagina.'),
 
-                    TextInput::make('season')
-                        ->label('Season')
-                        ->numeric()
-                        ->minValue(1)
-                        ->required()
-                        // La season di solito è quella in corso: si propone
-                        // la più alta che esiste già.
-                        ->default(fn () => max(Campaign::seasons() ?: [1]))
-                        ->helperText('Serve a raggruppare le campagne nell\'elenco.'),
+                            TextInput::make('season')
+                                ->label('Stagione')
+                                ->numeric()
+                                ->minValue(1)
+                                ->required()
+                                // Default: la stagione più alta già esistente.
+                                ->default(fn () => max(Campaign::seasons() ?: [1]))
+                                ->helperText('Serve a raggruppare le campagne nell\'elenco.'),
+                        ]),
 
                     FileUpload::make('cover_path')
                         ->label('Copertina')
                         ->image()
+                        ->acceptedFileTypes(['image/png', 'image/jpeg'])
                         ->disk('public')
                         ->directory('campagne')
                         ->maxSize(4096)
@@ -57,10 +64,35 @@ class CampaignForm
                     FileUpload::make('background_path')
                         ->label('Sfondo della pagina')
                         ->image()
+                        ->acceptedFileTypes(['image/png', 'image/jpeg'])
                         ->disk('public')
                         ->directory('campagne/sfondi')
                         ->maxSize(4096)
-                        ->helperText('Sta dietro al testo della pagina della campagna, sotto un velo. Una trama o una mappa sbiadita funzionano; una foto con un soggetto forte no. Se lo lasci vuoto si usa la copertina.'),
+                        ->helperText('Sta dietro al testo della pagina della campagna, sotto un overlay. Una trama o una mappa sbiadita funzionano; una foto con un soggetto forte no. Se lo lasci vuoto si usa la copertina.'),
+
+                    Grid::make(['default' => 1, 'sm' => 4])
+                        ->schema([
+                            Slider::make('background_opacity')
+                                ->label('Opacità dell\'overlay')
+                                ->range(0, 100)
+                                ->step(1)
+                                ->decimalPlaces(0)
+                                ->default(85)
+                                ->live()
+                                ->helperText('Quanto l\'overlay copre lo sfondo: più alto rende il testo più leggibile, più basso lascia vedere di più lo sfondo.')
+                                ->columnSpan(['default' => 1, 'sm' => 3]),
+
+                            TextInput::make('background_opacity')
+                                ->label('%')
+                                ->numeric()
+                                ->minValue(0)
+                                ->maxValue(100)
+                                ->step(1)
+                                ->suffix('%')
+                                ->default(85)
+                                ->live(onBlur: true),
+                        ])
+                        ->columnSpanFull(),
 
                     Textarea::make('description')
                         ->label('Descrizione')
@@ -76,14 +108,13 @@ class CampaignForm
                         ->relationship(
                             'dm',
                             'name',
-                            // Solo chi ha il ruolo: un giocatore non conduce.
+                            // Solo utenti con ruolo DM.
                             fn ($query) => $query->whereHas('roles', fn ($q) => $q->where('name', User::ROLE_DM))
                         )
                         ->searchable()
                         ->preload()
                         ->required()
-                        // Un DM apre i propri tavoli e basta: solo un admin può
-                        // assegnare la campagna a qualcun altro.
+                        // Solo un admin può assegnare la campagna a un altro DM.
                         ->default(fn () => auth()->id())
                         ->disabled(fn () => ! auth()->user()->isAdmin())
                         ->dehydrated(),
@@ -101,6 +132,7 @@ class CampaignForm
                     FileUpload::make('quest_giver_photo')
                         ->label('Ritratto')
                         ->image()
+                        ->acceptedFileTypes(['image/png', 'image/jpeg'])
                         ->disk('public')
                         ->directory('capigilda')
                         ->maxSize(4096),
@@ -112,6 +144,6 @@ class CampaignForm
                         ->helperText('Lo leggono i giocatori dalla pagina della campagna.'),
                 ])
                 ->columns(2),
-        ]);
+        ])->columns(1);
     }
 }
