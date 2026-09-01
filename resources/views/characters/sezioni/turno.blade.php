@@ -134,7 +134,7 @@
                     text-sm font-semibold text-fg transition hover:bg-page [&::-webkit-details-marker]:hidden">
         <span class="flex items-center gap-2">
             <x-icona :is="Icon::General" class="h-4 w-4 shrink-0 text-muted" />
-            Generali — le azioni base di chiunque
+            Generali: le azioni base di chiunque
         </span>
         <x-icona :is="Icon::Expand" class="h-4 w-4 shrink-0 text-muted transition group-open:rotate-180" />
     </summary>

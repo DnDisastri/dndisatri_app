@@ -722,7 +722,7 @@ class Character extends Model
                 $bonus = (int) ($override->weapon_bonus ?? 0);
 
                 $attack = Checks::weaponAttack($scores, $ability, $proficiency, $bonus);
-                $damageDie = $override->damage ?? $catalog['damage'] ?? '—';
+                $damageDie = $override->damage ?? $catalog['damage'] ?? 'Vuoto';
                 $damageMod = $scores->modifier($ability) + $bonus;
 
                 /*

@@ -82,7 +82,7 @@
                     <label for="morte-sessione" class="block text-muted">In quale serata <span class="text-muted">(facoltativo)</span></label>
                     <select id="morte-sessione" wire:model="morteSessione"
                             class="mt-1 w-full rounded-md border border-line bg-page px-2 py-2 text-fg">
-                        <option value="">— fra una sessione e l'altra —</option>
+                        <option value="">Fra una sessione e l'altra</option>
                         @foreach ($sessioni as $sessione)
                             <option value="{{ $sessione->id }}">
                                 {{ $sessione->displayTitle() }}@if ($sessione->campaign) · {{ $sessione->campaign->title }}@endif

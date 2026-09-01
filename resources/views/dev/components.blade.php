@@ -5,9 +5,9 @@
 {{-- Vetrina disponibile solo fuori produzione, renderizzata nel layout reale per verificare tema e varianti dei componenti. --}}
 @php
     $varianti = [
-        'primary' => 'Primario — l\'azione principale, una per schermata',
-        'secondary' => 'Secondario — un\'azione pari, che non è però quella',
-        'quiet' => 'Quiet — annulla, torna indietro, il servizio',
+        'primary' => 'Primario: l\'azione principale, una per schermata',
+        'secondary' => 'Secondario: un\'azione pari, che non è però quella',
+        'quiet' => 'Quiet: annulla, torna indietro, il servizio',
     ];
     $misure = ['sm' => 'sm', 'md' => 'md (predefinita)', 'lg' => 'lg'];
     $toni = ['neutral' => 'neutral', 'accent' => 'accent', 'danger' => 'danger'];
@@ -102,9 +102,9 @@
             <div>
                 <p class="mb-2 mt-3 text-xs uppercase tracking-wide text-muted">Imbottitura</p>
                 <div class="grid gap-3 sm:grid-cols-3">
-                    <x-card padding="sm">Stretta — <code>sm</code></x-card>
-                    <x-card>Normale — la predefinita</x-card>
-                    <x-card padding="lg">Larga — <code>lg</code></x-card>
+                    <x-card padding="sm">Stretta (<code>sm</code>)</x-card>
+                    <x-card>Normale, la predefinita</x-card>
+                    <x-card padding="lg">Larga (<code>lg</code>)</x-card>
                 </div>
             </div>
 
@@ -136,7 +136,7 @@
                     <p class="mb-2 text-sm text-fg">La card sta sopra la pagina, l'inset rientra.</p>
                     <div class="grid gap-3 sm:grid-cols-2">
                         <x-inset><span class="text-sm text-fg">Normale</span></x-inset>
-                        <x-inset padding="sm"><span class="text-sm text-fg">Stretto — <code>sm</code></span></x-inset>
+                        <x-inset padding="sm"><span class="text-sm text-fg">Stretto (<code>sm</code>)</span></x-inset>
                     </div>
                 </x-card>
             </div>
@@ -173,7 +173,7 @@
 
             <div>
                 <p class="mb-2 mt-3 text-xs uppercase tracking-wide text-muted">
-                    Una pagina intera vuota — <code>size="lg"</code>
+                    Una pagina intera vuota: <code>size="lg"</code>
                 </p>
                 <x-empty size="lg">Non c'è ancora nessuna campagna.</x-empty>
             </div>

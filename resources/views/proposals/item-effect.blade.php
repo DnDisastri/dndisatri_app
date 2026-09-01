@@ -42,14 +42,14 @@
                     <label class="mb-1 flex items-start gap-2 text-sm">
                         <input type="radio" name="mode" value="set" class="mt-1 accent-active" @checked(old('mode', 'set') === 'set')>
                         <span>
-                            <strong>Porta il punteggio a</strong> un valore fisso —
+                            <strong>Porta il punteggio a</strong> un valore fisso:
                             <span class="text-muted">vale solo se è un miglioramento</span>
                         </span>
                     </label>
                     <label class="flex items-start gap-2 text-sm">
                         <input type="radio" name="mode" value="bonus" class="mt-1 accent-active" @checked(old('mode') === 'bonus')>
                         <span>
-                            <strong>Somma</strong> al punteggio —
+                            <strong>Somma</strong> al punteggio:
                             <span class="text-muted">accetta anche valori negativi</span>
                         </span>
                     </label>

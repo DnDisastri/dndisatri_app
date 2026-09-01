@@ -18,7 +18,7 @@
             <x-icona :is="\App\Enums\Icon::Events" class="h-4 w-4" />
             {{ $event->starts_at->translatedFormat('l j F Y, H:i') }}
             @if ($event->ends_at)
-                — {{ $event->ends_at->isSameDay($event->starts_at)
+                → {{ $event->ends_at->isSameDay($event->starts_at)
                     ? $event->ends_at->format('H:i')
                     : $event->ends_at->translatedFormat('j F, H:i') }}
             @endif

@@ -44,7 +44,7 @@
 
         @if ($durata)
             <p class="text-xs text-muted">
-                Ha giocato dal {{ $dal->translatedFormat('j F Y') }} — {{ $durata }}.
+                Ha giocato dal {{ $dal->translatedFormat('j F Y') }}, {{ $durata }}.
             </p>
         @endif
     </x-panel>
