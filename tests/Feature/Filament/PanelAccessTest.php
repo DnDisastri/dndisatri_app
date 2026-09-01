@@ -14,7 +14,6 @@ $adminOnly = [
     'news' => PostResource::class,
     'eventi' => EventResource::class,
     'catalogo' => MarketItemResource::class,
-    'utenti' => UserResource::class,
 ];
 
 describe('le sezioni riservate agli admin', function () use ($adminOnly) {
@@ -35,6 +34,27 @@ describe('le sezioni riservate agli admin', function () use ($adminOnly) {
 
         expect($resource::canViewAny())->toBeFalse();
     })->with($adminOnly);
+});
+
+describe('la sezione Utenti', function () {
+    it('si apre ai DM in sola lettura', function () {
+        $dm = User::factory()->dm()->create();
+
+        $this->actingAs($dm)
+            ->get(UserResource::getUrl('index'))
+            ->assertOk();
+
+        expect($dm->can('viewAny', User::class))->toBeTrue()
+            ->and($dm->can('view', User::factory()->player()->create()))->toBeTrue();
+    });
+
+    it('non lascia ai DM creare, modificare o approvare account', function () {
+        $dm = User::factory()->dm()->create();
+
+        expect($dm->can('create', User::class))->toBeFalse()
+            ->and($dm->can('update', User::factory()->player()->create()))->toBeFalse()
+            ->and($dm->can('delete', User::factory()->player()->create()))->toBeFalse();
+    });
 });
 
 describe('il pannello', function () {
