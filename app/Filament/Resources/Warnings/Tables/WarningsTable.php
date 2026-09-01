@@ -17,15 +17,10 @@ class WarningsTable
     public static function configure(Table $table): Table
     {
         return $table
-            /*
-             * `user.warnings` è caricato apposta: le due colonne dello storico
-             * contano su quella collezione invece di interrogare il database
-             * riga per riga. Senza, una tabella di venti richiami farebbe
-             * quaranta query per dire due numeri.
-             */
+            // Eager-load di `user.warnings`: le colonne dello storico contano su
+            // quella collezione, altrimenti sarebbero query per riga (N+1).
             ->modifyQueryUsing(fn ($query) => $query->with(['user.warnings', 'issuedBy', 'liftedBy']))
-            // Gli aperti per primi, e fra quelli il più vecchio in cima: chi
-            // aspetta da più tempo è quello di cui ci si è dimenticati.
+            // I più recenti in cima.
             ->defaultSort('created_at', 'desc')
             ->columns([
                 TextColumn::make('user.name')
@@ -47,43 +42,42 @@ class WarningsTable
                 TextColumn::make('created_at')
                     ->label('Dato il')
                     ->dateTime('d/m/Y')
-                    ->sortable(),
+                    ->sortable()
+                    ->visibleFrom('md'),
 
                 TextColumn::make('issuedBy.name')
                     ->label('Da')
-                    ->toggleable(),
+                    ->toggleable()
+                    ->visibleFrom('md'),
 
-                // Quanto è durato, o quanto dura da quando è stato dato.
+                // Giorni di durata, o giorni trascorsi se ancora in corso.
                 TextColumn::make('durata')
                     ->label('Giorni')
-                    ->state(fn (Warning $record) => $record->daysLasted()),
+                    ->state(fn (Warning $record) => $record->daysLasted())
+                    ->visibleFrom('md'),
 
-                /*
-                 * I due numeri che il gruppo vuole poter vedere: quante volte
-                 * è servito intervenire su una persona, e quanto tempo in
-                 * tutto ha passato sotto controllo. Si ripetono su ogni riga
-                 * dello stesso giocatore, ed è voluto: si legge una riga alla
-                 * volta, non una colonna alla volta.
-                 */
+                // Totali per giocatore: ripetuti su ogni sua riga di proposito.
                 TextColumn::make('storico_quanti')
                     ->label('Richiami in tutto')
                     ->state(fn (Warning $record) => $record->user?->warnings->count() ?? 0)
-                    ->toggleable(),
+                    ->toggleable()
+                    ->visibleFrom('md'),
 
                 TextColumn::make('storico_giorni')
                     ->label('Giorni sotto controllo')
                     ->state(fn (Warning $record) => (int) ($record->user?->warnings
                         ->sum(fn (Warning $w) => $w->daysLasted()) ?? 0))
-                    ->toggleable(),
+                    ->toggleable()
+                    ->visibleFrom('md'),
 
                 TextColumn::make('liftedBy.name')
                     ->label('Tolto da')
-                    ->placeholder('—')
+                    ->placeholder('Vuoto')
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('lift_note')
                     ->label('Nota')
-                    ->placeholder('—')
+                    ->placeholder('Vuoto')
                     ->wrap()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
@@ -102,18 +96,13 @@ class WarningsTable
             ->recordActions([
                 self::liftAction(),
             ])
-            // Niente azioni di gruppo: un richiamo si toglie guardando in
-            // faccia il caso, non spuntando cinque caselle.
+            // Niente azioni di gruppo: ogni richiamo si valuta singolarmente.
             ->toolbarActions([]);
     }
 
     /**
-     * M23 — togliere un richiamo.
-     *
-     * Un pulsante e una nota. La riga **non si cancella**: si chiude, e resta
-     * nello storico con la sua durata. È il punto del meccanismo — serve a
-     * ricordare, non a punire per sempre — e per questo `WarningPolicy::delete`
-     * risponde no a chiunque.
+     * Toglie il richiamo: la riga non si cancella, si chiude e resta nello
+     * storico con la sua durata. Per questo `WarningPolicy::delete` nega sempre.
      */
     private static function liftAction(): Action
     {

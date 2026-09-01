@@ -82,7 +82,7 @@ class SupervisedActionResource extends Resource
 
     public static function getNavigationBadgeColor(): ?string
     {
-        return 'warning';
+        return 'primary';
     }
 
     public static function getPages(): array

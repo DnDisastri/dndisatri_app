@@ -119,7 +119,7 @@ class SupervisedAction extends Model
             ],
             SupervisedActionType::ListingCreation => [
                 ['voce' => 'Chi vende', 'valore' => $nome($payload['character_id'] ?? null)],
-                ['voce' => 'Cosa', 'valore' => trim(($payload['qty'] ?? 1).'× '.($payload['name'] ?? '—'))],
+                ['voce' => 'Cosa', 'valore' => trim(($payload['qty'] ?? 1).'× '.($payload['name'] ?? 'Vuoto'))],
                 ['voce' => 'Prezzo', 'valore' => isset($payload['price']) ? $payload['price'].' mo' : null],
             ],
             SupervisedActionType::ListingPurchase => [

@@ -35,8 +35,8 @@ class DmRequestInfolist
                             PendingChangeStatus::Approved => 'success',
                             PendingChangeStatus::Rejected => 'danger',
                         }),
-                    TextEntry::make('reviewedBy.name')->label('Decisa da')->placeholder('—'),
-                    TextEntry::make('reviewed_at')->label('Quando')->dateTime('d/m/Y H:i')->placeholder('—'),
+                    TextEntry::make('reviewedBy.name')->label('Decisa da')->placeholder('Vuoto'),
+                    TextEntry::make('reviewed_at')->label('Quando')->dateTime('d/m/Y H:i')->placeholder('Vuoto'),
                     TextEntry::make('review_note')
                         ->label('Nota')
                         ->placeholder('Nessuna nota')

@@ -15,9 +15,7 @@ class SupervisedActionsTable
     {
         return $table
             ->modifyQueryUsing(fn ($query) => $query->with(['user', 'reviewedBy']))
-            // Le più vecchie in cima fra quelle aperte: chi aspetta da più
-            // tempo è quello di cui ci si è dimenticati, e qui l'attesa non è
-            // una scomodità — è un giocatore fermo che non può vendere.
+            // Le più vecchie in cima: chi aspetta da più tempo va servito prima.
             ->defaultSort('created_at', 'asc')
             ->columns([
                 TextColumn::make('user.name')
@@ -30,20 +28,20 @@ class SupervisedActionsTable
                     ->badge()
                     ->formatStateUsing(fn (SupervisedActionType $state) => $state->label()),
 
-                // Il riassunto è scritto quando l'azione viene messa in attesa:
-                // «Vende Spada lunga +1 per 40 mo a Grimm». Serve a decidere
-                // quali aprire, non a decidere.
+                // Riassunto scritto quando l'azione è messa in attesa.
                 TextColumn::make('summary')
                     ->label('In breve')
                     ->wrap()
                     ->limit(90)
-                    ->placeholder('—'),
+                    ->placeholder('Vuoto')
+                    ->visibleFrom('md'),
 
                 TextColumn::make('created_at')
                     ->label('Da quando aspetta')
                     ->since()
                     ->tooltip(fn ($record) => $record->created_at->format('d/m/Y H:i'))
-                    ->sortable(),
+                    ->sortable()
+                    ->visibleFrom('md'),
 
                 TextColumn::make('status')
                     ->label('Esito')
@@ -57,18 +55,17 @@ class SupervisedActionsTable
 
                 TextColumn::make('reviewedBy.name')
                     ->label('Decisa da')
-                    ->placeholder('—')
-                    ->toggleable(),
+                    ->placeholder('Vuoto')
+                    ->toggleable()
+                    ->visibleFrom('md'),
 
                 TextColumn::make('reviewed_at')
                     ->label('Quando')
                     ->dateTime('d/m/Y H:i')
-                    ->placeholder('—')
+                    ->placeholder('Vuoto')
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                // Si apre su quelle che aspettano: è la ragione per cui uno
-                // entra qui.
                 SelectFilter::make('status')
                     ->label('Esito')
                     ->options(collect(PendingChangeStatus::cases())
@@ -85,8 +82,7 @@ class SupervisedActionsTable
             ->recordActions([
                 ViewAction::make()->label('Apri'),
             ])
-            // Niente approvazioni di gruppo: ognuna va guardata, ed è il senso
-            // di averle messe in attesa.
+            // Niente azioni di gruppo: ogni richiesta va valutata singolarmente.
             ->toolbarActions([]);
     }
 }

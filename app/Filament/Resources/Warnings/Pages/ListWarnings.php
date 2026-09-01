@@ -106,7 +106,9 @@ class ListWarnings extends ListRecords
             ->orderBy('name')
             ->get()
             ->reject(fn (User $user) => $user->isAdmin())
-            ->pluck('name', 'id')
+            // Nome ed email nell'etichetta: la ricerca del Select filtra sul
+            // testo, così si trova la persona per nome o per email.
+            ->mapWithKeys(fn (User $user) => [$user->id => "{$user->name} · {$user->email}"])
             ->all();
     }
 }
