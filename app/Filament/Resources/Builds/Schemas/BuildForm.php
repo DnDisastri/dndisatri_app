@@ -47,10 +47,11 @@ class BuildForm
                         }),
 
                     TextInput::make('slug')
-                        ->label('Indirizzo')
+                        ->label('Link')
                         ->required()
                         ->maxLength(255)
-                        ->unique(ignoreRecord: true),
+                        ->unique(ignoreRecord: true)
+                        ->helperText('Si scrive da solo dal titolo. Modificalo solo se vuoi: compare nel link della build.'),
 
                     TextInput::make('tag')
                         ->label('Etichetta')
@@ -84,6 +85,7 @@ class BuildForm
                     FileUpload::make('cover_path')
                         ->label('Immagine')
                         ->image()
+                        ->acceptedFileTypes(['image/png', 'image/jpeg'])
                         ->disk('public')
                         ->directory('build')
                         ->maxSize(4096),
@@ -146,7 +148,7 @@ class BuildForm
 
                     CheckboxList::make('skills')
                         ->label(fn (Get $get) => 'Abilità'.($get('class')
-                            ? ' — se ne scelgono '.ClassRules::skillCount($get('class'))
+                            ? ' (se ne scelgono '.ClassRules::skillCount($get('class')).')'
                             : ''))
                         ->options(fn (Get $get) => collect(ClassRules::skillChoices($get('class')))
                             ->mapWithKeys(fn ($key) => [$key => config("dnd.character.skill_names.{$key}", $key)]))
@@ -176,6 +178,6 @@ class BuildForm
                         ->visible(fn (Get $get) => ClassRules::spellList($get('class')) !== []),
                 ])
                 ->columns(2),
-        ]);
+        ])->columns(1);
     }
 }

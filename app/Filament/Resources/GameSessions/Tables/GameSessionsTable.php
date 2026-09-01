@@ -49,7 +49,7 @@ class GameSessionsTable
 
                 TextColumn::make('presenze')
                     ->label('Presenti')
-                    ->state(fn (GameSession $record) => $record->attendees()->count() ?: '—'),
+                    ->state(fn (GameSession $record) => $record->attendees()->count() ?: 'Vuoto'),
             ])
             ->filters([
                 TernaryFilter::make('senzaResoconto')
