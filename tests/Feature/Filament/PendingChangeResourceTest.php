@@ -63,7 +63,7 @@ describe('il confronto fra prima e dopo', function () {
         expect($rows[0]['label'])->toBe('Abilità')
 
             ->and($rows[0]['after'])->toBe('stealth: expert')
-            ->and($rows[0]['before'])->toBe('—');
+            ->and($rows[0]['before'])->toBe('Vuoto');
     });
 
     it('traduce i nomi delle caratteristiche', function () {
