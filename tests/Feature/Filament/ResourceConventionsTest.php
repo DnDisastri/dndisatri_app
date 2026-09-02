@@ -5,9 +5,8 @@ declare(strict_types=1);
 /**
  * Il canone dei pannelli Filament (reso regola).
  *
- * Le risorse curate del progetto seguono uno stile comune; questo test lo
- * blinda perché non torni la disomogeneità che aveva lasciato metà pannello in
- * inglese. La regola verificata qui:
+ * Le risorse seguono uno stile comune; questo test lo blinda. La regola
+ * verificata qui:
  *
  *   Ogni colonna di tabella, campo di form e voce di infolist ha una `->label()`
  *   esplicita in italiano, mai affidarsi all'umanizzazione automatica di
@@ -69,7 +68,9 @@ function componentiSenzaLabel(string $contenuto, array $classi): array
         $fine = collect($confini)->first(fn ($c) => $c > $dopoMake) ?? strlen($contenuto);
         $blocco = substr($contenuto, $inizio, $fine - $inizio);
 
-        if (! str_contains($blocco, '->label(')) {
+        // `hiddenLabel()` è una scelta deliberata (l'etichetta la dà la sezione),
+        // non una dimenticanza: vale come label esplicita.
+        if (! str_contains($blocco, '->label(') && ! str_contains($blocco, '->hiddenLabel(')) {
             $mancanti[] = "{$target[1][$i][0]}::make('{$target[2][$i][0]}')";
         }
     }
