@@ -16,6 +16,7 @@ use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
 
 class UserResource extends Resource
@@ -33,6 +34,25 @@ class UserResource extends Resource
     protected static ?string $recordTitleAttribute = 'name';
 
     protected static ?int $navigationSort = 30;
+
+    // I ruoli si leggono in più punti (voce Ruolo dell'infolist, isAdmin/isDm):
+    // precaricati, o col lazy loading disattivato la pagina esplode.
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with('roles');
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        $inAttesa = User::query()->whereNull('approved_at')->count();
+
+        return $inAttesa > 0 ? (string) $inAttesa : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'primary';
+    }
 
     public static function form(Schema $schema): Schema
     {

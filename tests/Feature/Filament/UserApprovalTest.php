@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Filament\Resources\Users\Pages\ListUsers;
+use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
 use Livewire\Livewire;
 
@@ -24,4 +25,17 @@ it('la sezione Utenti resta chiusa ai giocatori', function () {
     $this->actingAs(User::factory()->player()->create())
         ->get(App\Filament\Resources\Users\UserResource::getUrl('index'))
         ->assertForbidden();
+});
+
+it('il badge del menu Utenti conta gli iscritti in attesa', function () {
+    User::factory()->player()->unapproved()->count(2)->create();
+    User::factory()->player()->create();
+
+    expect(UserResource::getNavigationBadge())->toBe('2');
+});
+
+it('senza iscritti in attesa il badge non compare', function () {
+    User::factory()->player()->count(3)->create();
+
+    expect(UserResource::getNavigationBadge())->toBeNull();
 });
