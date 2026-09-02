@@ -18,6 +18,9 @@ class EventsTable
     {
         return $table
             ->defaultSort('starts_at', 'desc')
+            // createdBy si legge in una description: va precaricato, altrimenti
+            // col lazy loading disattivato la tabella esplode appena c'è un evento.
+            ->modifyQueryUsing(fn ($query) => $query->with('createdBy'))
             ->columns([
                 TextColumn::make('title')
                     ->label('Titolo')

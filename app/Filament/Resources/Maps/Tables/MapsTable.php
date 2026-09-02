@@ -17,6 +17,9 @@ class MapsTable
     {
         return $table
             ->defaultSort('title')
+            // uploadedBy si legge in una description: va precaricato, altrimenti
+            // col lazy loading disattivato la tabella esplode appena c'è una mappa.
+            ->modifyQueryUsing(fn ($query) => $query->with('uploadedBy'))
             ->columns([
                 ImageColumn::make('image_path')
                     ->label('Mappa')
