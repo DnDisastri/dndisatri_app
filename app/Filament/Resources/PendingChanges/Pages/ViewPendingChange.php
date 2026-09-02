@@ -15,6 +15,18 @@ class ViewPendingChange extends ViewRecord
 {
     protected static string $resource = PendingChangeResource::class;
 
+    // Il titolo dice cos'è la richiesta, non il suo id: «Richiesta modifica
+    // scheda» è leggibile, «Visualizza 7» no.
+    public function getTitle(): string
+    {
+        return 'Richiesta '.lcfirst($this->record->type->label());
+    }
+
+    public function getBreadcrumb(): string
+    {
+        return $this->record->type->label();
+    }
+
     protected function getHeaderActions(): array
     {
         return [

@@ -18,6 +18,9 @@ class GameSessionsTable
     {
         return $table
             ->defaultSort('played_at', 'desc')
+            // recapWrittenBy si legge in una description: va precaricato, o con
+            // il lazy loading disattivato la tabella esplode appena c'è una serata.
+            ->modifyQueryUsing(fn ($query) => $query->with(['campaign', 'recapWrittenBy']))
             ->columns([
                 TextColumn::make('campaign.title')
                     ->label('Campagna')
@@ -34,12 +37,7 @@ class GameSessionsTable
                     ->dateTime('j M Y, H:i')
                     ->sortable(),
 
-                /*
-                 * Le due colonne che dicono cosa manca da fare. Un recap non
-                 * scritto e delle presenze non segnate sono lavoro in sospeso,
-                 * e prima qui c'erano l'id numerico di chi aveva firmato e la
-                 * data: due cose che non si guardano mai.
-                 */
+                // Cosa manca da fare sulla serata: resoconto e presenze.
                 TextColumn::make('resoconto')
                     ->label('Resoconto')
                     ->state(fn (GameSession $record) => $record->hasRecap() ? 'Scritto' : 'Manca')
@@ -49,7 +47,7 @@ class GameSessionsTable
 
                 TextColumn::make('presenze')
                     ->label('Presenti')
-                    ->state(fn (GameSession $record) => $record->attendees()->count() ?: '—'),
+                    ->state(fn (GameSession $record) => $record->attendees()->count() ?: 'Vuoto'),
             ])
             ->filters([
                 TernaryFilter::make('senzaResoconto')
@@ -71,14 +69,7 @@ class GameSessionsTable
             ]);
     }
 
-    /**
-     * La porta verso la pagina della serata.
-     *
-     * **Il resoconto e le presenze si scrivono lì** (M13, M14): si fanno a
-     * fine partita, col telefono in mano, e il racconto va dove i giocatori lo
-     * leggeranno. Qui resta il lavoro da scrivania — fissare la data, correggere
-     * il numero, cercare una serata vecchia.
-     */
+    /** Apre la pagina pubblica della serata. */
     private static function openAction(): Action
     {
         return Action::make('apri')

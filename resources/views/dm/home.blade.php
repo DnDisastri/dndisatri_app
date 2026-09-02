@@ -61,7 +61,7 @@
                                    'text-fg' => ! ($corrente && $c->is($corrente)),
                                ])>
                                 {{ $c->title }}
-                                <span class="block text-xs text-muted">conduce {{ $c->dm?->name ?? '—' }}</span>
+                                <span class="block text-xs text-muted">conduce {{ $c->dm?->name ?? 'Vuoto' }}</span>
                             </a>
                         @endforeach
                     @endif

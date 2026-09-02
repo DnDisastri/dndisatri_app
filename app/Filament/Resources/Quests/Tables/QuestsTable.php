@@ -22,7 +22,8 @@ class QuestsTable
                 TextColumn::make('campaign.title')
                     ->label('Campagna')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->visibleFrom('md'),
 
                 TextColumn::make('title')
                     ->label('Titolo')
@@ -30,13 +31,10 @@ class QuestsTable
 
                 TextColumn::make('difficulty')
                     ->label('Difficoltà')
-                    ->badge(),
+                    ->badge()
+                    ->visibleFrom('md'),
 
-                /*
-                 * La colonna che serve davvero a chi conduce: quanti hanno
-                 * chiesto di esserci rispetto ai posti, e se si arriva al
-                 * minimo. È la domanda «stasera si gioca o no?».
-                 */
+                // Prenotati sui posti, e se è raggiunto il minimo per giocare.
                 TextColumn::make('posti')
                     ->label('Prenotati')
                     ->state(fn (Quest $record) => $record->participantCount().' / '.$record->max_participants)
@@ -47,13 +45,15 @@ class QuestsTable
 
                 TextColumn::make('attesa')
                     ->label('In attesa')
-                    ->state(fn (Quest $record) => $record->waiting()->count() ?: '—'),
+                    ->state(fn (Quest $record) => $record->waiting()->count() ?: 'Vuoto')
+                    ->visibleFrom('md'),
 
                 TextColumn::make('night_confirmed_at')
                     ->label('Serata')
                     ->state(fn (Quest $record) => $record->isNightConfirmed() ? 'Si fa' : 'Da decidere')
                     ->badge()
-                    ->color(fn (Quest $record) => $record->isNightConfirmed() ? 'success' : 'gray'),
+                    ->color(fn (Quest $record) => $record->isNightConfirmed() ? 'success' : 'gray')
+                    ->visibleFrom('md'),
 
                 TextColumn::make('esito')
                     ->label('Stato')
@@ -81,17 +81,7 @@ class QuestsTable
             ]);
     }
 
-    /**
-     * La porta verso la pagina dell'incarico.
-     *
-     * **La serata si fa**, **chiama dall'attesa** e **concludi** stavano qui, e
-     * sono andate su quella pagina (M9, M10). Sono gesti da fine serata, con il
-     * telefono in mano: chiedere di accendere il computer e aprire il Pannello
-     * per dire «si gioca» era il posto sbagliato. Tenerli in tutti e due i
-     * posti sarebbe stato peggio — D20 dice mai due pagine per la stessa cosa.
-     *
-     * Qui resta il lavoro da scrivania: creare, correggere, cercare.
-     */
+    /** Apre la pagina pubblica dell'incarico. */
     private static function openAction(): Action
     {
         return Action::make('apri')

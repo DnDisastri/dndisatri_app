@@ -49,12 +49,12 @@ class PostsTable
                 TextColumn::make('published_at')
                     ->label('Data')
                     ->dateTime('d/m/Y H:i')
-                    ->placeholder('—')
+                    ->placeholder('Vuoto')
                     ->sortable(),
 
                 TextColumn::make('author.name')
                     ->label('Autore')
-                    ->placeholder('—')
+                    ->placeholder('Vuoto')
                     ->toggleable(),
             ])
             ->filters([

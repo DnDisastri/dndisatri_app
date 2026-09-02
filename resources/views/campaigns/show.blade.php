@@ -8,7 +8,7 @@
     @if ($campaign->backgroundUrl())
         <div class="absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
              style="background-image: url('{{ $campaign->backgroundUrl() }}')"></div>
-        <div class="absolute inset-0 -z-10 bg-page/85"></div>
+        <div class="absolute inset-0 -z-10 bg-page" style="opacity: {{ $campaign->backgroundVeil() }}"></div>
     @endif
 
 <div class="mx-auto max-w-3xl space-y-6 px-4 py-6">

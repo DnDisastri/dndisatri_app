@@ -5,22 +5,19 @@ namespace App\Policies;
 use App\Models\User;
 
 /**
- * La gestione degli account è solo degli admin.
- *
- * Senza questa policy Filament lascerebbe entrare chiunque acceda al pannello,
- * DM compresi, e da lì si arriva a cambiare i ruoli: esattamente il buco che
- * la riscrittura doveva chiudere.
+ * I DM possono consultare gli utenti (e le loro schede); creare, modificare e
+ * cambiare ruoli resta solo degli admin. È lì il buco da tenere chiuso.
  */
 class UserPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin();
+        return $user->isAdmin() || $user->isDm();
     }
 
     public function view(User $user, User $target): bool
     {
-        return $user->isAdmin();
+        return $user->isAdmin() || $user->isDm();
     }
 
     public function create(User $user): bool

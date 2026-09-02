@@ -255,7 +255,7 @@
 
                 {{-- Danno / cura / condizione. --}}
                 <div class="mt-3 flex flex-wrap items-center gap-2">
-                    <input type="number" inputmode="numeric" min="1" placeholder="—"
+                    <input type="number" inputmode="numeric" min="1" placeholder="PF"
                            aria-label="Quanti punti per {{ $c['nome'] }}"
                            wire:model="colpo.{{ $c['id'] }}"
                            class="w-14 rounded-md border border-line bg-page px-2 py-2 text-center text-sm font-bold text-fg">
@@ -320,7 +320,7 @@
                         <ul class="mt-1 space-y-1">
                             @foreach ($statblock['attacks'] as $a)
                                 <li>
-                                    <span class="font-medium text-fg">{{ $a['nome'] ?? '—' }}</span>
+                                    <span class="font-medium text-fg">{{ $a['nome'] ?? 'Vuoto' }}</span>
                                     @if (! empty($a['bonus'])) <span class="text-muted">{{ $a['bonus'] }} per colpire</span> @endif
                                     @if (! empty($a['danni'])) <span class="text-muted">· {{ $a['danni'] }} danni</span> @endif
                                 </li>

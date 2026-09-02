@@ -32,11 +32,11 @@ class PostForm
                         }),
 
                     TextInput::make('slug')
-                        ->label('Indirizzo')
+                        ->label('Link')
                         ->required()
                         ->maxLength(255)
                         ->unique(ignoreRecord: true)
-                        ->helperText('Compare nel link della news.'),
+                        ->helperText('Si scrive da solo dal titolo. Modificalo solo se vuoi: compare nel link della news.'),
 
                     Textarea::make('excerpt')
                         ->label('Sommario')
@@ -67,12 +67,13 @@ class PostForm
                     FileUpload::make('cover_path')
                         ->label('Immagine')
                         ->image()
+                        ->acceptedFileTypes(['image/png', 'image/jpeg'])
                         ->disk('public')
                         ->directory('news')
                         ->maxSize(4096)
                         ->columnSpanFull(),
                 ])
                 ->columns(2),
-        ]);
+        ])->columns(1);
     }
 }

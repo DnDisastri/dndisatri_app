@@ -12,6 +12,7 @@ use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PendingChangePhotoController;
 use App\Http\Controllers\ProposalController;
 use App\Http\Controllers\QuestController;
 use App\Http\Controllers\ReactionController;
@@ -25,6 +26,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::middleware('auth')->group(function () {
+
+    Route::get('bacheca/{change}/foto', [PendingChangePhotoController::class, 'show'])->name('pending-changes.photo');
 
     Route::get('notifiche', [NotificationController::class, 'index'])->name('notifications.index');
 // La rotta fissa deve precedere `{notification}` per non essere interpretata come parametro dinamico.

@@ -87,7 +87,7 @@
                         ])>
                             {{ $effect->describe() }}
                             @unless ($active->has($effect->id))
-                                <span class="ml-1 text-xs no-underline">— non in sintonia</span>
+                                <span class="ml-1 text-xs no-underline">(non in sintonia)</span>
                             @endunless
                         </li>
                     @endforeach

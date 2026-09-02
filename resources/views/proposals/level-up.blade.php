@@ -105,7 +105,7 @@
                 </p>
                 <select name="subclass"
                         class="w-full rounded-md border-2 border-line bg-surface px-3 py-2 text-fg focus:border-active focus:outline-none">
-                    <option value="">— scelgo più avanti —</option>
+                    <option value="">Scelgo più avanti</option>
                     @foreach ($subclasses as $subclass)
                         <option value="{{ $subclass }}" @selected(old('subclass') === $subclass)>{{ $subclass }}</option>
                     @endforeach

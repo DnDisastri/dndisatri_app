@@ -38,7 +38,7 @@ describe('calendario e storico', function () {
         $untitled = GameSession::factory()->create(['number' => 3, 'title' => null]);
         $unnumbered = GameSession::factory()->create(['number' => null, 'title' => null]);
 
-        expect($numbered->displayTitle())->toBe('Sessione 12 — La Torre Nera')
+        expect($numbered->displayTitle())->toBe('Sessione 12: La Torre Nera')
             ->and($untitled->displayTitle())->toBe('Sessione 3')
             ->and($unnumbered->displayTitle())->toBe('Sessione');
     });

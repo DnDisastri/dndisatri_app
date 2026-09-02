@@ -42,10 +42,11 @@ class QuestForm
                         }),
 
                     TextInput::make('slug')
-                        ->label('Indirizzo')
+                        ->label('Link')
                         ->required()
                         ->maxLength(255)
-                        ->unique(ignoreRecord: true),
+                        ->unique(ignoreRecord: true)
+                        ->helperText('Si scrive da solo dal titolo. Modificalo solo se vuoi: compare nel link dell\'incarico.'),
 
                     Textarea::make('description')
                         ->label('Descrizione')
@@ -110,6 +111,6 @@ class QuestForm
             // è irreversibile e passa dall'azione di dominio, che è la garanzia
             // che nessuno lo faccia per sbaglio da un modulo. Lo stesso vale
             // per `night_confirmed_at`, che si scrive con «la serata si fa».
-        ]);
+        ])->columns(1);
     }
 }

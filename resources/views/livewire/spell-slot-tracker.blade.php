@@ -15,7 +15,7 @@
             <p class="mb-1 text-xs uppercase tracking-wide text-muted">
                 Slot {{ $set->isPact ? 'da patto' : 'disponibili' }}
                 @if ($set->isPact)
-                    <span class="text-muted">— tornano anche col riposo breve</span>
+                    <span class="text-muted">(tornano anche col riposo breve)</span>
                 @endif
             </p>
 

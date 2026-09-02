@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Actions\Supervision;
 
+use App\Actions\Approvals\AnnounceForApproval;
 use App\Actions\Market\AcceptTrade;
 use App\Actions\Market\BuyListing;
 use App\Actions\Market\CreateListing;
 use App\Actions\Market\CreateTrade;
 use App\Enums\SupervisedActionType;
+use App\Notifications\SupervisedActionAwaitingApproval;
 use App\Models\Character;
 use App\Models\MarketListing;
 use App\Models\SupervisedAction;
@@ -113,7 +115,7 @@ final class Supervisor
         array $payload,
         string $summary,
     ): SupervisedAction {
-        return SupervisedAction::create([
+        $action = SupervisedAction::create([
             'user_id' => $actor->getKey(),
             // Si annota sotto quale richiamo è stata chiesta: a richiamo
             // chiuso, è quello che racconta se il controllo è servito.
@@ -122,5 +124,9 @@ final class Supervisor
             'payload' => $payload,
             'summary' => $summary,
         ]);
+
+        app(AnnounceForApproval::class)->handle(new SupervisedActionAwaitingApproval($action), $actor);
+
+        return $action;
     }
 }

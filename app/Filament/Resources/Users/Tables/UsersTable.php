@@ -18,14 +18,16 @@ class UsersTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->defaultSort('created_at', 'desc')
             ->columns([
                 TextColumn::make('name')
+                    ->label('Nome')
                     ->searchable(),
                 TextColumn::make('email')
                     ->label('Email')
                     ->searchable(),
 
-                // L'approvazione: chi è ancora in attesa non può entrare.
+                // In attesa = non può ancora accedere.
                 TextColumn::make('approved_at')
                     ->label('Approvato')
                     ->dateTime('d/m/Y')
@@ -37,11 +39,8 @@ class UsersTable
                 TextColumn::make('created_at')
                     ->label('Registrato')
                     ->dateTime('d/m/Y')
-                    ->sortable(),
-                TextColumn::make('updated_at')
-                    ->dateTime()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->visibleFrom('md'),
             ])
             ->filters([
                 TernaryFilter::make('approved_at')
@@ -56,13 +55,12 @@ class UsersTable
                     ),
             ])
             ->recordActions([
-                // Approvare un iscritto: gli apre la porta. Compare solo su chi è
-                // ancora in attesa, e con conferma perché è un via libera.
+                // Solo admin, sugli account ancora in attesa; con conferma.
                 Action::make('approva')
                     ->label('Approva')
                     ->icon(Icon::Approve)
                     ->color('success')
-                    ->visible(fn (User $record) => ! $record->isApproved())
+                    ->visible(fn (User $record) => ! $record->isApproved() && auth()->user()->isAdmin())
                     ->requiresConfirmation()
                     ->modalHeading('Approvare questo account?')
                     ->modalDescription('Da questo momento potrà accedere all\'applicazione.')
@@ -75,6 +73,8 @@ class UsersTable
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->emptyStateHeading('Nessun utente')
+            ->emptyStateDescription('Qui compaiono gli iscritti: giocatori, DM e admin.');
     }
 }

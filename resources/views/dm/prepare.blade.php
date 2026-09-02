@@ -16,7 +16,7 @@
         <h1 class="mt-1 text-2xl leading-tight text-fg">
             <span class="block">Prepara</span>
             <span class="block text-xl text-muted">
-                {{ $session->numberLabel() }}@if (filled($session->title)) — {{ $session->title }} @endif
+                {{ $session->numberLabel() }}@if (filled($session->title)): {{ $session->title }} @endif
             </span>
         </h1>
         <p class="mt-1 text-sm text-muted">{{ $session->played_at->translatedFormat('l j F Y, H:i') }}</p>

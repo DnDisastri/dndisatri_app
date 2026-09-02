@@ -181,7 +181,7 @@
                                 @if ($candidato->characters->isNotEmpty())
                                     <select name="personaggi[{{ $candidato->id }}]"
                                             class="rounded-md border border-line bg-surface px-2 py-1 text-sm text-fg">
-                                        <option value="">— senza personaggio —</option>
+                                        <option value="">Senza personaggio</option>
                                         @foreach ($candidato->characters as $personaggio)
                                             <option value="{{ $personaggio->id }}" @selected($scelto === $personaggio->id)>
                                                 {{ $personaggio->name }}

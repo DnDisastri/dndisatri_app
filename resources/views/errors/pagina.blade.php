@@ -17,7 +17,7 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
-    @include('partials.testa', ['title' => $codice.' — '.$titolo])
+    @include('partials.testa', ['title' => $codice.': '.$titolo])
 </head>
 <body class="min-h-screen bg-page antialiased">
 

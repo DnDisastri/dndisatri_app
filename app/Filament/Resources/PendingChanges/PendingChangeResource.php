@@ -59,7 +59,7 @@ class PendingChangeResource extends Resource
 
     public static function getNavigationBadgeColor(): ?string
     {
-        return 'warning';
+        return 'primary';
     }
 
     public static function canViewAny(): bool

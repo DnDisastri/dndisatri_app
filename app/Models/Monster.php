@@ -13,13 +13,12 @@ use Spatie\Activitylog\Support\LogOptions;
 /**
  * Un mostro del bestiario: lo statblock riusabile che il DM pesca nel tracker.
  *
- * È **materiale condiviso**, come un manuale: lo scrive un DM e lo usano tutti,
- * perché un repertorio di mostri è tanto più utile quanto più cresce. Nel
- * tracker il mostro scelto viene **copiato** nella serata — i PF calano lì, non
- * qui: il bestiario è la scheda pulita, non il mostro di stasera.
+ * Nel tracker il mostro scelto viene **copiato** nella serata — i PF calano lì,
+ * non qui. Con `campaign_id` nullo il mostro è **pubblico** (usabile in ogni
+ * campagna); valorizzato, lo vede e lo usa solo il DM di quella campagna.
  */
 #[Fillable([
-    'name', 'hp', 'ac', 'speed', 'attacks', 'traits', 'created_by',
+    'name', 'hp', 'ac', 'speed', 'attacks', 'traits', 'created_by', 'campaign_id',
 ])]
 class Monster extends Model
 {
@@ -47,9 +46,27 @@ class Monster extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function campaign(): BelongsTo
+    {
+        return $this->belongsTo(Campaign::class);
+    }
+
+    public function isPublic(): bool
+    {
+        return $this->campaign_id === null;
+    }
+
     public function scopeSearch(Builder $query, string $termine): void
     {
         $query->where('name', 'like', '%'.$termine.'%');
+    }
+
+    /** Pubblici, più quelli della campagna indicata. */
+    public function scopeUsableInCampaign(Builder $query, ?int $campaignId): void
+    {
+        $query->where(fn (Builder $q) => $q
+            ->whereNull('campaign_id')
+            ->when($campaignId !== null, fn (Builder $q) => $q->orWhere('campaign_id', $campaignId)));
     }
 
     /**

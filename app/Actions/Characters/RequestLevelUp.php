@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Characters;
 
+use App\Actions\Approvals\AnnounceForApproval;
 use App\Domain\Dnd\Ability;
 use App\Domain\Dnd\ClassRules;
 use App\Domain\Dnd\HitPoints;
@@ -14,6 +15,7 @@ use App\Enums\PendingChangeType;
 use App\Models\Character;
 use App\Models\PendingChange;
 use App\Models\User;
+use App\Notifications\ChangeAwaitingApproval;
 use InvalidArgumentException;
 
 /**
@@ -140,7 +142,7 @@ final class RequestLevelUp
             $summary[] = 'Impara: '.implode(', ', $diff['spells']).'.';
         }
 
-        return PendingChange::create([
+        $change = PendingChange::create([
             'character_id' => $character->getKey(),
             'requested_by' => $requester->getKey(),
             'type' => PendingChangeType::LevelUp,
@@ -148,6 +150,10 @@ final class RequestLevelUp
             'summary' => implode(' ', $summary),
             'base_updated_at' => $character->updated_at,
         ]);
+
+        app(AnnounceForApproval::class)->handle(new ChangeAwaitingApproval($change), $requester);
+
+        return $change;
     }
 
     /**

@@ -119,12 +119,22 @@ class PendingChange extends Model
         $character = $this->character;
 
         return collect($this->diff ?? [])
+            // La foto non è testo: si guarda, non si legge in una colonna.
+            ->reject(fn ($after, $field) => $field === 'photo_path')
             ->map(fn ($after, $field) => [
                 'label' => self::fieldLabel($field),
                 'before' => self::readable($character?->getAttribute($field)),
                 'after' => self::readable($after),
             ])
             ->values();
+    }
+
+    /** Il percorso (disco privato) della foto proposta, se la richiesta ne ha una. */
+    public function proposedPhotoPath(): ?string
+    {
+        $path = $this->diff['photo_path'] ?? null;
+
+        return is_string($path) && $path !== '' ? $path : null;
     }
 
     private static function fieldLabel(string $field): string
@@ -135,6 +145,8 @@ class PendingChange extends Model
             'subclass' => 'Sottoclasse',
             'race' => 'Specie',
             'background' => 'Background',
+            'story' => 'Storia',
+            'photo_path' => 'Foto',
             'level' => 'Livello',
             'hit_die' => 'Dado vita',
             'hp_max' => 'PF massimi',
@@ -157,12 +169,12 @@ class PendingChange extends Model
     private static function readable(mixed $value): string
     {
         return match (true) {
-            $value === null, $value === '' => '—',
+            $value === null, $value === '' => 'Vuoto',
             is_bool($value) => $value ? 'sì' : 'no',
             is_array($value) => collect($value)
                 ->filter(fn ($v) => $v !== false && $v !== 'none' && $v !== null)
                 ->map(fn ($v, $k) => is_bool($v) ? $k : "{$k}: {$v}")
-                ->join(', ') ?: '—',
+                ->join(', ') ?: 'Vuoto',
             default => (string) $value,
         };
     }

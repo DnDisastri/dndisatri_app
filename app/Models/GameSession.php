@@ -107,10 +107,10 @@ class GameSession extends Model
         return $this->number !== null ? "Sessione {$this->number}" : 'Sessione';
     }
 
-    /** Titolo da mostrare: "Sessione 12 — La Torre Nera", o quel che c'è. */
+    /** Titolo da mostrare: "Sessione 12: La Torre Nera", o quel che c'è. */
     public function displayTitle(): string
     {
-        return filled($this->title) ? "{$this->numberLabel()} — {$this->title}" : $this->numberLabel();
+        return filled($this->title) ? "{$this->numberLabel()}: {$this->title}" : $this->numberLabel();
     }
 
     // === Query ===

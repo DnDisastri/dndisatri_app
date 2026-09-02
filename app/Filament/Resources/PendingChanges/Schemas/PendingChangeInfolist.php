@@ -4,6 +4,7 @@ namespace App\Filament\Resources\PendingChanges\Schemas;
 
 use App\Enums\PendingChangeStatus;
 use App\Enums\PendingChangeType;
+use App\Models\PendingChange;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Schemas\Components\Section;
@@ -20,15 +21,22 @@ class PendingChangeInfolist
                         ->label('Tipo')
                         ->badge()
                         ->formatStateUsing(fn (PendingChangeType $state) => $state->label()),
-                    TextEntry::make('character.name')->label('Personaggio'),
-                    TextEntry::make('requestedBy.name')->label('Proposta da'),
-                    TextEntry::make('created_at')->label('Quando')->dateTime('d/m/Y H:i'),
+
+                    TextEntry::make('requestedBy.name')
+                        ->label('Utente'),
+
+                    TextEntry::make('requestedBy.email')
+                        ->label('Email')
+                        ->copyable(),
+
+                    TextEntry::make('character.name')
+                        ->label('Personaggio'),
+
                     TextEntry::make('summary')
-                        ->label('In breve')
-                        ->placeholder('—')
-                        ->columnSpanFull(),
+                        ->label('Riassunto')
+                        ->visible(fn (PendingChange $record) => filled($record->summary)),
                 ])
-                ->columns(4),
+                ->columns(1),
 
             Section::make('Cosa cambia')
                 ->schema([
@@ -48,15 +56,15 @@ class PendingChangeInfolist
                             PendingChangeStatus::Approved => 'success',
                             PendingChangeStatus::Rejected => 'danger',
                         }),
-                    TextEntry::make('reviewedBy.name')->label('Decisa da')->placeholder('—'),
-                    TextEntry::make('reviewed_at')->label('Quando')->dateTime('d/m/Y H:i')->placeholder('—'),
+                    TextEntry::make('reviewedBy.name')->label('Decisa da')->placeholder('Vuoto'),
+                    TextEntry::make('reviewed_at')->label('Quando')->dateTime('d/m/Y H:i')->placeholder('Vuoto'),
                     TextEntry::make('review_note')
                         ->label('Nota')
                         ->placeholder('Nessuna nota')
                         ->columnSpanFull(),
                 ])
                 ->columns(3)
-                ->visible(fn ($record) => ! $record->isPending()),
-        ]);
+                ->visible(fn (PendingChange $record) => ! $record->isPending()),
+        ])->columns(1);
     }
 }

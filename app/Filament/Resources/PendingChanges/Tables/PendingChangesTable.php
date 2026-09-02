@@ -15,8 +15,7 @@ class PendingChangesTable
     public static function configure(Table $table): Table
     {
         return $table
-            // Le più vecchie per prime: chi aspetta da più tempo va servito
-            // prima. È il contrario dell'ordinamento di una bacheca di news.
+            // Le più vecchie per prime: chi aspetta da più tempo va servito prima.
             ->defaultSort('created_at', 'asc')
             ->columns([
                 TextColumn::make('type')
@@ -40,21 +39,22 @@ class PendingChangesTable
 
                 TextColumn::make('requestedBy.name')
                     ->label('Proposta da')
-                    ->searchable(),
+                    ->searchable()
+                    ->visibleFrom('md'),
 
                 TextColumn::make('summary')
                     ->label('In breve')
-                    ->placeholder('—')
+                    ->placeholder('Vuoto')
                     ->limit(50)
-                    ->toggleable(),
+                    ->toggleable()
+                    ->visibleFrom('md'),
 
                 TextColumn::make('created_at')
                     ->label('Da')
                     ->since()
                     ->sortable(),
 
-                // La scheda si è mossa fra la proposta e adesso: chi approva
-                // deve saperlo prima di premere il pulsante.
+                // Avvisa se la scheda è cambiata dopo la proposta.
                 TextColumn::make('avviso')
                     ->label('')
                     ->badge()
@@ -70,21 +70,16 @@ class PendingChangesTable
                         PendingChangeStatus::Approved => 'success',
                         PendingChangeStatus::Rejected => 'danger',
                     })
-                    ->toggleable(),
+                    ->toggleable()
+                    ->visibleFrom('md'),
 
                 TextColumn::make('reviewedBy.name')
                     ->label('Decisa da')
-                    ->placeholder('—')
+                    ->placeholder('Vuoto')
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('status')
-                    ->label('Stato')
-                    ->options(collect(PendingChangeStatus::cases())
-                        ->mapWithKeys(fn ($case) => [$case->value => $case->label()])
-                        ->all())
-                    ->default(PendingChangeStatus::Pending->value),
-
+                // Lo stato si sceglie dalle tab in cima; qui resta il tipo.
                 SelectFilter::make('type')
                     ->label('Tipo')
                     ->options(collect(PendingChangeType::cases())
@@ -94,7 +89,7 @@ class PendingChangesTable
             ->recordActions([
                 ViewAction::make()->label('Esamina'),
             ])
-            ->emptyStateHeading('Nessuna richiesta in attesa')
+            ->emptyStateHeading('Nessuna richiesta')
             ->emptyStateDescription('Quando un giocatore proporrà una modifica, comparirà qui.')
             ->modifyQueryUsing(fn ($query) => $query->with(['character', 'requestedBy', 'reviewedBy']));
     }

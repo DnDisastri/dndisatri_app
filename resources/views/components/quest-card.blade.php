@@ -82,7 +82,7 @@
             @elseif ($quest->isNightConfirmed())
                 <span class="font-semibold text-fg">La serata si fa</span>
             @elseif ($quest->isFull())
-                <span class="text-muted">Posti esauriti — si entra in lista d'attesa</span>
+                <span class="text-muted">Posti esauriti, si entra in lista d'attesa</span>
             @else
                 <span class="text-muted">Si può fare</span>
             @endif

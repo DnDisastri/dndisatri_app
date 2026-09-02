@@ -102,7 +102,7 @@ class CombatTracker extends Component
             'tipo' => in_array($c['tipo'] ?? null, ['pg', 'mostro'], true)
                 ? $c['tipo']
                 : (($c['pg'] ?? false) ? 'pg' : 'mostro'),
-            'nome' => mb_substr((string) ($c['nome'] ?? '—'), 0, 80),
+            'nome' => mb_substr((string) ($c['nome'] ?? 'Vuoto'), 0, 80),
             'iniziativa' => (int) ($c['iniziativa'] ?? 0),
             'characterId' => isset($c['characterId']) ? (int) $c['characterId'] : null,
             'hp' => isset($c['hp']) ? (int) $c['hp'] : null,
@@ -204,7 +204,10 @@ class CombatTracker extends Component
     {
         $this->assicuraDm();
 
-        $monster = Monster::find($monsterId);
+        // Pubblico o della campagna di questa serata: gli altri non si pescano.
+        $monster = Monster::usableInCampaign($this->sessione()->campaign_id)
+            ->whereKey($monsterId)
+            ->first();
 
         if ($monster === null) {
             return;
@@ -456,7 +459,9 @@ class CombatTracker extends Component
 
         // Il bestiario da pescare: cerca solo col pannello aperto e qualcosa scritto.
         $mostriTrovati = ($this->mostraAggiungiMostro && trim($this->cercaMostro) !== '')
-            ? Monster::search(trim($this->cercaMostro))->orderBy('name')->limit(8)->get()
+            ? Monster::search(trim($this->cercaMostro))
+                ->usableInCampaign($this->sessione()->campaign_id)
+                ->orderBy('name')->limit(8)->get()
             : collect();
 
         return view('livewire.combat-tracker', [

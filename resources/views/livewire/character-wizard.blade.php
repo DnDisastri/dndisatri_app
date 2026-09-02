@@ -19,7 +19,7 @@
          spento per quelli che ancora non si toccano. --}}
     <div>
         <p class="mb-2 text-xs font-medium text-muted">
-            Passo {{ $step }} di {{ CharacterWizard::LAST_STEP }} — {{ $titles[$step] }}
+            Passo {{ $step }} di {{ CharacterWizard::LAST_STEP }}: {{ $titles[$step] }}
         </p>
         <div class="flex gap-1">
             @foreach ($titles as $number => $title)
@@ -167,7 +167,7 @@
                                             @foreach (range(0, $bonus - 1) as $slot)
                                                 <select wire:model.live="speciesChoices.{{ $slot }}"
                                                         class="rounded-md border border-line bg-page px-3 py-2 text-sm text-fg focus:border-active focus:outline-none">
-                                                    <option value="">— scegli —</option>
+                                                    <option value="">Scegli</option>
                                                     @foreach ($abilities as $ability)
                                                         <option value="{{ $ability->value }}">{{ $ability->fullName() }}</option>
                                                     @endforeach
@@ -405,11 +405,11 @@
 
                 $righe = [
                     ['Chi sei', filled($name) ? $name : 'Nome da scrivere', 1],
-                    ['Classe', filled($class) ? $class : '—', 1],
-                    ['Specie', filled($species) ? $species : '—', 2],
+                    ['Classe', filled($class) ? $class : 'Vuoto', 1],
+                    ['Specie', filled($species) ? $species : 'Vuoto', 2],
                     ['Caratteristiche', $scoreStr, 3],
-                    ['Background', filled($background) ? $background : '—', 4],
-                    ['Abilità', $skillNames->isNotEmpty() ? $skillNames->join(', ') : '—', 5],
+                    ['Background', filled($background) ? $background : 'Vuoto', 4],
+                    ['Abilità', $skillNames->isNotEmpty() ? $skillNames->join(', ') : 'Vuoto', 5],
                     ['Equipaggiamento', 'Kit di classe e background', 6],
                 ];
 
@@ -440,7 +440,7 @@
             @if ($this->buildChanged())
                 <x-note tone="danger" class="mt-3">
                     Hai cambiato qualcosa di essenziale rispetto a «{{ $buildTitle }}»: la build
-                    potrebbe rendere meno. Va benissimo — è il tuo personaggio.
+                    potrebbe rendere meno. Va benissimo, è il tuo personaggio.
                 </x-note>
             @endif
         @endif

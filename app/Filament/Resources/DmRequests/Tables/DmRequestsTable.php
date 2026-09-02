@@ -39,13 +39,13 @@ class DmRequestsTable
 
                 TextColumn::make('reviewedBy.name')
                     ->label('Decisa da')
-                    ->placeholder('—')
+                    ->placeholder('Vuoto')
                     ->toggleable(),
 
                 TextColumn::make('reviewed_at')
                     ->label('Quando')
                     ->dateTime('d/m/Y H:i')
-                    ->placeholder('—')
+                    ->placeholder('Vuoto')
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([

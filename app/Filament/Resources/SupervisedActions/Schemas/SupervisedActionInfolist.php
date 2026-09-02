@@ -24,7 +24,7 @@ class SupervisedActionInfolist
                     TextEntry::make('created_at')->label('Quando')->dateTime('d/m/Y H:i'),
                     TextEntry::make('summary')
                         ->label('In breve')
-                        ->placeholder('—')
+                        ->placeholder('Vuoto')
                         ->columnSpanFull(),
                 ])
                 ->columns(3),
@@ -49,7 +49,7 @@ class SupervisedActionInfolist
                         ->label('Perché era stato dato')
                         ->placeholder('Il richiamo non è più rintracciabile')
                         ->columnSpanFull(),
-                    TextEntry::make('warning.created_at')->label('Dal')->dateTime('d/m/Y')->placeholder('—'),
+                    TextEntry::make('warning.created_at')->label('Dal')->dateTime('d/m/Y')->placeholder('Vuoto'),
                     TextEntry::make('warning.lifted_at')
                         ->label('Tolto il')
                         ->dateTime('d/m/Y')
@@ -69,8 +69,8 @@ class SupervisedActionInfolist
                             PendingChangeStatus::Approved => 'success',
                             PendingChangeStatus::Rejected => 'danger',
                         }),
-                    TextEntry::make('reviewedBy.name')->label('Decisa da')->placeholder('—'),
-                    TextEntry::make('reviewed_at')->label('Quando')->dateTime('d/m/Y H:i')->placeholder('—'),
+                    TextEntry::make('reviewedBy.name')->label('Decisa da')->placeholder('Vuoto'),
+                    TextEntry::make('reviewed_at')->label('Quando')->dateTime('d/m/Y H:i')->placeholder('Vuoto'),
                     TextEntry::make('review_note')
                         ->label('Motivo')
                         ->placeholder('Nessuna nota')
