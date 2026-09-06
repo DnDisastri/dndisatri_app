@@ -63,16 +63,9 @@ class Campaign extends Model
     }
 
     /**
-     * Il tavolo: i personaggi vivi che hanno davvero giocato questa campagna.
-     *
-     * Non è un elenco fisso — un personaggio non «appartiene» a una campagna —
-     * si ricava da chi si è seduto al tavolo, cioè dal pivot delle presenze
-     * (`game_session_user`) delle serate. È la fonte più onesta che abbiamo di
-     * «chi c'è a questo tavolo».
-     *
-     * Carica quel che serve ai **PF efficaci** (oggetti e loro effetti): sul
-     * cruscotto del DM la barra dei punti ferita deve dire il numero giusto,
-     * non quello salvato senza gli oggetti in sintonia.
+     * Il tavolo: i personaggi vivi che hanno giocato questa campagna. Non è un
+     * elenco fisso, si ricava dalle presenze (`game_session_user`). Carica
+     * oggetti ed effetti per i PF efficaci (la barra del DM deve dire il numero giusto).
      */
     public function roster(): \Illuminate\Database\Eloquent\Collection
     {
@@ -115,13 +108,7 @@ class Campaign extends Model
 
     // === Il capogilda ===
 
-    /**
-     * L'NPC del dungeon master: affida gli incarichi e fa succedere le serate.
-     *
-     * Vive qui e non su una tabella sua perché è di questa storia: un tavolo,
-     * un capogilda. Se un giorno due capigilda dovranno collaborare come dato
-     * e non solo a parole, si promuove allora.
-     */
+    /** L'NPC del DM che affida gli incarichi: uno per campagna, vive qui (non su una tabella sua). */
     public function hasQuestGiver(): bool
     {
         return filled($this->quest_giver);
@@ -143,14 +130,9 @@ class Campaign extends Model
     }
 
     /**
-     * Lo sfondo della pagina della campagna.
-     *
-     * **Ricade sulla copertina quando non ce n'è uno suo**, e non è pigrizia:
-     * una pagina che perde il fondo perché nessuno ha caricato la seconda
-     * immagine sembra rotta, mentre la copertina sotto il velo funziona quasi
-     * sempre. Lo sfondo dedicato serve quando la copertina ha un soggetto
-     * forte — un volto, una scritta grande — che dietro al testo diventa
-     * rumore.
+     * Lo sfondo della pagina, che ricade sulla copertina se non ce n'è uno suo
+     * (una pagina senza fondo sembra rotta). Lo sfondo dedicato serve quando la
+     * copertina ha un soggetto forte che dietro al testo fa rumore.
      */
     public function backgroundUrl(): ?string
     {
@@ -173,10 +155,8 @@ class Campaign extends Model
     }
 
     /**
-     * Le season esistenti, dalla più recente: è l'elenco del filtro.
-     *
-     * Si ricava dalle campagne invece di essere scritta da qualche parte,
-     * così non può mai proporre una season vuota né dimenticarne una.
+     * Le season esistenti, dalla più recente (l'elenco del filtro): ricavate
+     * dalle campagne, così non propone una season vuota né ne dimentica una.
      *
      * @return list<int>
      */

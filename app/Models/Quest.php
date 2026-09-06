@@ -63,26 +63,13 @@ class Quest extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /**
-     * Chi affida l'incarico: il capogilda del tavolo.
-     *
-     * Vive sulla campagna — **uno per campagna**, non uno per DM: è l'NPC di
-     * quella storia, e un DM che apre due tavoli diversi può averne due
-     * diversi. Le quest non ne tengono una copia: la leggono da lì, così non
-     * c'è niente da riallineare quando il DM lo cambia.
-     */
+    /** Il capogilda del tavolo: vive sulla campagna (uno per campagna), le quest lo leggono da lì. */
     public function questGiver(): ?string
     {
         return $this->campaign?->quest_giver;
     }
 
-    /**
-     * Ha una ricompensa da mostrare?
-     *
-     * Ne basta una parte: oro, oggetti, o il campo libero. Le quest **devono**
-     * averne una — lo garantisce il modulo del dungeon master — e questo è il
-     * conto che lo verifica.
-     */
+    /** Ha una ricompensa (oro, oggetti o campo libero)? Le quest devono averne una. */
     public function hasReward(): bool
     {
         return (int) $this->reward_gold > 0
@@ -96,13 +83,7 @@ class Quest extends Model
         return $this->type === QuestType::Campaign;
     }
 
-    /**
-     * Tutte le prenotazioni, **ritirati compresi**.
-     *
-     * Lo storico di chi voleva giocare non si cancella: è metà del motivo per
-     * cui le prenotazioni esistono. Chi vuole i partecipanti veri usa
-     * `seatHolders()`, non questa.
-     */
+    /** Tutte le prenotazioni, ritirati compresi (lo storico non si cancella). Per i partecipanti veri: `seatHolders()`. */
     public function participants(): BelongsToMany
     {
         return $this->belongsToMany(User::class)
@@ -176,10 +157,7 @@ class Quest extends Model
         return $this->freeSlots() === 0;
     }
 
-    /**
-     * Il minimo è **un'indicazione, non un divieto**: dice al dungeon master
-     * se la serata sta in piedi, e resta lui a decidere se farla lo stesso.
-     */
+    /** Il minimo è un'indicazione, non un divieto: dice al DM se la serata sta in piedi. */
     public function hasMinimum(): bool
     {
         return $this->participantCount() >= $this->min_participants;
@@ -190,13 +168,7 @@ class Quest extends Model
         return max(0, $this->min_participants - $this->participantCount());
     }
 
-    /**
-     * Il dungeon master ha dichiarato che la serata si fa.
-     *
-     * È una proprietà della quest e non si deduce dai posti confermati: se
-     * l'ultimo confermato si ritirasse, una serata dichiarata tornerebbe in
-     * forse da sola.
-     */
+    /** Il DM ha dichiarato che la serata si fa: è una proprietà, non si deduce dai confermati (uno che si ritira non l'annulla). */
     public function isNightConfirmed(): bool
     {
         return $this->night_confirmed_at !== null;
@@ -247,12 +219,7 @@ class Quest extends Model
         $query->whereNotNull('closed_at');
     }
 
-    /**
-     * Solo da conclusa, e per lo stesso motivo del resoconto: si applaude
-     * **com'è andata**. Su una quest ancora aperta il gesto c'è già ed è
-     * «voglio partecipare» — una faccina accanto sarebbe più facile da dare e
-     * direbbe molto meno.
-     */
+    /** Solo da conclusa: si applaude com'è andata (su una aperta il gesto è già «voglio partecipare»). */
     public function acceptsReactions(): bool
     {
         return $this->isArchived();

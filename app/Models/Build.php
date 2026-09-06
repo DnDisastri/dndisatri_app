@@ -89,12 +89,9 @@ class Build extends Model
     // === Il passaggio alla creazione guidata ===
 
     /**
-     * È completa se basta a riempire un personaggio di 1° senza domande.
-     *
-     * Le otto arrivate dalla vecchia applicazione **non lo sono**: avevano solo
-     * classe, sottoclasse e un consiglio a parole. Finché un DM non le
-     * completa, «usa questa build» porta avanti quel che c'è e lascia il resto
-     * da scegliere, che è meglio di un pulsante che non compare.
+     * È completa se basta a riempire un personaggio di 1° senza domande. Le
+     * build vecchie (solo classe e consiglio) non lo sono: finché un DM non le
+     * completa, «usa questa build» porta avanti quel che c'è.
      */
     public function isComplete(): bool
     {
@@ -105,11 +102,9 @@ class Build extends Model
     }
 
     /**
-     * Lo stato da cui parte il mago della creazione.
-     *
-     * Restituisce **solo le caselle che la build sa riempire**: le chiavi
-     * assenti non vanno impostate a vuoto, o cancellerebbero i valori di
-     * partenza del modulo (i punteggi del point buy su tutti).
+     * Lo stato da cui parte la creazione guidata: solo le caselle che la build
+     * sa riempire. Le chiavi assenti non si impostano a vuoto, o cancellerebbero
+     * i valori di partenza del modulo (i punteggi del point buy).
      *
      * @return array<string,mixed>
      */

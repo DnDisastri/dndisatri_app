@@ -2,27 +2,20 @@
 
 @php
     /*
-     * Il menù dei tre pallini di un personaggio, uno solo per i due posti che lo
-     * mostrano: la card de «I miei eroi» e l'intestazione della scheda. Erano
-     * due copie identiche da tenere allineate a mano — stesse voci, stesse
-     * icone — e una restava sempre indietro rispetto all'altra.
+     * Il menù dei tre pallini di un personaggio, uno solo per i due posti che
+     * lo mostrano (card «I miei eroi» e intestazione scheda).
      *
-     * `serve` è il permesso che ogni voce richiede: le quattro proposte le fa
-     * solo chi può proporre (il proprietario di un personaggio **vivo**), il
-     * registro chi può leggerlo (il proprietario e chi conduce). Le voci che non
-     * passano il permesso non si disegnano; se non ne resta nessuna, i tre
-     * pallini spariscono — meglio che aprire il vuoto.
-     *
-     * Quelle senza pagina restano **spente**, come le voci della barra in basso:
-     * si vedono, si capisce che esistono, e non portano da nessuna parte.
+     * `serve` è il permesso di ogni voce: le proposte solo chi può proporre
+     * (proprietario di un personaggio vivo), il registro chi può leggerlo. Le
+     * voci senza permesso non si disegnano; se non ne resta nessuna, i pallini
+     * spariscono. Quelle senza pagina restano spente.
      */
     $azioni = [
         ['nome' => 'Proponi modifiche', 'rotta' => 'proposals.edit', 'serve' => 'propose', 'icona' => \App\Enums\Icon::Edit],
         ['nome' => 'Sali di livello', 'rotta' => 'proposals.level-up', 'serve' => 'propose', 'icona' => \App\Enums\Icon::LevelUp],
         ['nome' => 'Registra un bottino', 'rotta' => 'proposals.loot', 'serve' => 'propose', 'icona' => \App\Enums\Icon::Loot],
         ['nome' => 'Oggetto magico', 'rotta' => 'proposals.item-effect', 'serve' => 'propose', 'icona' => \App\Enums\Icon::MagicItem],
-        // Il registro sta staccato dalle proposte: non è una richiesta al DM, è
-        // l'estratto conto che si legge, e il permesso è un altro.
+        // Il registro è staccato dalle proposte: è l'estratto conto, altro permesso.
         ['nome' => 'Registro del personaggio', 'rotta' => 'characters.ledger', 'serve' => 'viewLedger', 'separa' => true, 'icona' => \App\Enums\Icon::CharacterLedger],
     ];
 
@@ -51,8 +44,7 @@
                         {{ $voce['nome'] }}
                     </a>
                 @else
-                    {{-- Spenta è un `button disabled` e non uno `span` travestito:
-                         così la tastiera la salta da sé. --}}
+                    {{-- Spenta è un `button disabled`, non uno `span`: la tastiera la salta. --}}
                     <button type="button" disabled title="Non c'è ancora" @class([
                         'flex w-full cursor-not-allowed items-center gap-3 px-4 py-2.5 text-left text-sm text-muted opacity-60',
                         'border-t border-line' => $voce['separa'] ?? false,

@@ -5,17 +5,11 @@
 ])
 
 {{--
-    Il medaglione del grado d'avventuriero (richiesta 8).
+    Il medaglione del grado d'avventuriero: cinque fasce dal livello, un metallo
+    per fascia. Si passa il livello, il grado si calcola qui.
 
-    Cinque fasce dedotte dal livello, un metallo per fascia — legno, bronzo,
-    argento, oro, platino. Si passa il **livello** e non il grado: chi scrive la
-    vista ha in mano un personaggio col suo livello, e il grado è roba di
-    dominio che si calcola qui, in un posto solo.
-
-    Il colore lo mette il metallo, non il tema: sono cinque tinte che il tema
-    non ha, e il medaglione dev'essere d'oro anche di notte. Per questo il colore
-    è un `style` inline e non una classe — l'icona Phosphor prende `currentColor`
-    dal contenitore, e il contenitore glielo dà.
+    Il colore è un `style` inline e non una classe: sono tinte che il tema non ha
+    (il medaglione è d'oro anche di notte), e l'icona Phosphor prende `currentColor`.
 --}}
 @php $grado = \App\Domain\Dnd\AdventurerRank::fromLevel((int) $level); @endphp
 

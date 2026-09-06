@@ -2,13 +2,9 @@
 
 @php
     /*
-     * Le due metà di uno scambio, sempre nello stesso ordine: quello che dà
-     * chi ha proposto, e quello che chiede in cambio.
-     *
-     * L'ordine non si inverte per chi riceve. Sarebbe più "naturale" leggere
-     * prima quello che si ottiene, ma allora la stessa proposta si
-     * leggerebbe in due modi diversi a seconda di chi la guarda, e una
-     * discussione al tavolo diventerebbe impossibile.
+     * Le due metà di uno scambio, sempre nello stesso ordine (offre / in cambio),
+     * anche per chi riceve: invertirlo farebbe leggere la stessa proposta in due
+     * modi e renderebbe impossibile discuterne al tavolo.
      */
     $lati = [
         ['titolo' => 'Offre', 'oggetti' => $trade->givenItems(), 'oro' => $trade->give_gp],

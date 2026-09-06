@@ -1,15 +1,12 @@
 @props(['character' => null])
 
 {{--
-    Come si sale di livello (richiesta 9).
+    Come si sale di livello: la regola del gruppo non sta nel codice (l'app non
+    fa salire nessuno), quindi va scritta. Di norma una sessione = un livello,
+    ma è una richiesta che approva il DM.
 
-    La regola del gruppo non sta nel codice — l'app non fa salire nessuno da
-    sola — quindi va **scritta**, o resta un sapere orale che chi arriva dopo
-    non trova da nessuna parte. Di norma una sessione giocata dà diritto a un
-    livello, ma è **una richiesta**: la premi tu, la approva il DM.
-
-    Se le si passa un personaggio, la legenda si fa anche contatore: quante
-    sessioni ha giocato da quando è salito l'ultima volta, e se può già chiedere.
+    Con un personaggio, la legenda conta anche le sessioni giocate dall'ultimo
+    passaggio.
 --}}
 <x-note tone="neutral" {{ $attributes }}>
     <p class="font-semibold text-fg">Come si sale di livello</p>
