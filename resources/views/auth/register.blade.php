@@ -1,6 +1,10 @@
 @extends('layouts.guest')
 @section('title', 'Registrazione')
 
+@section('top')
+    <x-back dove="sopra" :href="route('home')">Torna indietro</x-back>
+@endsection
+
 @section('content')
     <form method="POST" action="{{ route('register') }}" class="flex flex-col gap-4">
         @csrf

@@ -6,6 +6,8 @@
 {{-- Le pagine d'accesso hanno lo sfondo sfumato della vecchia applicazione. --}}
 <body class="min-h-screen antialiased bg-page">
     <div class="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-12">
+        @yield('top')
+
         <div class="mb-8 rounded-2xl bg-surface border border-line p-6 text-center">
             <h1 class="text-3xl text-fg drop-shadow">{{ config('app.name') }}</h1>
             <p class="mt-1 text-sm text-muted">Qui il caos vince sempre</p>
