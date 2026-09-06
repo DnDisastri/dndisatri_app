@@ -39,12 +39,12 @@ describe('danni', function () {
             ->and($character->fresh()->hp_current)->toBe(27);
     });
 
-    it('possono portare sotto zero', function () {
+    it('si fermano a zero, senza andare in negativo', function () {
         $character = Character::factory()->create(['hp_max' => 30, 'hp_current' => 4]);
 
         app(AdjustHitPoints::class)->damage($character, 10);
 
-        expect($character->fresh()->hp_current)->toBe(-6);
+        expect($character->fresh()->hp_current)->toBe(0);
     });
 });
 
@@ -57,12 +57,12 @@ describe('cure', function () {
         expect($character->fresh()->hp_current)->toBe(30);
     });
 
-    it('da sotto zero sommano, senza riportare al valore curato', function () {
-        $character = Character::factory()->create(['hp_max' => 30, 'hp_current' => -5]);
+    it('curano da zero, risalendo', function () {
+        $character = Character::factory()->create(['hp_max' => 30, 'hp_current' => 0]);
 
         app(AdjustHitPoints::class)->heal($character, 3);
 
-        expect($character->fresh()->hp_current)->toBe(-2);
+        expect($character->fresh()->hp_current)->toBe(3);
     });
 
     it('non toccano i temporanei', function () {
