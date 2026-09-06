@@ -11,52 +11,19 @@ use Illuminate\View\View;
 
 class HomeController extends Controller
 {
-    /**
-     * La Home (P4): cosa succede nel gruppo.
-     *
-     * **Il personaggio non sta qui.** Ha la sua sezione nella barra in basso:
-     * questa pagina racconta la gilda, il personaggio è affare di chi lo
-     * gioca. È il motivo per cui la vecchia bacheca è stata svuotata.
-     *
-     * Sei blocchi, nell'ordine in cui uno se li chiede: cosa c'è di nuovo,
-     * cosa si festeggia, **a quali storie si può partecipare**, quando si
-     * gioca, cosa si può fare, cosa è successo.
-     */
+    /** La Home: novità, campagne, tavoli, quest e news del gruppo. */
     public function index(): View
     {
-        /*
-         * Chi non ha fatto l'accesso vede la **presentazione** (P0), non la
-         * Home. È l'unico indirizzo dell'applicazione che serve due pagine
-         * diverse, e la scelta sta qui e non nelle rotte: due rotte sullo
-         * stesso `/`, una per gli ospiti e una per gli altri, non si possono
-         * dichiarare — Laravel prende la prima che combacia e le middleware
-         * non entrano nella scelta.
-         *
-         * La Home è di tutti, DM compresi: chi conduce ci atterra come gli
-         * altri, e alla Regia arriva dallo scudo nella barra. Nessuno viene
-         * dirottato all'ingresso — sarebbe una porta che si chiude in faccia a
-         * chi è anche un giocatore.
-         */
+        // Gli ospiti vedono la presentazione: due pagine sullo stesso `/`, e la
+        // scelta sta qui perché due rotte su `/` non si possono dichiarare
+        // (Laravel prende la prima che combacia, le middleware non contano).
         if (! auth()->check()) {
             return view('prelogin', ['illustrazioni' => $this->illustrazioni()]);
         }
 
         $events = Event::published()->upcoming()->limit(4)->get();
 
-        /*
-         * Solo le campagne **aperte**: la Home racconta cosa sta succedendo, e
-         * una storia finita non è una porta in cui entrare. Le concluse
-         * restano nell'elenco (P16) e nel Libro Mastro, che è il posto della
-         * memoria.
-         *
-         * Le più recenti per season: chi apre la Home cerca il tavolo di
-         * adesso, non quello di due stagioni fa che non si è mai chiuso.
-         *
-         * **Sei al massimo**, che in griglia a due colonne sono tre righe
-         * piene. Oltre, la Home smetterebbe di essere un assaggio e
-         * diventerebbe l'elenco delle campagne, che è un'altra pagina (P16) —
-         * e il pulsante qui sotto ci porta.
-         */
+        // Solo le aperte, le più recenti per season, al massimo sei (anteprima).
         $campaigns = Campaign::query()
             ->active()
             ->orderByDesc('season')
@@ -64,8 +31,7 @@ class HomeController extends Controller
             ->limit(6)
             ->get();
 
-        // Al plurale: in una stessa sera possono girare due tavoli diversi, e
-        // mostrarne uno solo darebbe l'idea sbagliata di cosa succede.
+        // Al plurale: in una sera possono esserci più tavoli.
         $sessions = GameSession::query()
             ->upcoming()
             ->with('campaign')
@@ -78,9 +44,7 @@ class HomeController extends Controller
             ->with('campaign')
             ->latest('id')
             ->get()
-            // I posti liberi si contano in PHP e non in SQL: `freeSlots()` è
-            // già la regola, e riscriverla in una query la farebbe esistere
-            // in due posti che possono divergere.
+            // Posti liberi in PHP: `freeSlots()` è già la regola, non si duplica in SQL.
             ->filter(fn (Quest $quest) => ! $quest->isFull())
             ->take(4);
 
@@ -92,21 +56,15 @@ class HomeController extends Controller
             'sessions' => $sessions,
             'quests' => $quests,
             'posts' => $posts,
-
-            // La riga sotto il benvenuto: dice cosa c'è di nuovo, e se non c'è
-            // niente lo dice lo stesso invece di sparire.
             'novita' => $this->novita($events->count(), $sessions->count(), $quests->count()),
+
+            // Banner del tutorial solo a chi non ha ancora un eroe.
+            'senzaEroe' => auth()->user()->characters()->doesntExist(),
         ]);
     }
 
     /**
-     * Le illustrazioni della presentazione.
-     *
-     * Si leggono dalla cartella invece di essere elencate nel codice: cambiare
-     * le figure di benvenuto è una cosa da fare copiando dei file, non
-     * modificando una vista. Aggiungerne una quarta vuol dire metterla lì.
-     *
-     * L'ordine è quello del nome, quindi si decide chiamandole `1-…`, `2-…`.
+     * Illustrazioni della presentazione, lette dalla cartella (ordine per nome).
      *
      * @return list<string>
      */
@@ -133,13 +91,7 @@ class HomeController extends Controller
         return $file;
     }
 
-    /**
-     * «Due eventi in arrivo e tre incarichi aperti.»
-     *
-     * Un elenco di frasi unite bene vale più di tre contatori in fila: si
-     * legge in un colpo, che è tutto quello che deve fare una riga sotto il
-     * benvenuto.
-     */
+    /** Una frase tipo «Due eventi in arrivo e tre incarichi aperti». */
     private function novita(int $eventi, int $tavoli, int $incarichi): string
     {
         $pezzi = [];

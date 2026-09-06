@@ -184,3 +184,30 @@ it('sulla Home le campagne si fermano a sei', function () {
 
     expect(substr_count($html, 'href="'.url('/campagne').'/'))->toBe(6);
 });
+
+describe('l\'invito al tutorial', function () {
+    it('esce a chi non ha ancora un eroe, e porta al tutorial', function () {
+        $this->actingAs($this->giocatore)
+            ->get('/')
+            ->assertOk()
+            ->assertSee('Non hai ancora un eroe')
+            ->assertSee(route('faq.index').'#tutorial', false);
+    });
+
+    it('sparisce a chi un eroe ce l\'ha già', function () {
+        \App\Models\Character::factory()->ownedBy($this->giocatore)->create();
+
+        $this->actingAs($this->giocatore)
+            ->get('/')
+            ->assertOk()
+            ->assertDontSee('Non hai ancora un eroe');
+    });
+
+    it('in fondo alla Home rimanda sempre alle FAQs', function () {
+        $this->actingAs($this->giocatore)
+            ->get('/')
+            ->assertOk()
+            ->assertSee(route('faq.index'))
+            ->assertSee('Vai alle FAQs');
+    });
+});
