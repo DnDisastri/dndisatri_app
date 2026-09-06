@@ -7,6 +7,20 @@
     <div>
         <h2 class="text-2xl text-fg">Bentornato, {{ auth()->user()->name }}</h2>
     </div>
+
+    {{-- Invito al tutorial per chi non ha un eroe; `#tutorial` lo apre da solo. --}}
+    @if ($senzaEroe)
+        <x-note>
+            <span class="flex items-center gap-2">
+                <x-icona :is="\App\Enums\Icon::Faq" class="h-5 w-5 shrink-0" />
+                <span>
+                    Non hai ancora un eroe.
+                    <a href="{{ route('faq.index').'#tutorial' }}" class="font-semibold underline">Guarda il tutorial</a>
+                    per iniziare.
+                </span>
+            </span>
+        </x-note>
+    @endif
 {{-- Il carosello usa CSS scroll-snap e resta navigabile anche senza JavaScript. --}}
     @if ($events->isNotEmpty())
         <section>
@@ -17,7 +31,10 @@
                 <p class="mt-1 text-sm text-muted">Ecco i prossimi eventi in programma</p>
             </div>
 
-            <div class=" flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2
+            {{-- `-mx-4` sfonda il padding della pagina e `scroll-px-4` riallinea
+                 lo snap: la prima card resta a filo del contenuto, le altre
+                 escono dai bordi dello schermo invece di essere tagliate corte. --}}
+            <div class="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 scroll-px-4
                         [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 @foreach ($events as $event)
                     <x-poster
@@ -146,5 +163,12 @@
             </x-button>
         </section>
     @endif
+
+    <section>
+        <x-button variant="quiet" size="lg" full :href="route('faq.index')">
+            <x-icona :is="\App\Enums\Icon::Faq" class="h-5 w-5" />
+            Come funziona? Vai alle FAQs
+        </x-button>
+    </section>
 </div>
 @endsection
