@@ -57,6 +57,7 @@
                     ['Il mio profilo', route('profile.edit'), \App\Enums\Icon::Profile],
                     ['FAQs', route('faq.index'), \App\Enums\Icon::Faq],
                     ['Chi siamo', route('about'), \App\Enums\Icon::General],
+                    ['Segnala un problema', route('bug-reports.create'), \App\Enums\Icon::BugReports],
                 ] as [$voce, $indirizzo, $icona])
                     <a href="{{ $indirizzo }}" class="flex items-center gap-3 px-4 py-2.5 text-sm text-fg hover:bg-page">
                         <x-icona :is="$icona" class="h-5 w-5 shrink-0 text-muted" />

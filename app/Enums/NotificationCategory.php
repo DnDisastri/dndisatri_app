@@ -21,6 +21,7 @@ enum NotificationCategory: string
     case Requests = 'richieste';
     case Market = 'mercato';
     case Moderation = 'richiami';
+    case Reports = 'segnalazioni';
 
     public function label(): string
     {
@@ -29,6 +30,7 @@ enum NotificationCategory: string
             self::Requests => 'Le mie richieste',
             self::Market => 'Mercato',
             self::Moderation => 'Richiami',
+            self::Reports => 'Segnalazioni',
         };
     }
 
@@ -39,6 +41,7 @@ enum NotificationCategory: string
             self::Requests => 'Proposte approvate o rifiutate, e quello che tocca a te approvare.',
             self::Market => 'Scambi proposti, annunci venduti, transazioni annullate.',
             self::Moderation => 'Richiami ricevuti e revocati.',
+            self::Reports => 'Che fine hanno fatto i problemi che hai segnalato.',
         };
     }
 }
