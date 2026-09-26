@@ -1,0 +1,61 @@
+{
+  "_bowlby-one-400-normal-BlBlciR_.woff2": {
+    "file": "assets/bowlby-one-400-normal-BlBlciR_.woff2",
+    "src": "_bowlby-one-400-normal-BlBlciR_.woff2"
+  },
+  "_bowlby-one-400-normal-DAczUCp_.woff": {
+    "file": "assets/bowlby-one-400-normal-DAczUCp_.woff",
+    "src": "_bowlby-one-400-normal-DAczUCp_.woff"
+  },
+  "_fonts-7soJLtYJ.css": {
+    "file": "assets/fonts-7soJLtYJ.css",
+    "src": "_fonts-7soJLtYJ.css"
+  },
+  "_quicksand-400-normal-BSDtH9U0.woff2": {
+    "file": "assets/quicksand-400-normal-BSDtH9U0.woff2",
+    "src": "_quicksand-400-normal-BSDtH9U0.woff2"
+  },
+  "_quicksand-400-normal-BqXBKzPR.woff": {
+    "file": "assets/quicksand-400-normal-BqXBKzPR.woff",
+    "src": "_quicksand-400-normal-BqXBKzPR.woff"
+  },
+  "_quicksand-500-normal-7J1fbcAD.woff": {
+    "file": "assets/quicksand-500-normal-7J1fbcAD.woff",
+    "src": "_quicksand-500-normal-7J1fbcAD.woff"
+  },
+  "_quicksand-500-normal-_DbwbYKP.woff2": {
+    "file": "assets/quicksand-500-normal-_DbwbYKP.woff2",
+    "src": "_quicksand-500-normal-_DbwbYKP.woff2"
+  },
+  "_quicksand-600-normal-CkxN0sDw.woff": {
+    "file": "assets/quicksand-600-normal-CkxN0sDw.woff",
+    "src": "_quicksand-600-normal-CkxN0sDw.woff"
+  },
+  "_quicksand-600-normal-DTBPeRoM.woff2": {
+    "file": "assets/quicksand-600-normal-DTBPeRoM.woff2",
+    "src": "_quicksand-600-normal-DTBPeRoM.woff2"
+  },
+  "_quicksand-700-normal-Dpk7G9Y6.woff2": {
+    "file": "assets/quicksand-700-normal-Dpk7G9Y6.woff2",
+    "src": "_quicksand-700-normal-Dpk7G9Y6.woff2"
+  },
+  "_quicksand-700-normal-HjJN-aaT.woff": {
+    "file": "assets/quicksand-700-normal-HjJN-aaT.woff",
+    "src": "_quicksand-700-normal-HjJN-aaT.woff"
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-DD-uSXTy.css",
+    "name": "app",
+    "names": [
+      "app.css"
+    ],
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-CASDaGbr.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  }
+}

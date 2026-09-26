@@ -1,5 +1,9 @@
 * text=auto eol=lf
 
+# La build di Vite è versionata perché il deploy la porti sul server: i nomi
+# con hash cambiano a ogni build, senza questo il diff è illeggibile.
+public/build/** binary
+
 *.blade.php diff=html
 *.css diff=css
 *.html diff=html

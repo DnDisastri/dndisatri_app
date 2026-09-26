@@ -13,7 +13,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Va qui e non in bootstrap/app.php: lì il .env non è ancora caricato.
+        if ($publicPath = config('app.public_path')) {
+            $this->app->usePublicPath($publicPath);
+        }
     }
 
     /**
