@@ -176,6 +176,48 @@
                                         </div>
                                     </x-inset>
                                 @endif
+
+                                {{-- Sottorazza, discendenza o etnia: cambia il
+                                     nome ma è sempre la stessa scelta, e i suoi
+                                     bonus si sommano a quelli della razza. --}}
+                                @php $sottorazze = $this->subspeciesOptions(); @endphp
+                                @if ($sottorazze->isNotEmpty())
+                                    <x-inset class="mt-3">
+                                        <p class="mb-2 text-sm text-fg">
+                                            Scegli la tua <strong>{{ strtolower($this->subspeciesLabel()) }}</strong>.
+                                        </p>
+
+                                        <div class="space-y-2">
+                                            @foreach ($sottorazze as $sottorazza)
+                                                @php $presa = $subspecies === $sottorazza->name; @endphp
+                                                <button type="button"
+                                                        wire:click="selectSubspecies('{{ $sottorazza->name }}')"
+                                                        @class([
+                                                            'w-full rounded-card border px-3 py-2 text-left transition',
+                                                            'border-active bg-surface' => $presa,
+                                                            'border-line hover:border-active' => ! $presa,
+                                                        ])>
+                                                    <span class="flex items-center gap-2">
+                                                        <span class="font-semibold text-fg">{{ $sottorazza->name }}</span>
+                                                        @foreach ($sottorazza->asi ?? [] as $abil => $punti)
+                                                            <x-badge tone="accent">+{{ $punti }} {{ Ability::from($abil)->fullName() }}</x-badge>
+                                                        @endforeach
+                                                        @if ($sottorazza->speed)
+                                                            <x-badge>Velocità {{ rtrim(rtrim(number_format($sottorazza->speed, 1, ',', ''), '0'), ',') }} m</x-badge>
+                                                        @endif
+                                                    </span>
+
+                                                    @if ($sottorazza->description)
+                                                        <span class="mt-1 block text-sm text-fg">{{ $sottorazza->description }}</span>
+                                                    @endif
+                                                    @if ($presa && $sottorazza->traits)
+                                                        <span class="mt-1 block text-sm text-muted">{{ $sottorazza->traits }}</span>
+                                                    @endif
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                    </x-inset>
+                                @endif
                             </div>
                         @endif
                     </div>
