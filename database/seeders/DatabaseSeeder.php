@@ -14,6 +14,9 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             RoleSeeder::class,
+            // Il catalogo delle regole, da cui la creazione del personaggio
+            // legge: senza, nessuno può scegliere una sottoclasse.
+            SubclassSeeder::class,
             // Contenuti di partenza modificabili dal pannello, anche in produzione.
             MarketSeeder::class,
             FaqSeeder::class,

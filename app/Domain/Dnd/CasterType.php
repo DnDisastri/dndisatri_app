@@ -27,8 +27,16 @@ enum CasterType: string
 
         $type = self::from($caster);
 
-        if ($type === self::None && in_array($subclass, config('dnd.classes.third_caster_subclasses', []), true)) {
-            return self::Third;
+        // Cavaliere Mistico e Furfante Arcano lanciano pur stando in una
+        // classe che non lancia, e una homebrew può fare lo stesso: il
+        // contrassegno sta sulla sottoclasse, non in un elenco a parte.
+        if ($type === self::None && $subclass !== null) {
+            $lancia = ClassRules::subclassesOf($class)
+                ->firstWhere('name', $subclass)?->third_caster ?? false;
+
+            if ($lancia) {
+                return self::Third;
+            }
         }
 
         return $type;

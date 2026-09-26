@@ -6,6 +6,7 @@ use App\Actions\Characters\ApprovePendingChange;
 use App\Actions\Characters\RequestLevelUp;
 use App\Models\Character;
 use App\Models\User;
+use Database\Seeders\SubclassSeeder;
 
 // Il multiclasse nasce solo all'approvazione della richiesta; fino ad allora la scheda resta invariata.
 function guerriero(array $overrides = []): Character
@@ -191,6 +192,9 @@ describe('le competenze entrando in una classe nuova', function () {
 });
 // Il livello di accesso alla sottoclasse si calcola sulla singola classe, non sul livello totale del personaggio.
 describe('la sottoclasse', function () {
+    // Il catalogo è in tabella: senza seed non c'è niente da scegliere.
+    beforeEach(fn () => $this->seed(SubclassSeeder::class));
+
     it('si sceglie al livello di quella classe, non del personaggio', function () {
         $character = guerriero();
 

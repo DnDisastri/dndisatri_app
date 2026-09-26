@@ -97,6 +97,18 @@ class PendingChange extends Model
     }
 
     /**
+     * Chiavi del diff che non sono colonne della scheda, e che quindi non
+     * hanno un «prima» da confrontare.
+     *
+     * La foto è un file e si guarda, non si legge in una colonna. Le altre
+     * tre sono istruzioni per l'approvazione: una classe da far salire, un
+     * talento e degli incantesimi, che diventano righe a parte. Il riepilogo
+     * le racconta già tutte, e `class_up` porta dentro un array annidato che
+     * qui non si saprebbe scrivere.
+     */
+    private const NON_COLONNE = ['photo_path', 'class_up', 'feat', 'spells'];
+
+    /**
      * Il confronto campo per campo fra la scheda adesso e come diventerebbe. Il
      * «prima» si legge dal personaggio ora: in archivio c'è solo il diff.
      *
@@ -107,8 +119,7 @@ class PendingChange extends Model
         $character = $this->character;
 
         return collect($this->diff ?? [])
-            // La foto non è testo: si guarda, non si legge in una colonna.
-            ->reject(fn ($after, $field) => $field === 'photo_path')
+            ->reject(fn ($after, $field) => in_array($field, self::NON_COLONNE, true))
             ->map(fn ($after, $field) => [
                 'label' => self::fieldLabel($field),
                 'before' => self::readable($character?->getAttribute($field)),
@@ -154,17 +165,36 @@ class PendingChange extends Model
         };
     }
 
+    /**
+     * Un valore del diff scritto per essere letto.
+     *
+     * Ricorsiva di proposito: un array annidato qui dentro deve diventare
+     * testo, non far saltare la pagina di chi sta approvando.
+     */
     private static function readable(mixed $value): string
     {
         return match (true) {
             $value === null, $value === '' => 'Vuoto',
             is_bool($value) => $value ? 'sì' : 'no',
-            is_array($value) => collect($value)
-                ->filter(fn ($v) => $v !== false && $v !== 'none' && $v !== null)
-                ->map(fn ($v, $k) => is_bool($v) ? $k : "{$k}: {$v}")
-                ->join(', ') ?: 'Vuoto',
+            is_array($value) => self::readableArray($value),
             default => (string) $value,
         };
+    }
+
+    /** @param  array<array-key,mixed>  $value */
+    private static function readableArray(array $value): string
+    {
+        // Una lista è un elenco di cose: gli indici 0, 1, 2 non vanno letti.
+        $lista = array_is_list($value);
+
+        return collect($value)
+            ->filter(fn ($v) => $v !== false && $v !== 'none' && $v !== null)
+            ->map(fn ($v, $k) => match (true) {
+                $lista => self::readable($v),
+                is_bool($v) => (string) $k,
+                default => "{$k}: ".self::readable($v),
+            })
+            ->join(', ') ?: 'Vuoto';
     }
 
     public function scopePending(Builder $query): void
