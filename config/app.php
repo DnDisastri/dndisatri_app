@@ -56,6 +56,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Document root
+    |--------------------------------------------------------------------------
+    |
+    | Di norma è la cartella "public" dentro il progetto. In produzione il
+    | dominio principale ha la document root fissa su public_html, fuori dal
+    | progetto: lì va dichiarata qui, o storage:link e il manifest di Vite
+    | finiscono nel posto sbagliato.
+    |
+    */
+
+    'public_path' => env('APP_PUBLIC_PATH'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

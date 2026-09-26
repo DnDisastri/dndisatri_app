@@ -70,7 +70,6 @@ node_modules/
 
 # Laravel / PHP
 /vendor/
-/public/build/
 /public/build.zip
 /public/hot
 /public/storage
@@ -93,6 +92,10 @@ auth.json
 # Local environment files
 .env.backup
 .env.production
+
+# Destinazioni di deploy: le scrive ogni clone sul server, non il repository.
+.deploy-path
+.deploy-public
 
 # IDE / editors
 /.idea/
