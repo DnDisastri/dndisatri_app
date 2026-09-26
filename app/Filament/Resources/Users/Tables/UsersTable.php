@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Users\Tables;
 
+use App\Actions\Users\DemoteFromDm;
+use App\Actions\Users\PromoteToDm;
 use App\Enums\Icon;
 use App\Models\User;
 use Filament\Actions\Action;
@@ -9,9 +11,11 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use RuntimeException;
 
 class UsersTable
 {
@@ -65,6 +69,51 @@ class UsersTable
                     ->modalHeading('Approvare questo account?')
                     ->modalDescription('Da questo momento potrà accedere all\'applicazione.')
                     ->action(fn (User $record) => $record->forceFill(['approved_at' => now()])->save()),
+
+                // La nomina che parte dall'admin: l'altra strada, la domanda
+                // del giocatore, resta in "Richieste DM".
+                Action::make('nominaDm')
+                    ->label('Nomina DM')
+                    ->icon(Icon::DmRequests)
+                    ->color('primary')
+                    ->visible(fn (User $record) => auth()->user()->isAdmin()
+                        && ! $record->isDm()
+                        && ! $record->isAdmin())
+                    ->requiresConfirmation()
+                    ->modalHeading('Nominare dungeon master?')
+                    ->modalDescription(fn (User $record) => "{$record->name} potrà aprire campagne, programmare tavoli e condurre incarichi. Riceverà un avviso.")
+                    ->action(function (User $record) {
+                        app(PromoteToDm::class)->handle($record, auth()->user());
+
+                        Notification::make()->success()
+                            ->title("{$record->name} è un dungeon master")
+                            ->send();
+                    }),
+
+                Action::make('revocaDm')
+                    ->label('Torna giocatore')
+                    ->icon(Icon::Reject)
+                    ->color('danger')
+                    ->visible(fn (User $record) => auth()->user()->isAdmin()
+                        && $record->isDm()
+                        && ! $record->isAdmin())
+                    ->requiresConfirmation()
+                    ->modalHeading('Togliere il ruolo di dungeon master?')
+                    ->modalDescription(fn (User $record) => "{$record->name} torna fra i giocatori e potrà avere un personaggio. Non si può fare finché conduce una campagna aperta.")
+                    ->action(function (User $record) {
+                        try {
+                            app(DemoteFromDm::class)->handle($record, auth()->user());
+
+                            Notification::make()->success()
+                                ->title("{$record->name} è tornato giocatore")
+                                ->send();
+                        } catch (RuntimeException $e) {
+                            Notification::make()->danger()
+                                ->title('Non si può togliere ora')
+                                ->body($e->getMessage())
+                                ->send();
+                        }
+                    }),
 
                 ViewAction::make(),
                 EditAction::make(),
