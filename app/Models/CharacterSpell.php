@@ -52,20 +52,9 @@ class CharacterSpell extends Model
     }
 
     /**
-     * Come si tira questo incantesimo: `'attacco'`, `'cd'`, o niente.
-     *
-     * Si deduce dalla descrizione, perché non abbiamo una colonna che lo dica e
-     * aggiungerla vorrebbe dire ricompilare a mano trecento incantesimi. Le
-     * descrizioni della libreria sono scritte tutte uguali — «Tiro per colpire
-     * a distanza», «TS su Destrezza» — e tanto basta.
-     *
-     * Serve alla sezione Turno, dove ogni riga deve dire il **suo** numero: là
-     * non si legge «il tuo attacco con incantesimo è +7» in cima e poi ci si
-     * arrangia, si legge «Dardo di Fuoco, +7 per colpire».
-     *
-     * È una deduzione, quindi sbaglia in silenzio verso il basso: se non
-     * riconosce niente non scrive niente, invece di scrivere il numero
-     * sbagliato.
+     * Come si tira: `'attacco'`, `'cd'`, o niente. Dedotto dalla descrizione
+     * (niente colonna apposta), che nella libreria è scritta uguale («Tiro per
+     * colpire», «TS su…»). Se non riconosce non scrive niente, mai il numero sbagliato.
      */
     public function rollKind(): ?string
     {
@@ -81,20 +70,14 @@ class CharacterSpell extends Model
 
     /*
      * Le colonne del cheat sheet (Turno), dedotte dalla descrizione come
-     * rollKind. Le sintesi della libreria hanno una grammatica fissa —
-     * «<Scuola>, liv. N. <Tempo>, <gittata>. <effetto; danni>» — e tanto basta a
-     * pescarne i pezzi. È una deduzione: quando non riconosce, non scrive
-     * (sbaglia in silenzio verso il basso), e il dettaglio per esteso resta in
-     * «Magia». Per un incantesimo scritto a mano dal giocatore, fuori grammatica,
-     * le colonne restano un trattino — mai un dato sbagliato.
+     * rollKind: la libreria ha una grammatica fissa. Quando non riconosce non
+     * scrive (mai un dato sbagliato), e il dettaglio resta in «Magia».
      */
 
     /**
-     * Il «cappello» della descrizione: scuola, livello, tempo e gittata, cioè
-     * tutto quello che viene **prima** dell'effetto. Si taglia al primo segno
-     * d'effetto (il tiro, i danni, il «;»), così un «spinta di 3 m» o un «entro
-     * 9 m» dentro l'effetto non si spaccia per gittata — e il «liv. 1.» col suo
-     * punto non serve più a delimitare niente.
+     * Il «cappello» della descrizione (scuola, livello, tempo, gittata): tutto
+     * quello che viene prima dell'effetto. Si taglia al primo segno d'effetto
+     * (tiro, danni, «;»), così un «entro 9 m» dentro l'effetto non passa per gittata.
      */
     private function testata(): string
     {

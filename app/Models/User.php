@@ -41,12 +41,7 @@ class User extends Authenticatable implements FilamentUser
         ];
     }
 
-    /**
-     * Approvato da un amministratore, e quindi ammesso.
-     *
-     * Non è mass-assignable di proposito: si accende solo dal gesto esplicito di
-     * approvazione (nel pannello o dalla riga di comando), mai da un form.
-     */
+    /** Approvato da un admin. Non mass-assignable: si accende solo dal gesto esplicito, mai da un form. */
     public function isApproved(): bool
     {
         return $this->approved_at !== null;
@@ -70,13 +65,7 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(Warning::class);
     }
 
-    /**
-     * È sotto controllo adesso?
-     *
-     * Finché lo è, quattro azioni di mercato passano dall'approvazione di un DM
-     * o di un admin: proporre uno scambio, accettarne uno, mettere in vendita,
-     * comprare da un annuncio. Il negozio della gilda resta libero.
-     */
+    /** Sotto controllo: quattro azioni di mercato (scambi, annunci, acquisti dagli annunci) passano dall'approvazione. Il negozio resta libero. */
     public function isUnderWarning(): bool
     {
         return $this->warnings()->active()->exists();
@@ -88,8 +77,7 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
-     * Lo storico che DM e admin devono poter vedere: quante volte è stato
-     * richiamato, e quanti giorni in tutto è stato sotto controllo.
+     * Lo storico per DM e admin: quante volte richiamato e quanti giorni in tutto.
      *
      * @return array{count: int, days: int}
      */
@@ -108,11 +96,7 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasRole(self::ROLE_ADMIN);
     }
 
-    /**
-     * Gli admin sono account di sola amministrazione: non hanno personaggi e
-     * non compaiono davanti ai giocatori — né nella Gilda, né come autori di
-     * un'approvazione. Chi ha deciso cosa si legge solo dal pannello.
-     */
+    /** Gli admin sono di sola amministrazione: non hanno personaggi e non compaiono davanti ai giocatori. */
     public function scopeVisibleToPlayers(Builder $query): void
     {
         $query->whereDoesntHave(
@@ -126,10 +110,7 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasRole(self::ROLE_DM);
     }
 
-    /**
-     * Il pannello di gestione è uno solo: quello che cambia è cosa ci si vede
-     * dentro, deciso Resource per Resource. I giocatori non entrano.
-     */
+    /** Al pannello entrano DM e admin; cosa ci vedono è deciso Resource per Resource. */
     public function canAccessPanel(Panel $panel): bool
     {
         return $this->isAdmin() || $this->isDm();

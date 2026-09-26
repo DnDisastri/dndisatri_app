@@ -11,19 +11,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Collection;
 
 /**
- * Una richiesta di scambio: si chiede a parole una cosa che non si vede.
+ * Una richiesta di scambio: si chiede a parole una cosa che non si vede (lo
+ * zaino di un altro non è pubblico). Quello che si chiede è un nome scritto a
+ * mano, che può essere sbagliato.
  *
- * Serve perché lo zaino di un altro non è pubblico e in vetrina finisce solo
- * quello che il proprietario ci mette. Per il resto si chiede — e quello che si
- * chiede è **un nome scritto a mano**, che può essere sbagliato: è una diceria,
- * non un riferimento a una riga.
- *
- * Non muove niente. Quando chi la riceve dice di sì nasce uno `Trade`, e da lì
- * in poi valgono le regole di sempre, vigilanza compresa.
- *
- * Gli stati sono quelli degli scambi (`TradeStatus`): sono le stesse quattro
- * risposte, e inventarne quattro uguali con un altro nome vorrebbe dire
- * tenerle allineate a mano per sempre.
+ * Non muove niente: quando chi la riceve dice di sì nasce uno `Trade`. Gli stati
+ * sono quelli degli scambi (`TradeStatus`), per non tenerne due serie allineate.
  */
 #[Fillable(['from_character_id', 'to_character_id', 'wanted', 'offered', 'offered_gp', 'message'])]
 class TradeRequest extends Model
@@ -60,11 +53,8 @@ class TradeRequest extends Model
     }
 
     /**
-     * I nomi degli oggetti offerti.
-     *
-     * Sono nomi e non righe di inventario: fra la richiesta e la risposta chi ha
-     * offerto può averli venduti, e il controllo vero si fa quando lo scambio
-     * si esegue.
+     * I nomi degli oggetti offerti: nomi, non righe d'inventario (chi ha offerto
+     * può averli venduti; il controllo vero si fa quando lo scambio si esegue).
      *
      * @return Collection<int,string>
      */

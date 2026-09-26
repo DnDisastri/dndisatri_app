@@ -18,10 +18,9 @@ class Trade extends Model
     use HasFactory;
 
     /**
-     * Lo stato iniziale va dichiarato anche qui, non solo come valore
-     * predefinito della colonna: un modello appena creato non rilegge la riga,
-     * quindi `status` resterebbe null e `isOpen()` fallirebbe su un oggetto che
-     * il database considera già in attesa.
+     * Lo stato iniziale va dichiarato anche qui, non solo come default della
+     * colonna: un modello appena creato non rilegge la riga, quindi `status`
+     * resterebbe null e `isOpen()` fallirebbe.
      */
     protected $attributes = ['status' => TradeStatus::Pending->value];
 
@@ -76,18 +75,11 @@ class Trade extends Model
     }
 
     /**
-     * Perché questo scambio non si può eseguire **adesso**, se non si può (P28).
-     *
-     * Negli scambi niente esce dall'inventario al momento della proposta: la
-     * disponibilità si verifica all'accettazione, e per **entrambe** le parti.
-     * Fra la proposta e la risposta il mondo si muove — l'oggetto venduto,
-     * l'oro speso — e allora l'accettazione fallisce. Questo lo dice prima del
-     * clic, invece che dopo con un errore rosso.
-     *
-     * È la stessa verifica di `AcceptTrade::assertCanDeliver`, in sola lettura.
-     * Le due non devono discordare: se la card dice «si può» e l'accettazione
-     * poi fallisce, o viceversa, è peggio del silenzio. Se un giorno le regole
-     * dello scambio cambiano, vanno cambiate in tutte e due.
+     * Perché questo scambio non si può eseguire adesso. Niente esce
+     * dall'inventario alla proposta: la disponibilità si verifica
+     * all'accettazione, per entrambe le parti (fra proposta e risposta il mondo
+     * si muove). È la stessa verifica di `AcceptTrade::assertCanDeliver` in sola
+     * lettura: le due vanno tenute allineate.
      *
      * @return list<string>
      */

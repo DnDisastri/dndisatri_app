@@ -22,10 +22,8 @@ final class AdjustHitPoints
     /**
      * Danni subiti.
      *
-     * I punti ferita temporanei fanno da scudo e si consumano per primi, com'è
-     * il loro scopo. Quello che resta va sui punti ferita veri, che **possono
-     * scendere sotto zero**: è una scelta del gruppo, e il numero negativo
-     * racconta quanto male è andata.
+     * I PF temporanei fanno da scudo e si consumano per primi. Il resto va sui
+     * PF veri, che si fermano a zero: non si scende in negativo.
      */
     public function damage(Character $character, int $amount): Character
     {
@@ -44,11 +42,6 @@ final class AdjustHitPoints
     /**
      * Cure ricevute. Non si supera il massimo **efficace**, cioè quello che
      * tiene già conto degli oggetti magici indossati.
-     *
-     * L'aritmetica è quella nuda: chi è a -5 e riceve 3 arriva a -2. Nel
-     * regolamento una cura da sotto zero riporterebbe esattamente al valore
-     * curato, ma qui il gruppo tiene i negativi apposta per vedere quanto in
-     * profondità si è andati, e sommare è l'unica cosa che non perde quel dato.
      */
     public function heal(Character $character, int $amount): Character
     {
@@ -83,7 +76,8 @@ final class AdjustHitPoints
         // Non sono mass-assignable per il resto del sistema: qui si scrivono
         // di proposito, ed è l'unico posto che lo fa senza approvazione.
         $dati = [
-            'hp_current' => $current,
+            // I PF non scendono sotto zero: 10 PF e 12 danni fanno 0, non -2.
+            'hp_current' => max(0, $current),
             'hp_temp' => max(0, $temp),
         ];
 

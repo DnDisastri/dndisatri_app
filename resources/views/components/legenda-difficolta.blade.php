@@ -1,13 +1,7 @@
 {{--
-    Cosa vuol dire la difficoltà di una quest (richiesta 10).
-
-    Le quattro parole — Facile, Media, Difficile, Epica — non dicono niente da
-    sole a chi arriva ora: «media» rispetto a cosa? Qui si àncora ognuna ai
-    gradi d'avventuriero (richiesta 8), così «Difficile» smette di essere un
-    aggettivo e diventa «da Professionista a Maestro, liv. 5–12».
-
-    Le fasce si accavallano di un gradino apposta: una quest è per un tratto
-    della scalata, non per un livello preciso.
+    Cosa vuol dire la difficoltà di una quest: àncora ognuna ai gradi
+    d'avventuriero, così «Difficile» diventa un intervallo di livelli, non un
+    aggettivo. Le fasce si accavallano di un gradino apposta.
 --}}
 <div {{ $attributes->merge(['class' => 'space-y-2']) }}>
     @foreach (\App\Enums\QuestDifficulty::cases() as $difficolta)

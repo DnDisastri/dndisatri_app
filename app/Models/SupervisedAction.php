@@ -65,11 +65,8 @@ class SupervisedAction extends Model
     }
 
     /**
-     * I personaggi coinvolti, da qualunque lato.
-     *
-     * Serve alla regola del conflitto d'interessi: un DM non dà il via libera a
-     * uno scambio in cui c'è dentro un suo personaggio, esattamente come non
-     * approva una richiesta del proprio.
+     * I personaggi coinvolti, da qualunque lato: serve al conflitto d'interessi
+     * (un DM non approva uno scambio con dentro un suo personaggio).
      *
      * @return list<int>
      */
@@ -87,16 +84,9 @@ class SupervisedAction extends Model
     }
 
     /**
-     * L'intenzione scritta in italiano, riga per riga.
-     *
-     * Il riassunto («Vende Spada lunga +1 per 40 mo») basta a decidere quali
-     * aprire, non a decidere: per quello bisogna vedere **cosa esce e cosa
-     * entra, e da quale personaggio**. Il `payload` è un array grezzo con degli
-     * id dentro, e mostrarlo così vorrebbe dire chiedere a chi vigila di fare
-     * l'interprete.
-     *
-     * Sta sul modello e non nella pagina perché è una lettura dei dati, non un
-     * fatto di grafica — e perché così si può provare senza aprire un browser.
+     * L'intenzione in italiano, riga per riga: il riassunto basta a decidere
+     * quali aprire, non a decidere (serve cosa esce/entra e da quale
+     * personaggio). Sta sul modello, non nella pagina, così si prova senza browser.
      *
      * @return list<array{voce: string, valore: string}>
      */

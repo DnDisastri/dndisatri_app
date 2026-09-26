@@ -43,11 +43,7 @@ class Character extends Model
 {
     use HasFactory, LogsActivity;
 
-    /**
-     * Ogni modifica alla scheda finisce nel registro attività, con chi l'ha
-     * fatta e cosa è cambiato. Vale sia per le approvazioni sia per gli
-     * interventi diretti dei DM.
-     */
+    /** Ogni modifica alla scheda va nel log attività (approvazioni e interventi diretti dei DM). */
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
@@ -74,23 +70,13 @@ class Character extends Model
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * La serata in cui è morto, quando è morto a un tavolo.
-     *
-     * Nulla per chi è caduto fra una sessione e l'altra: succede, e non c'è
-     * niente da collegare.
-     */
+    /** La serata in cui è morto, se a un tavolo (null se caduto fra sessioni). */
     public function diedInSession(): BelongsTo
     {
         return $this->belongsTo(GameSession::class, 'died_in_session_id');
     }
 
-    /**
-     * L'indirizzo della foto, o null se non ne ha una.
-     *
-     * Chi la mostra decide cosa fare del segnaposto: qui non si inventa un
-     * percorso finto, perché «non ha una foto» è un'informazione.
-     */
+    /** L'indirizzo della foto, o null: «non ha foto» è un'informazione, non si inventa un percorso. */
     public function photoUrl(): ?string
     {
         return $this->photo_path
@@ -136,14 +122,7 @@ class Character extends Model
         return $this->hasMany(LedgerEntry::class);
     }
 
-    /**
-     * Le serate a cui questo personaggio si è seduto.
-     *
-     * Passa da `character_id` sul pivot delle presenze e non da chi lo gioca:
-     * è la differenza fra «Marco c'era» e «Grimm c'era», e per la pagina di una
-     * campagna conta la seconda — un giocatore che perde un eroe a metà storia
-     * non fa risultare il successivo a serate che non ha visto.
-     */
+    /** Le serate a cui si è seduto: passa da `character_id` (conta «Grimm c'era», non «Marco»). */
     public function sessions(): BelongsToMany
     {
         return $this->belongsToMany(
@@ -156,14 +135,7 @@ class Character extends Model
 
     // === I dadi vita ===
 
-    /**
-     * Quanti dadi vita ha in tutto: uno per livello.
-     *
-     * Un multiclasse ne avrebbe di facce diverse — un Guerriero 3 / Mago 2 ha
-     * tre d10 e due d6 — ma la scheda tiene una faccia sola. È la stessa
-     * semplificazione delle due riserve di slot, ed è scritta fra le cose che
-     * mancano.
-     */
+    /** Dadi vita totali: uno per livello. Un multiclasse avrebbe facce diverse, la scheda ne tiene una (semplificazione). */
     public function hitDiceTotal(): int
     {
         return max(1, (int) $this->level);
@@ -177,12 +149,7 @@ class Character extends Model
 
     // === I preferiti dell'emporio ===
 
-    /**
-     * Gli articoli dell'emporio segnati da questo personaggio.
-     *
-     * Sono una scorciatoia per le cose che si ricomprano ogni volta — pozioni,
-     * frecce, razioni — e stanno sul personaggio perché è lui a consumarle.
-     */
+    /** Gli articoli dell'emporio segnati: scorciatoia per le cose che si ricomprano. */
     public function favoriteItems(): BelongsToMany
     {
         return $this->belongsToMany(MarketItem::class)
@@ -190,13 +157,7 @@ class Character extends Model
             ->orderBy('name');
     }
 
-    /**
-     * Mette o toglie la stella, e dice com'è finita.
-     *
-     * `toggle()` fa tutto in una query per parte e non ha bisogno di sapere
-     * prima cosa c'era: quello che ritorna sono le due liste, e basta guardare
-     * se l'id è finito fra gli attaccati.
-     */
+    /** Mette o toglie la stella; ritorna se l'id è finito fra gli attaccati. */
     public function toggleFavorite(MarketItem $item): bool
     {
         $esito = $this->favoriteItems()->toggle($item);
@@ -206,11 +167,7 @@ class Character extends Model
         return filled($esito['attached']);
     }
 
-    /**
-     * La relazione già caricata vince sulla query: nella griglia dell'emporio
-     * la domanda si ripete per ogni articolo, e senza questo sarebbero venti
-     * interrogazioni per disegnare venti stelle.
-     */
+    /** La relazione caricata vince sulla query: nella griglia eviterebbe una query per stella. */
     public function hasFavorite(MarketItem|int $item): bool
     {
         $id = $item instanceof MarketItem ? $item->getKey() : $item;
@@ -374,23 +331,16 @@ class Character extends Model
         return $this->died_at === null;
     }
 
-    /**
-     * A terra e ancora vivo: è quando contano i tiri salvezza contro morte.
-     *
-     * I punti ferita tengono i negativi apposta (vedi `AdjustHitPoints`), quindi
-     * «a terra» è zero **o sotto**, non l'uguaglianza secca.
-     */
+    /** A terra e ancora vivo (tiri salvezza contro morte): i PF sono a zero. */
     public function isDying(): bool
     {
         return $this->isAlive() && $this->hp_current <= 0;
     }
 
     /**
-     * Segna un tiro contro morte, con la logica del pallino: cliccare il terzo
-     * quando ce ne sono già tre lo toglie (torna a due). Si può solo da
-     * morente, e la logica vive qui — non nei due posti che la richiamano (la
-     * scheda del giocatore e il tracker del DM), che sono due porte sullo
-     * stesso dato, non due copie.
+     * Segna un tiro contro morte, con la logica del pallino: ricliccare l'n-esimo
+     * quando è già acceso lo toglie (torna a n-1). Solo da morente. La logica sta
+     * qui, non nei due posti che la richiamano (scheda e tracker del DM).
      */
     public function segnaTiroMorte(string $tipo, int $n): void
     {
@@ -428,14 +378,9 @@ class Character extends Model
     public const ATTUNEMENT_LIMIT = 3;
 
     /**
-     * Gli effetti che contano adesso.
-     *
-     * Un effetto vale se l'oggetto che lo porta è **in sintonia**. Togliendo la
-     * sintonia, o vendendo l'oggetto, il bonus sparisce da sé — che è quello
-     * che il codice sosteneva di fare da sempre senza farlo.
-     *
-     * Restano fuori dalla regola le benedizioni e le maledizioni: non hanno un
-     * oggetto a cui essere legate, valgono sempre, e le toglie solo un DM.
+     * Gli effetti che contano adesso: un effetto vale se l'oggetto è in sintonia
+     * (togliere la sintonia o vendere l'oggetto spegne il bonus). Benedizioni e
+     * maledizioni non hanno un oggetto, valgono sempre, le toglie solo un DM.
      *
      * @return Collection<int, CharacterItemEffect>
      */
@@ -497,11 +442,9 @@ class Character extends Model
     }
 
     /**
-     * Quando è salito di livello l'ultima volta.
-     *
-     * Serve per contare le sessioni giocate «da allora». Non c'è una colonna
-     * apposta: il momento è l'approvazione dell'ultima richiesta di passaggio
-     * di livello, e chi non è mai salito parte dalla propria creazione.
+     * Quando è salito di livello l'ultima volta. Non c'è una colonna: è
+     * l'approvazione dell'ultima richiesta di passaggio; chi non è mai salito
+     * parte dalla creazione.
      */
     public function lastLevelUpAt(): \Illuminate\Support\Carbon
     {
@@ -514,13 +457,7 @@ class Character extends Model
         return $ultimo?->updated_at ?? $this->created_at;
     }
 
-    /**
-     * Le sessioni **giocate** da quando è salito di livello l'ultima volta.
-     *
-     * È il numero che dice se può chiedere il prossimo: la regola del gruppo è
-     * che di norma una sessione giocata dà diritto a un livello — ma resta una
-     * richiesta, non un automatismo, e a decidere è il DM.
-     */
+    /** Le sessioni giocate dall'ultimo passaggio: dice se può chiedere il prossimo (decide il DM). */
     public function sessionsSinceLastLevelUp(): int
     {
         return $this->sessions()
@@ -542,27 +479,16 @@ class Character extends Model
     }
 
     /**
-     * Gli slot incantesimo.
-     *
-     * **Passa sempre da `Multiclass`**, anche con una classe sola: quella
-     * funzione con una classe sola torna alla tabella di quella classe, quindi
-     * il risultato è identico e non esistono due strade diverse da tenere
-     * allineate.
-     *
-     * Con più classi non si sommano gli slot: si calcola un livello da
-     * incantatore combinato (vedi `Multiclass`).
+     * Gli slot incantesimo, sempre da `Multiclass` anche con una classe sola
+     * (lì torna alla tabella della classe: un'unica strada). Con più classi non
+     * si sommano gli slot: si calcola un livello da incantatore combinato.
      */
     public function spellSlots(): SpellSlotSet
     {
         return Multiclass::slots($this->classLevels());
     }
 
-    /**
-     * Gli slot da patto, che vivono a parte da quelli normali.
-     *
-     * Un Warlock 2 / Mago 3 ha **due** riserve distinte, che si recuperano con
-     * riposi diversi: il patto torna anche col riposo breve.
-     */
+    /** Gli slot da patto, riserva distinta da quelli normali (torna anche col riposo breve). */
     public function pactSlots(): SpellSlotSet
     {
         return Multiclass::pactSlots($this->classLevels());
@@ -600,13 +526,8 @@ class Character extends Model
 
     /**
      * Quanti incantesimi può tenere preparati: `modificatore + livello nella
-     * classe`, mai meno di uno.
-     *
-     * **Con due classi che preparano i budget si sommano**, ed è una
-     * semplificazione: nel manuale sarebbero due liste separate, una per
-     * classe, con la propria caratteristica. Un Chierico/Druido è raro abbastanza
-     * da non giustificare due elenchi sulla scheda, e sommare non regala niente
-     * — ogni classe contribuisce solo con il proprio.
+     * classe`, mai meno di uno. Con due classi che preparano i budget si sommano
+     * (semplificazione: ogni classe contribuisce col proprio).
      */
     public function preparationLimit(): int
     {
@@ -627,11 +548,8 @@ class Character extends Model
     }
 
     /**
-     * Gli incantesimi che si possono lanciare adesso.
-     *
-     * I trucchetti ci sono sempre: non si preparano. Per le classi che non
-     * preparano, `prepared` resta vero su tutto e questo elenco coincide con
-     * quello conosciuto.
+     * Gli incantesimi lanciabili adesso: i trucchetti sempre (non si preparano);
+     * per le classi che non preparano coincide con quelli conosciuti.
      *
      * @return Collection<int, CharacterSpell>
      */
@@ -689,16 +607,10 @@ class Character extends Model
     }
 
     /**
-     * L'elenco degli attacchi: le armi possedute, con bonus e danni già fatti
-     * (decisione D9).
-     *
-     * Si ricava dall'inventario, non da una lista a parte: un'arma venduta
-     * sparisce dagli attacchi da sé, che è la stessa ragione per cui la Classe
-     * Armatura non è una colonna salvata.
-     *
-     * Le righe di `character_weapons` non duplicano le armi: servono a
-     * **correggerle**, quando un DM assegna una spada +1 o un'arma che nel
-     * catalogo non c'è.
+     * Gli attacchi: le armi possedute con bonus e danni già fatti. Si ricava
+     * dall'inventario (un'arma venduta sparisce da sé, come per la CA). Le righe
+     * di `character_weapons` non duplicano le armi: le correggono (spada +1, o
+     * un'arma fuori catalogo).
      *
      * @return Collection<int, array{name: string, ability: Ability, attack: int, damage: string, equipped: bool}>
      */
@@ -725,15 +637,9 @@ class Character extends Model
                 $damageDie = $override->damage ?? $catalog['damage'] ?? 'Vuoto';
                 $damageMod = $scores->modifier($ability) + $bonus;
 
-                /*
-                 * Il danno del catalogo è a **soli dadi** ("2d6"): il
-                 * modificatore lo aggiunge l'applicazione. Ma un DM, che ha
-                 * davanti una scheda dove sta scritto "1d4+3", può aver messo
-                 * nell'override il danno già completo — e allora aggiungerne un
-                 * altro darebbe "1d4+3+3". Se il testo porta già un suo
-                 * modificatore piatto, si rispetta com'è: quello che il DM ha
-                 * scritto è il danno, punto.
-                 */
+                // Il catalogo dà i soli dadi ("2d6") e il modificatore lo
+                // aggiunge l'app; ma un override del DP può portarlo già completo
+                // ("1d4+3"), e allora non se ne aggiunge un altro.
                 $giàCompleto = (bool) preg_match('/[+-]\s*\d+\s*$/', $damageDie);
 
                 return [

@@ -7,21 +7,12 @@
 ])
 
 {{--
-    La card di una cosa in vendita, all'emporio e negli annunci.
+    La card di una cosa in vendita (emporio e annunci, la stessa vista da due lati).
 
-    È un componente solo per tutte e due le bacheche perché sono la stessa cosa
-    vista da due lati — un nome, una riga di contorno, un prezzo — e tenerle in
-    due pezzi di markup separati le faceva già scivolare: gli annunci usavano
-    `<x-card>` e l'emporio un `<div>` con il bordo scritto a mano.
-
-    **È un `<button>` e non una `<x-card href>`**: apre il riquadro di dettaglio
-    e non porta da nessuna parte, quindi non è un collegamento. La stella dei
-    preferiti sta *fuori* dal pulsante, in `$angolo`, perché un pulsante dentro
-    un altro pulsante non è HTML valido e i browser lo sbrogliano come vogliono.
-
-    `mt-auto` sul prezzo lo incolla in fondo: in una griglia le card della
-    stessa riga sono alte uguali, e senza, i prezzi ballerebbero a seconda della
-    lunghezza dei nomi.
+    È un `<button>`, non una `<x-card href>`: apre il dettaglio, non porta
+    altrove. La stella dei preferiti sta fuori dal pulsante, in `$angolo`
+    (pulsante dentro pulsante non è HTML valido). `mt-auto` sul prezzo lo incolla
+    in fondo, così in griglia le card restano alte uguali.
 --}}
 <div class="relative">
     <button type="button" wire:click="{{ $apri }}"

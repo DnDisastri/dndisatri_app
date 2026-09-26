@@ -38,6 +38,7 @@ class GameSession extends Model
         return [
             'played_at' => 'datetime',
             'recap_written_at' => 'datetime',
+            'players_notified_at' => 'datetime',
             // L'ordine d'iniziativa: una lista corta che vive con la serata.
             'initiative' => 'array',
         ];
@@ -58,12 +59,7 @@ class GameSession extends Model
         return $this->belongsTo(User::class, 'recap_written_by');
     }
 
-    /**
-     * Chi c'era davvero, non chi si era iscritto.
-     *
-     * Il pivot porta anche **con quale personaggio**: può essere nullo, perché
-     * chi conduce siede al tavolo senza giocarne uno.
-     */
+    /** Chi c'era davvero, non chi si era iscritto. Il pivot porta anche il personaggio (nullo per chi conduce). */
     public function attendees(): BelongsToMany
     {
         return $this->belongsToMany(User::class)
@@ -71,12 +67,7 @@ class GameSession extends Model
             ->withTimestamps();
     }
 
-    /**
-     * I personaggi che hanno giocato questa serata.
-     *
-     * Passa dal pivot e non dai giocatori: è la differenza fra «c'era Marco» e
-     * «c'era Grimm», e per una pagina di campagna conta la seconda.
-     */
+    /** I personaggi che hanno giocato: dal pivot, non dai giocatori (conta «Grimm c'era», non «Marco»). */
     public function playedCharacters(): BelongsToMany
     {
         return $this->belongsToMany(Character::class, 'game_session_user');
@@ -132,13 +123,7 @@ class GameSession extends Model
         $query->whereNotNull('recap')->where('recap', '!=', '');
     }
 
-    /**
-     * La reaction è al **resoconto**, non alla serata.
-     *
-     * Prima che sia scritto questa pagina dice soltanto quando si gioca, e
-     * applaudire una data non vuol dire niente. È anche il motivo per cui la
-     * fila di faccine sta dentro il riquadro del racconto e non in fondo.
-     */
+    /** La reaction è al resoconto, non alla serata: applaudire una data non vuol dire niente. */
     public function acceptsReactions(): bool
     {
         return $this->hasRecap();

@@ -26,11 +26,7 @@ class PendingChange extends Model
     /** Vedi la nota in Trade: il predefinito del database non basta. */
     protected $attributes = ['status' => PendingChangeStatus::Pending->value];
 
-    /**
-     * Chi approva e chi rifiuta resta tracciato due volte: sulla richiesta
-     * stessa (`reviewed_by`) e nel registro attività. La prima serve a
-     * mostrarlo in bacheca, il secondo a ricostruire la sequenza.
-     */
+    /** Chi decide è tracciato due volte: su `reviewed_by` (per la bacheca) e nel log attività (per la sequenza). */
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
@@ -80,23 +76,16 @@ class PendingChange extends Model
         return $this->archived_at !== null;
     }
 
-    /**
-     * Si archivia solo una richiesta **decisa**. Una ancora in attesa è viva:
-     * nasconderla vorrebbe dire perderla di vista proprio mentre aspetta un sì
-     * o un no.
-     */
+    /** Si archivia solo una richiesta decisa: una in attesa è viva, nasconderla la perderebbe di vista. */
     public function isArchivable(): bool
     {
         return ! $this->isArchived() && ! $this->isPending();
     }
 
     /**
-     * Il personaggio è cambiato fra la proposta e adesso.
-     *
-     * Non blocca l'approvazione: serve ad avvisare chi decide che la scheda si
-     * è mossa nel frattempo, invece di sovrascrivere in silenzio come faceva
-     * la vecchia applicazione. I bottini non sono mai obsoleti, perché si
-     * applicano come somma e non come sostituzione.
+     * Il personaggio è cambiato fra la proposta e adesso. Non blocca
+     * l'approvazione: avvisa chi decide invece di sovrascrivere in silenzio. I
+     * bottini non sono mai obsoleti (si applicano come somma, non sostituzione).
      */
     public function isStale(): bool
     {
@@ -108,9 +97,8 @@ class PendingChange extends Model
     }
 
     /**
-     * Il confronto campo per campo fra la scheda com'è adesso e come
-     * diventerebbe. Il «prima» si legge dal personaggio in questo momento,
-     * perché in archivio c'è solo il diff.
+     * Il confronto campo per campo fra la scheda adesso e come diventerebbe. Il
+     * «prima» si legge dal personaggio ora: in archivio c'è solo il diff.
      *
      * @return Collection<int, array{label: string, before: string, after: string}>
      */

@@ -5,7 +5,7 @@
 @section('content')
 <div class="mx-auto max-w-3xl px-4 py-6">
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
-        <x-icona :is="\App\Enums\Icon::Ledger" class="h-7 w-7" /> Registro
+        <x-icona :is="\App\Enums\Icon::CharacterLedger" class="h-7 w-7" /> Registro
     </h2>
 
     @if ($filtrabile && $tutti)

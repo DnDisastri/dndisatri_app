@@ -4,37 +4,16 @@
 ])
 
 {{--
-    Il riquadro che si apre sopra la pagina.
+    Il riquadro che si apre sopra la pagina, dove aprire una pagina intera
+    sarebbe troppo.
 
-    Serve dove aprire una pagina intera sarebbe troppo: l'articolo dell'emporio
-    ha cinque campi, e andarci vuol dire perdere il posto nella griglia e
-    tornare in cima all'elenco per ogni cosa che si guarda.
+    Non è autonomo: vive dentro un componente Livewire che decide se disegnarlo
+    e possiede il metodo per chiuderlo (`$close`, non una funzione JS: qui non
+    c'è Alpine). Si chiude in tre modi: crocetta, fondo scuro, Esc. Il fondo è
+    un `<button>` vero, così è raggiungibile col tabulatore.
 
-    **Non è un componente autonomo**: vive dentro un componente Livewire, che
-    decide se disegnarlo (`@if`) e possiede il metodo per chiuderlo. `$close` è
-    il nome di quel metodo — `chiudi` quasi sempre — e non una funzione
-    Javascript: qui non c'è Alpine, e non serve.
-
-    Si chiude in tre modi, che sono i tre che la gente prova: la crocetta, il
-    fondo scuro, il tasto Esc. Il fondo è un `<button>` vero e non un `<div>`
-    con un `wire:click` sopra, così ci si arriva anche col tabulatore e ha un
-    nome per chi non lo vede.
-
-    Sta a `z-50`, che è il gradino più alto della scala: un riquadro modale con
-    la navigazione o l'intestazione ancora premibili sopra sarebbe una porta
-    socchiusa.
-
-    LA SCALA, e conviene tenerla tutta qui perché sono quattro righe sparse in
-    quattro file:
-
-    - `z-30` la barra in basso — arredamento fisso;
-    - `z-40` l'intestazione e i menù a tendina delle card — roba che uno ha
-      appena aperto, e che deve passare sopra al resto;
-    - `z-50` questo.
-
-    Il resto della pagina non ha z, e non deve prenderne: il momento in cui si
-    comincia a metterne uno qua e uno là è il momento in cui la scala smette di
-    valere e si finisce a rilanciare a 9999.
+    Scala z: `z-30` la barra in basso, `z-40` intestazione e tendine, `z-50`
+    questo. Il resto della pagina non prende z.
 --}}
 <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
      role="dialog" aria-modal="true"

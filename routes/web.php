@@ -1,10 +1,12 @@
 <?php
 
+use App\Http\Controllers\AboutController;
 use App\Http\Controllers\BuildController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CharacterController;
 use App\Http\Controllers\DmController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\FaqController;
 use App\Http\Controllers\GameSessionController;
 use App\Http\Controllers\GuildController;
 use App\Http\Controllers\HomeController;
@@ -25,6 +27,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
+// Pubblica: la si raggiunge dalla presentazione, prima dell'accesso.
+Route::get('chi-siamo', [AboutController::class, 'show'])->name('about');
+
 Route::middleware('auth')->group(function () {
 
     Route::get('bacheca/{change}/foto', [PendingChangePhotoController::class, 'show'])->name('pending-changes.photo');
@@ -42,6 +47,8 @@ Route::middleware('auth')->group(function () {
     Route::get('profilo/richiami', [ProfileController::class, 'warnings'])->name('profile.warnings');
 
     Route::get('gilda', [GuildController::class, 'index'])->name('guild.index');
+
+    Route::get('guida', [FaqController::class, 'index'])->name('faq.index');
 
     Route::get('regia', [DmController::class, 'home'])->name('dm.home');
 

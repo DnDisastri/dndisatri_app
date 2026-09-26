@@ -6,26 +6,13 @@
 ])
 
 {{--
-    La card di un incarico, in elenco.
+    La card di un incarico, una per tutti gli elenchi (Home, campagna,
+    incarichi). Tre assi come proprietà:
 
-    Esisteva scritta a mano in tre posti — la Home, la pagina della campagna e
-    l'elenco degli incarichi — con le stesse quattro righe e differenze
-    piccole. È il motivo per cui «ne mancano 1» era sbagliato in tutti e tre
-    insieme: una regola scritta tre volte si corregge una volta sola.
-
-    L'anatomia è una e uguale ovunque; quello che cambia da un elenco all'altro
-    sono tre cose, e sono proprietà:
-
-    - `campaign` — il nome della campagna. Si spegne solo dentro la campagna
-      stessa, dove ripeterlo su ogni card non direbbe niente.
-    - `rewards` — le ricompense. Servono a chi sta scegliendo dentro un tavolo,
-      non a chi scorre la bacheca di casa.
-    - `dim` — la card spenta. **Lo decide chi chiama**, perché «spento» vuol
-      dire due cose diverse: nella campagna è un incarico finito, nell'elenco è
-      uno pieno in cui si può solo mettersi in fila.
-
-    Come per `<x-button>`, sono assi che si sostituiscono e non classi:
-    `$attributes->merge()` accoda, e non potrebbe toglierne una.
+    - `campaign` — il nome della campagna (spento dentro la campagna stessa);
+    - `rewards` — le ricompense (servono a chi sceglie a un tavolo);
+    - `dim` — la card spenta, deciso da chi chiama («spento» = finito nella
+      campagna, pieno nell'elenco).
 --}}
 @php
     $mioPosto = $quest->seatOf(auth()->user());
@@ -37,8 +24,7 @@
         <p class="font-semibold text-fg">{{ $quest->title }}</p>
 
         <div class="flex shrink-0 items-center gap-1.5">
-            {{-- Il tipo, neutro: per ora tutte «Di campagna», ma il giorno che
-                 arrivano boss run e farm è questa a distinguerle. --}}
+            {{-- Il tipo, neutro: per ora tutte «Di campagna», distingue quando arriveranno boss run e farm. --}}
             @if ($quest->type)
                 <x-badge tone="neutral">{{ $quest->type->label() }}</x-badge>
             @endif
@@ -49,8 +35,7 @@
         </div>
     </div>
 
-    {{-- Non è un collegamento: la card è già un collegamento, e uno dentro
-         l'altro è HTML non valido. --}}
+    {{-- Non è un link: la card lo è già, e uno dentro l'altro è HTML non valido. --}}
     @if ($campaign)
         <p class="mt-1 text-sm text-muted">{{ $quest->campaign?->title }}</p>
     @endif
@@ -60,20 +45,15 @@
     @endif
 
     @if ($quest->isActive())
-        {{-- Il plurale è scritto a mano: il pluralizzatore di Laravel ragiona
-             in inglese e su «posto» sbaglia. --}}
+        {{-- Plurale a mano: il pluralizzatore di Laravel ragiona in inglese. --}}
         <p class="mt-3 text-sm text-muted">
             {{ $quest->participantCount() }} prenotati su {{ $quest->max_participants }} posti
         </p>
 
-        {{-- La riga che dice se serve qualcuno, sotto e da sola: scorrendo un
-             elenco è l'unica cosa che fa fermare, ed è «ne manca 1» che
-             convince l'ultimo. --}}
+        {{-- Se serve qualcuno, sotto e da solo: è la riga che fa fermare scorrendo. --}}
         <p class="mt-1 text-sm">
             @if ($quest->missingToMinimum() > 0)
-                {{-- Il plurale è scritto a mano anche qui: «manca 1 giocatore»
-                     e «mancano 3 giocatori» cambiano tutte e due le parole, e
-                     il pluralizzatore di Laravel ragiona in inglese. --}}
+                {{-- Plurale a mano anche qui (in inglese sbaglierebbe). --}}
                 <span class="font-semibold text-fg">
                     {{ $quest->missingToMinimum() === 1
                         ? 'Manca 1 giocatore'
@@ -91,12 +71,8 @@
         <p class="mt-3 text-sm text-muted">{{ $quest->outcome()->label() }}</p>
     @endif
 
-    {{-- Il proprio posto si vede da qui, o si aprirebbero tutti gli incarichi
-         per ricordarsi dov'è che si è detto di sì.
-
-         È una pillola e parla in seconda persona — `mine()` e non `label()` —
-         perché «Prenotato» scritto lì dice che *qualcosa* è prenotato, non che
-         sei stato tu. --}}
+    {{-- Il proprio posto, in seconda persona (`mine()`, non `label()`):
+         «Prenotato» da solo direbbe che qualcosa è prenotato, non che sei tu. --}}
     @if ($quest->isActive() && $mioPosto?->isActive())
         <p class="mt-3">
             <x-badge tone="own">{{ $mioPosto->mine() }}</x-badge>

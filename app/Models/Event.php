@@ -41,6 +41,7 @@ class Event extends Model
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
             'published_at' => 'datetime',
+            'players_notified_at' => 'datetime',
         ];
     }
 

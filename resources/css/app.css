@@ -3,17 +3,11 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
-/* =========================================================================
- * 1. LE TINTE
- *
- * Vengono dal logo: i giocatori riconoscono questi colori. Si dichiarano qui
- * una volta sola e **non si usano nelle pagine** — le pagine usano i ruoli
- * del blocco 3. Vedi docs/GRAFICA.md.
- *
- * Navy e rosso esistono in due versioni perché su fondo scuro le originali
- * non reggono il contrasto: 1,68:1 e 3,85:1. Non è una preferenza, è la
- * soglia sotto cui una parte delle persone non legge.
- * ========================================================================= */
+/* -------------------------------------------------------------------------
+ * 1. LE TINTE (dal logo). Non si usano nelle pagine: quelle usano i ruoli del
+ * blocco 3 (docs/GRAFICA.md). Navy e rosso hanno due versioni perché su fondo
+ * scuro le originali non reggono il contrasto (1,68:1 e 3,85:1).
+ * ------------------------------------------------------------------------- */
 :root {
     --tinta-navy: #2c3e6e;
     --tinta-navy-chiaro: #4c63a6;
@@ -27,13 +21,10 @@
     --tinta-inchiostro-fondo: #111111;
 }
 
-/* =========================================================================
- * 2. I RUOLI, NEI DUE TEMI
- *
- * Il tema chiaro è quello scritto qui; lo scuro lo ridefinisce sotto.
- * L'ordine conta: prima il sistema operativo, poi `data-theme` sul tag html,
- * che vince sempre perché è una scelta esplicita di chi guarda.
- * ========================================================================= */
+/* -------------------------------------------------------------------------
+ * 2. I RUOLI, NEI DUE TEMI. Chiaro qui, scuro sotto. `data-theme` sul tag html
+ * vince sul sistema perché è una scelta esplicita.
+ * ------------------------------------------------------------------------- */
 :root {
     --ui-page: var(--tinta-carta);
     --ui-surface: var(--tinta-bianco);
@@ -44,8 +35,7 @@
 
     --ui-primary: var(--tinta-navy);
     --ui-on-primary: var(--tinta-carta);
-    /* Le icone che stanno su un fondo primario senza essere quella attiva:
-       si devono vedere (4,97:1 sul navy) ma non competere col rosso. */
+    /* Icona non attiva su primario: visibile (4,97:1 sul navy), non compete col rosso. */
     --ui-on-primary-soft: #a9b6d6;
 
     --ui-active: var(--tinta-rosso);
@@ -53,14 +43,11 @@
 
     --ui-accent: var(--tinta-crema);
 
-    /* Gli elementi spenti non sono da leggere, sono da riconoscere: per
-       questo sono esentati dai requisiti di contrasto. */
+    /* Spenti: da riconoscere, non da leggere; esentati dal contrasto. */
     --ui-off: #afb5c6;
     --ui-off-fg: #6e7a9a;
 
-    /* Stesso fondo di `off`, ma il testo si legge: è per le cose sottotono
-       che vanno comunque lette — la pillola «Conclusa», un fatto senza peso.
-       Prende il testo dal navy della palette: 5,0:1 sul suo fondo. */
+    /* Sottotono ma leggibile (testo navy, 5,0:1): la pillola «Conclusa» e simili. */
     --ui-quiet: #afb5c6;
     --ui-on-quiet: var(--tinta-navy);
 
@@ -77,18 +64,16 @@
         --ui-line: #333333;
 
         --ui-fg: var(--tinta-carta);
-        /* Non `#666666`: su fondo scuro fa 3,03:1 e sparisce. */
+        /* Non #666666: su fondo scuro fa 3,03:1. */
         --ui-muted: #a0a0a0;
 
         --ui-primary: var(--tinta-navy-chiaro);
         --ui-on-primary: var(--tinta-carta);
-        /* Più chiara che in tema chiaro: il navy sotto è già schiarito, e la
-           stessa tinta ci sparirebbe sopra (3,64:1 così). */
+        /* Più chiara: sul navy schiarito la stessa tinta farebbe 3,64:1. */
         --ui-on-primary-soft: #c3cce3;
 
         --ui-active: var(--tinta-rosso-chiaro);
-        /* Quasi nero sopra il rosso schiarito: 5,08:1 contro i 3,43:1 del
-           bianco. A occhio sembra strano, si legge meglio. */
+        /* Quasi nero sul rosso schiarito: 5,08:1 contro i 3,43:1 del bianco. */
         --ui-on-active: var(--tinta-inchiostro);
 
         --ui-off: #3a3a3a;
@@ -148,21 +133,13 @@
     --ui-on-danger-soft: #8c2c29;
 }
 
-/* =========================================================================
- * 3. I RUOLI COME CLASSI
- *
- * `inline` fa sì che le utility puntino alla variabile invece di copiarne il
- * valore: senza, il tema resterebbe quello del momento in cui Tailwind ha
- * compilato, e cambiarlo a schermo non farebbe niente.
- *
- * Da qui nascono bg-page, text-fg, border-line, bg-primary, text-on-primary…
- * ========================================================================= */
+/* -------------------------------------------------------------------------
+ * 3. I RUOLI COME CLASSI. `inline` fa puntare le utility alla variabile: senza,
+ * il tema resterebbe fisso al momento della compilazione. Da qui bg-page,
+ * text-fg, bg-primary, text-on-primary…
+ * ------------------------------------------------------------------------- */
 @theme inline {
-    /*
-     * Due caratteri con due mestieri: Quicksand per leggere, Bowlby One per i
-     * titoli. Bowlby è largo e pesantissimo — funziona su tre parole e
-     * diventa illeggibile su un paragrafo, quindi non è mai il predefinito.
-     */
+    /* Quicksand per il testo, Bowlby One (un solo peso, pesantissimo) per i titoli. */
     --font-sans: 'Quicksand', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
         sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
 
@@ -196,40 +173,17 @@
     --color-on-danger-soft: var(--ui-on-danger-soft);
 
     /*
-     * L'angolo delle card: `rounded-card`, 18px.
-     *
-     * Sta qui e non scritto nelle viste perché è la misura che decide la forma
-     * di tutta l'applicazione — cambiarla vuol dire cambiare una riga, non
-     * cercare `rounded-xl` in trenta file.
-     *
-     * **I riquadri d'immagine non la usano**: hanno una forma loro, qui sotto,
-     * ed è voluto che restino fermi quando questa misura si muove.
-     *
-     * **La scatola dentro una card non usa questa.** Due angoli concentrici
-     * sono paralleli solo se quello interno vale l'esterno meno l'imbottitura:
-     * 18 meno i 16 del `p-4` fa 2, cioè `rounded-[2px]`. Con lo stesso raggio su
-     * tutti e due, l'angolo interno sembra più stretto di quello esterno anche
-     * se il numero è identico — quindi se questa misura cambia, va rifatto
-     * anche il conto dentro `<x-inset>`.
+     * `rounded-card`, 18px: la forma di tutta l'app, in un posto solo. La
+     * scatola dentro una card NON usa questo: due angoli concentrici sono
+     * paralleli solo se l'interno vale l'esterno meno l'imbottitura (18 - 16
+     * del p-4 = 2px). Se cambia, va rifatto il conto in <x-inset>.
      */
     --radius-card: 1.125rem;
 
     /*
-     * L'angolo dei riquadri d'immagine: `rounded-poster` più
-     * `rounded-br-poster-cut`, cioè 30, 30, 8, 30.
-     *
-     * È la forma dei manifesti — eventi, campagne — e delle mappe: le cose che
-     * sono **tutte immagine**, dove il testo sta sopra o sotto e la card è la
-     * figura. L'angolo quasi vivo in basso a destra è quello che le distingue
-     * dalle card normali, e basta averne due appaiate per vedere che è voluto.
-     *
-     * Gli 8px non sono uno zero mancato: un angolo perfettamente vivo accanto
-     * a tre tondi si legge come un errore di allineamento, un raccordo minimo
-     * lo fa sembrare una scelta, e a occhio nudo resta un angolo.
-     *
-     * Sono due token e non uno perché l'angolo tagliato è la firma: se un
-     * giorno cambia il raggio grande, quello piccolo non deve seguirlo per
-     * conto suo.
+     * `rounded-poster` + `rounded-br-poster-cut` = 30 30 8 30: la forma dei
+     * manifesti (eventi, campagne, mappe). L'angolo quasi vivo in basso a
+     * destra è la firma; due token perché non segua il raggio grande.
      */
     --radius-poster: 30px;
     --radius-poster-cut: 8px;
@@ -240,11 +194,7 @@
         color-scheme: light dark;
     }
 
-    /*
-     * I titoli in Bowlby One, e il peso resta 400: il carattere ha un solo
-     * peso, e chiedergliene un altro produrrebbe un grassetto finto disegnato
-     * dal browser, che su un carattere già pesantissimo si impasta.
-     */
+    /* Bowlby One ha un solo peso: chiederne un altro dà un grassetto finto. */
     h1,
     h2 {
         font-family: var(--font-display);
@@ -273,4 +223,23 @@
     ::-webkit-scrollbar-thumb:hover {
         background: var(--ui-active);
     }
+}
+
+/* Tutorial: solo ciò che il <dialog> nativo non copre. */
+
+/* Preflight azzera i margini del <dialog>: senza questo non si centra. */
+#tutorial {
+    margin: auto;
+}
+
+#tutorial::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+#tutorial-slider {
+    scrollbar-width: none;
+}
+
+#tutorial-slider::-webkit-scrollbar {
+    display: none;
 }

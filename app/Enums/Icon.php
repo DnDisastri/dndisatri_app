@@ -26,11 +26,14 @@ enum Icon: string implements Icona, ScalableIcon
     case Events = 'events';
 
     // Intestazione.
+    case Home = 'home';
     case Notifications = 'notifications';
     case Menu = 'menu';
 
     // Menu utente.
     case Profile = 'profile';
+    case Faq = 'faq';
+    case Install = 'install';
     case Panel = 'panel';
     case Logout = 'logout';
 
@@ -105,6 +108,11 @@ enum Icon: string implements Icona, ScalableIcon
     case ShowPassword = 'show-password';
     case HidePassword = 'hide-password';
 
+    // Social.
+    case Instagram = 'instagram';
+    case Tiktok = 'tiktok';
+    case Telegram = 'telegram';
+
     public function phosphor(): Phosphor
     {
         return match ($this) {
@@ -113,10 +121,13 @@ enum Icon: string implements Icona, ScalableIcon
             self::Characters => Phosphor::IdentificationBadge,
             self::Market => Phosphor::HandCoins,
             self::Events => Phosphor::BookmarkSimple,
+            self::Home => Phosphor::HouseFill,
             self::Notifications => Phosphor::Bell,
             self::Menu => Phosphor::DotsThreeBold,
 
             self::Profile => Phosphor::UserCircle,
+            self::Faq => Phosphor::Info,
+            self::Install => Phosphor::DownloadSimple,
             self::Panel => Phosphor::SlidersHorizontal,
             self::Logout => Phosphor::SignOut,
 
@@ -183,6 +194,10 @@ enum Icon: string implements Icona, ScalableIcon
 
             self::ShowPassword => Phosphor::Eye,
             self::HidePassword => Phosphor::EyeClosed,
+
+            self::Instagram => Phosphor::InstagramLogo,
+            self::Tiktok => Phosphor::TiktokLogo,
+            self::Telegram => Phosphor::TelegramLogo,
         };
     }
 

@@ -10,6 +10,11 @@
 {{-- Mobile: la colonna riempie lo schermo. Schermi grandi: resta a proporzioni
      telefono (9:16) e il grigio attorno è un segnaposto per una futura immagine. --}}
 <div class="relative h-full w-full overflow-hidden bg-primary sm:aspect-[9/16] sm:h-full sm:w-auto sm:max-w-full">
+    <a href="{{ route('about') }}"
+       class="pointer-events-auto absolute right-4 top-4 z-20 rounded-full bg-black/30 px-3 py-1.5 text-sm font-medium text-white backdrop-blur transition hover:bg-black/50">
+        Chi siamo
+    </a>
+
     <div id="benvenuto"
          class="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto scroll-smooth
                 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

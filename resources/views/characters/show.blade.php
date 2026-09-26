@@ -59,25 +59,33 @@
             @endif
         </x-panel>
 
-        {{-- Le sezioni condividono la stessa route: lo stato attivo dipende da `$sezione`.
-     La navigazione viene nascosta quando è disponibile una sola sezione. --}}
+        {{-- Sezioni a swipe (app.js), senza reload; l'indirizzo segue la
+             sezione, così un refresh riapre lì. --}}
         @if (count($sezioni) > 1)
             <nav class="flex overflow-x-auto rounded-full border border-line bg-surface text-sm"
                 aria-label="Sezioni della scheda">
                 @foreach ($sezioni as $voce)
-                    <a href="{{ $voce->url($character) }}" wire:navigate
-                        @if ($voce === $sezione) aria-current="page" @endif @class([
-                            'flex-1 whitespace-nowrap rounded-full px-3 py-2 text-center font-medium transition',
-                            'bg-primary text-on-primary' => $voce === $sezione,
-                            'text-muted hover:text-fg' => $voce !== $sezione,
-                        ])>
+                    <button type="button" data-sheet-tab data-url="{{ $voce->url($character) }}"
+                        @if ($voce === $sezione) aria-current="page" @endif
+                        class="flex-1 whitespace-nowrap rounded-full px-3 py-2 text-center font-medium text-muted
+                               transition hover:text-fg aria-[current]:bg-primary aria-[current]:text-on-primary">
                         {{ $voce->label() }}
-                    </a>
+                    </button>
                 @endforeach
             </nav>
-        @endif
 
-        @include('characters.sezioni.' . $sezione->value)
+            <div id="sheet-slider"
+                class="flex snap-x snap-mandatory overflow-x-auto transition-[height] duration-200
+                       [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                @foreach ($sezioni as $voce)
+                    <div class="w-full shrink-0 snap-center snap-always self-start space-y-4">
+                        @include('characters.sezioni.' . $voce->value)
+                    </div>
+                @endforeach
+            </div>
+        @else
+            @include('characters.sezioni.' . $sezione->value)
+        @endif
 
         <x-back dove="sotto" :href="$mio ? route('characters.index') : route('guild.index')">
             {{ $mio ? 'Torna ai miei eroi' : 'Torna alla Gilda' }}
