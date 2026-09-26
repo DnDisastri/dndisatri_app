@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Domain\Dnd\SubclassCatalogue;
 use App\Notifications\InAppNotification;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
@@ -20,6 +21,9 @@ class AppServiceProvider extends ServiceProvider
         if ($publicPath = config('app.public_path')) {
             $this->app->usePublicPath($publicPath);
         }
+
+        // Singleton perché faccia da memoria per la durata della richiesta.
+        $this->app->singleton(SubclassCatalogue::class);
     }
 
     /**

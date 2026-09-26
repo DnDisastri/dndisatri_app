@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use App\Actions\Characters\ApprovePendingChange;
 use App\Actions\Characters\RequestLevelUp;
+use App\Domain\Dnd\ClassRules;
 use App\Models\Character;
 use App\Models\User;
+use Database\Seeders\SubclassSeeder;
 
 // Gli incantesimi appresi con il level-up entrano nella scheda solo dopo l'approvazione della richiesta.
 describe('la richiesta', function () {
@@ -48,7 +50,7 @@ describe('cosa non si può imparare', function () {
             $character, $character->user, spells: ['Fulmine'],
         ))->toThrow(InvalidArgumentException::class, 'lo conosce già');
     });
-// Il livello massimo apprendibile viene calcolato sugli slot che il personaggio avrà dopo il level-up.
+    // Il livello massimo apprendibile viene calcolato sugli slot che il personaggio avrà dopo il level-up.
     it('uno di livello troppo alto per gli slot che avrà', function () {
         $character = Character::factory()->create(['class' => 'Mago', 'level' => 1]);
 
@@ -83,7 +85,7 @@ describe('l\'approvazione', function () {
         expect($spell)->not->toBeNull()
             ->and($spell->level)->toBe(3);
     });
-// L'approvazione rivalida lo stato corrente perché lo stesso incantesimo può essere stato aggiunto nel frattempo.
+    // L'approvazione rivalida lo stato corrente perché lo stesso incantesimo può essere stato aggiunto nel frattempo.
     it('non sdoppia la lista se l\'incantesimo c\'è già', function () {
         $character = Character::factory()->create(['class' => 'Mago', 'level' => 4]);
 
@@ -100,6 +102,9 @@ describe('l\'approvazione', function () {
 });
 
 describe('le sottoclassi ora sono a catalogo', function () {
+    // Il catalogo è in tabella: senza seed non c'è niente da scegliere.
+    beforeEach(fn () => $this->seed(SubclassSeeder::class));
+
     it('accetta quelle vere', function () {
         $character = Character::factory()->create(['class' => 'Mago', 'level' => 1]);
 
@@ -120,7 +125,7 @@ describe('le sottoclassi ora sono a catalogo', function () {
 
     it('e rifiuta una sottoclasse di un\'altra classe', function () {
         $character = Character::factory()->create(['class' => 'Mago', 'level' => 1]);
-        $barbarian = App\Domain\Dnd\ClassRules::subclasses('Barbaro')[0];
+        $barbarian = ClassRules::subclasses('Barbaro')[0];
 
         expect(fn () => app(RequestLevelUp::class)->handle(
             $character, $character->user, subclass: $barbarian,

@@ -60,7 +60,17 @@ final class ClassRules
     /** @return list<string> */
     public static function subclasses(?string $class): array
     {
-        return collect(config("dnd.subclasses.{$class}", []))->pluck('name')->all();
+        return self::subclassesOf($class)->pluck('name')->all();
+    }
+
+    /**
+     * Le sottoclassi con la loro descrizione, per chi deve farle scegliere.
+     *
+     * @return Collection<int,Subclass>
+     */
+    public static function subclassesOf(?string $class): Collection
+    {
+        return app(SubclassCatalogue::class)->of($class);
     }
 
     /**
