@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Enums\NotificationCategory;
 use App\Models\Quest;
 
 /**
@@ -16,6 +17,11 @@ use App\Models\Quest;
 final class QuestSeatConfirmed extends InAppNotification
 {
     public function __construct(private readonly Quest $quest) {}
+
+    public function category(): NotificationCategory
+    {
+        return NotificationCategory::Table;
+    }
 
     public function toArray(object $notifiable): array
     {

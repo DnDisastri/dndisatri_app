@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Enums\NotificationCategory;
 use App\Models\Warning;
 
 /**
@@ -16,6 +17,11 @@ use App\Models\Warning;
 final class WarningIssued extends InAppNotification
 {
     public function __construct(private readonly Warning $warning) {}
+
+    public function category(): NotificationCategory
+    {
+        return NotificationCategory::Moderation;
+    }
 
     public function toArray(object $notifiable): array
     {

@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\NotificationCategory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 
@@ -107,5 +109,32 @@ class ProfileController extends Controller
         $request->session()->regenerate();
 
         return back()->with('status', 'Password cambiata.');
+    }
+
+    /**
+     * Le categorie di email.
+     *
+     * Si salva chi è **spento**, non chi è acceso: una categoria aggiunta in
+     * futuro parte accesa per tutti, senza dover ripassare sulle righe già
+     * salvate. Il modulo manda le spuntate, e il complemento è il resto.
+     */
+    public function updateNotifications(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'categorie' => ['array'],
+            'categorie.*' => [Rule::enum(NotificationCategory::class)],
+        ]);
+
+        $accese = $validated['categorie'] ?? [];
+
+        $spente = collect(NotificationCategory::cases())
+            ->map(fn (NotificationCategory $categoria) => $categoria->value)
+            ->reject(fn (string $valore) => in_array($valore, $accese, true))
+            ->values()
+            ->all();
+
+        $request->user()->forceFill(['muted_notifications' => $spente])->save();
+
+        return back()->with('status', 'Preferenze salvate.');
     }
 }

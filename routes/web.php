@@ -43,6 +43,7 @@ Route::middleware('auth')->group(function () {
     Route::get('profilo', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('profilo', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('profilo/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+    Route::put('profilo/notifiche', [ProfileController::class, 'updateNotifications'])->name('profile.notifications');
 
     Route::get('profilo/richiami', [ProfileController::class, 'warnings'])->name('profile.warnings');
 
