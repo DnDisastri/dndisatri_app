@@ -16,7 +16,9 @@ use Illuminate\Support\Facades\DB;
  * sovrascrivendo un valore letto prima: è la stessa regola che il brief chiede
  * per i bottini (§4.3), e vale per ogni movimento d'oro.
  *
- * Il saldo non scende sotto zero: un personaggio non va in debito.
+ * Il saldo non scende sotto zero: un personaggio non va in debito. E non sale
+ * oltre il tetto della colonna: un numero più grande farebbe fallire la
+ * scrittura invece di assegnare l'oro.
  */
 final class GrantGold
 {
@@ -25,7 +27,7 @@ final class GrantGold
         return DB::transaction(function () use ($character, $amount, $actor, $reason) {
             $target = Character::whereKey($character->getKey())->lockForUpdate()->firstOrFail();
 
-            $applied = max($amount, -$target->gp);
+            $applied = min(max($amount, -$target->gp), Character::MAX_GP - $target->gp);
 
             $target->increment('gp', $applied);
             $target->refresh();
