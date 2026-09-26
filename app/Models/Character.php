@@ -296,6 +296,15 @@ class Character extends Model
     // === Registro ===
 
     /**
+     * Il tetto di ogni importo in oro: è il massimo di `unsignedInteger`, il
+     * tipo di `gp` e delle colonne del mercato. Oltre, il database rifiuta la
+     * scrittura e la richiesta muore con un 500 invece che con un errore nel
+     * modulo. Se un giorno servisse un limite di gioco più basso, si abbassa
+     * qui e vale ovunque.
+     */
+    public const MAX_GP = 4_294_967_295;
+
+    /**
      * Scrive una riga nel Registro. Va chiamata DOPO aver aggiornato l'oro,
      * così `gp_after` racconta il saldo risultante.
      */

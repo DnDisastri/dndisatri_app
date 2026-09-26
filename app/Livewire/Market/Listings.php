@@ -6,6 +6,7 @@ use App\Actions\Market\CancelListing;
 use App\Actions\Supervision\Supervisor;
 use App\Exceptions\MarketException;
 use App\Livewire\Concerns\ActsAsCharacter;
+use App\Models\Character;
 use App\Models\MarketListing;
 use App\Models\SupervisedAction;
 use Livewire\Component;
@@ -59,6 +60,15 @@ class Listings extends Component
     public function sell(): void
     {
         $character = $this->requireCharacter();
+
+        // Il prezzo finisce in una colonna `unsignedInteger`: oltre quel
+        // limite la scrittura fallisce e la pagina muore.
+        $this->validate([
+            'price' => ['integer', 'min:0', 'max:'.Character::MAX_GP],
+        ], [
+            'price.min' => 'Il prezzo non può essere negativo.',
+            'price.max' => 'Prezzo troppo alto: tanto oro non esiste.',
+        ]);
 
         try {
             $result = app(Supervisor::class)->createListing(

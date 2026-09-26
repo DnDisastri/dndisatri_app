@@ -121,6 +121,8 @@ class Trades extends Component
             return;
         }
 
+        $this->validaOro(['giveGp', 'wantGp']);
+
         if ($this->chiedo !== '') {
             $this->request($character, $to);
 
@@ -197,6 +199,8 @@ class Trades extends Component
     {
         $request = TradeRequest::findOrFail($this->richiestaAperta);
         $this->authorize('accept', $request);
+
+        $this->validaOro(['offroGp']);
 
         try {
             $result = app(AcceptTradeRequest::class)->handle(
@@ -298,6 +302,27 @@ class Trades extends Component
             ->map(fn (string $name) => ['name' => $name, 'qty' => 1])
             ->values()
             ->all();
+    }
+
+    /**
+     * Le cifre in oro stanno in colonne `unsignedInteger`: fuori da quel
+     * campo la scrittura fallisce e la pagina muore. Il `min="0"` nel modulo
+     * è solo lato client, quindi il controllo va rifatto qui.
+     *
+     * @param  list<string>  $campi
+     */
+    private function validaOro(array $campi): void
+    {
+        $regole = ['integer', 'min:0', 'max:'.Character::MAX_GP];
+
+        $this->validate(
+            array_fill_keys($campi, $regole),
+            array_merge(...array_map(fn (string $campo) => [
+                "{$campo}.integer" => 'Le monete si contano a numeri interi.',
+                "{$campo}.min" => 'Non puoi mettere una cifra negativa.',
+                "{$campo}.max" => 'Cifra troppo alta: tanto oro non esiste.',
+            ], $campi)),
+        );
     }
 
     public function render()
