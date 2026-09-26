@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Enums\NotificationCategory;
 use App\Enums\PendingChangeStatus;
 use App\Models\SupervisedAction;
 
@@ -19,6 +20,11 @@ use App\Models\SupervisedAction;
 final class SupervisedActionDecided extends InAppNotification
 {
     public function __construct(private readonly SupervisedAction $action) {}
+
+    public function category(): NotificationCategory
+    {
+        return NotificationCategory::Requests;
+    }
 
     public function toArray(object $notifiable): array
     {

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Enums\NotificationCategory;
+
 /**
  * «Una transazione è stata annullata».
  *
@@ -21,6 +23,11 @@ final class TransactionReversed extends InAppNotification
         private readonly string $what,
         private readonly string $reason,
     ) {}
+
+    public function category(): NotificationCategory
+    {
+        return NotificationCategory::Market;
+    }
 
     public function toArray(object $notifiable): array
     {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Enums\NotificationCategory;
 use App\Enums\TradeStatus;
 use App\Models\Trade;
 
@@ -18,6 +19,11 @@ final class TradeResolved extends InAppNotification
         private readonly Trade $trade,
         private readonly string $otherName,
     ) {}
+
+    public function category(): NotificationCategory
+    {
+        return NotificationCategory::Market;
+    }
 
     public function toArray(object $notifiable): array
     {

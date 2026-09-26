@@ -4,12 +4,18 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Enums\NotificationCategory;
 use App\Models\Event;
 
 /** Un nuovo evento è comparso in bacheca. */
 final class EventPublished extends InAppNotification
 {
     public function __construct(private readonly Event $event) {}
+
+    public function category(): NotificationCategory
+    {
+        return NotificationCategory::Table;
+    }
 
     public function toArray(object $notifiable): array
     {

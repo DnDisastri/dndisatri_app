@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Enums\NotificationCategory;
 use App\Models\Trade;
 
 /** Qualcuno ti ha proposto uno scambio: tocca a te rispondere. */
@@ -13,6 +14,11 @@ final class TradeProposed extends InAppNotification
         private readonly Trade $trade,
         private readonly string $fromName,
     ) {}
+
+    public function category(): NotificationCategory
+    {
+        return NotificationCategory::Market;
+    }
 
     public function toArray(object $notifiable): array
     {
