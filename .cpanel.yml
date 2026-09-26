@@ -1,0 +1,13 @@
+---
+# Le due destinazioni le dichiara il clone, non il repository: su staging
+# coincidono (public/ sta dentro la root), in produzione la document root è
+# public_html, fuori dal progetto. Vedi docs/PIANO-GO-LIVE.md.
+deployment:
+  tasks:
+    - export DEPLOYPATH=$(cat .deploy-path)
+    - export PUBLICPATH=$(cat .deploy-public)
+    - /bin/cp artisan composer.json composer.lock .env.example $DEPLOYPATH
+    - /bin/cp package.json package-lock.json vite.config.js $DEPLOYPATH
+    - /bin/cp -R app bootstrap config database resources routes $DEPLOYPATH
+    # Il /. copia il contenuto di public/, non la cartella.
+    - /bin/cp -R public/. $PUBLICPATH

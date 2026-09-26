@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" preserveAspectRatio="xMidYMid slice">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#e8d5a0"/><stop offset="1" stop-color="#c9b078"/>
+  </linearGradient></defs>
+  <rect width="800" height="1000" fill="url(#g)"/>
+  <circle cx="400" cy="420" r="220" fill="#ffffff" opacity="0.12"/>
+  <text x="400" y="460" text-anchor="middle" font-family="sans-serif" font-size="72"
+        font-weight="700" fill="#ffffff" opacity="0.85">La gilda</text>
+  <text x="400" y="530" text-anchor="middle" font-family="sans-serif" font-size="28"
+        fill="#ffffff" opacity="0.6">illustrazione di prova</text>
+</svg>
