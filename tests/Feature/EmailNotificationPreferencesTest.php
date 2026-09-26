@@ -6,7 +6,10 @@ use App\Enums\NotificationCategory;
 use App\Models\Event;
 use App\Models\User;
 use App\Notifications\EventPublished;
+use App\Notifications\InAppNotification;
 use App\Notifications\TradeProposed;
+use Illuminate\Cache\RateLimiter as RateLimiterFacade;
+use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Support\Facades\Notification;
 
 // Le notifiche restano sempre in applicazione; l'email è la parte che il
@@ -110,6 +113,32 @@ describe('l\'email', function () {
         expect($html)->toContain($this->giocatore->name)
             ->toContain($this->evento->title)
             ->toContain(route('profile.edit'));
+    });
+});
+
+// L'hosting accetta 250 email l'ora su tutto l'account: il freno sta sulla
+// posta e non deve rallentare la campanella.
+describe('il limitatore di invii', function () {
+    it('frena la posta', function () {
+        $middleware = (new EventPublished($this->evento))->middleware($this->giocatore, 'mail');
+
+        expect($middleware)->toHaveCount(1)
+            ->and($middleware[0])->toBeInstanceOf(RateLimited::class);
+    });
+
+    it('non frena la notifica in applicazione', function () {
+        expect((new EventPublished($this->evento))->middleware($this->giocatore, 'database'))->toBe([]);
+    });
+
+    it('insiste abbastanza da attraversare l\'ora del blocco', function () {
+        expect((new EventPublished($this->evento))->retryUntil())
+            ->toBeGreaterThan(now()->addHour());
+    });
+
+    it('è registrato e sta sotto il tetto dell\'hosting', function () {
+        $limite = app(RateLimiterFacade::class)->limiter(InAppNotification::LIMITATORE)();
+
+        expect($limite->maxAttempts)->toBeLessThan(250);
     });
 });
 

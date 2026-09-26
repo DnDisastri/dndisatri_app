@@ -2,7 +2,10 @@
 
 namespace App\Providers;
 
+use App\Notifications\InAppNotification;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -47,5 +50,12 @@ class AppServiceProvider extends ServiceProvider
 
             return app()->isProduction() ? $regola->uncompromised() : $regola;
         });
+
+        /*
+         * Il tetto dell'hosting è 250 email l'ora su tutto l'account. Qui si
+         * sta sotto di cinquanta, che restano per i recuperi password e per
+         * quello che non passa di qui.
+         */
+        RateLimiter::for(InAppNotification::LIMITATORE, fn () => Limit::perHour(200));
     }
 }
