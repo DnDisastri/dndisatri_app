@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Actions\Approvals\AnnounceForApproval;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Notifications\RegistrationAwaitingApproval;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -45,6 +47,13 @@ class RegisteredUserController extends Controller
         $user->assignRole(Role::findOrCreate(User::ROLE_PLAYER, 'web'));
 
         event(new Registered($user));
+
+        // Il badge nel pannello lo vede solo chi ci entra di sua iniziativa:
+        // senza questo avviso un iscritto può restare fuori per giorni.
+        app(AnnounceForApproval::class)->handle(
+            new RegistrationAwaitingApproval($user),
+            ruoli: [User::ROLE_ADMIN],
+        );
 
         return redirect()->route('login')->with('status',
             'Registrazione ricevuta. Un amministratore deve approvare l\'account prima del primo accesso.');
