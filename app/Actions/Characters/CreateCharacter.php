@@ -9,6 +9,7 @@ use App\Domain\Dnd\AbilityScores;
 use App\Domain\Dnd\ClassRules;
 use App\Domain\Dnd\PointBuy;
 use App\Domain\Dnd\SpellSlots;
+use App\Domain\Dnd\SubraceCatalogue;
 use App\Enums\EquipmentSlot;
 use App\Models\Character;
 use App\Models\User;
@@ -53,16 +54,23 @@ final class CreateCharacter
         array $equipmentChoices = [],
         ?string $subclass = null,
         ?string $story = null,
+        ?string $subspecies = null,
+        array $backgroundSkills = [],
+        ?int $pack = null,
     ): Character {
         $this->validate($name, $class, $species, $background, $boughtScores, $skills, $spells);
+        $this->validateBackgroundSkills($background, $backgroundSkills);
 
-        $scores = PointBuy::withSpecies($boughtScores, $species, $speciesChoices);
+        $sottorazza = app(SubraceCatalogue::class)->find($species, $subspecies);
+
+        $scores = PointBuy::withSpecies($boughtScores, $species, $speciesChoices, $subspecies);
         $abilityScores = AbilityScores::fromArray($scores);
         $hitDie = ClassRules::hitDie($class);
 
         return DB::transaction(function () use (
             $owner, $name, $class, $species, $background, $subclass, $story,
-            $scores, $abilityScores, $hitDie, $skills, $spells, $equipmentChoices
+            $scores, $abilityScores, $hitDie, $skills, $spells, $equipmentChoices, $sottorazza,
+            $backgroundSkills, $pack
         ) {
             $character = Character::create([
                 'user_id' => $owner->getKey(),
@@ -70,6 +78,7 @@ final class CreateCharacter
                 'class' => $class,
                 'subclass' => $subclass,
                 'race' => $species,
+                'subrace' => $sottorazza?->name,
                 'background' => $background,
                 // Quello che gli altri leggeranno di lui. Alla creazione si
                 // scrive liberamente: è dopo che le modifiche passano da un DM.
@@ -77,7 +86,9 @@ final class CreateCharacter
                 'level' => 1,
                 'hit_die' => $hitDie,
                 ...$scores,
-                'speed' => config("dnd.species.{$species}.speed", 9),
+                // L'elfo dei boschi cammina più svelto della sua razza: se la
+                // sottorazza dichiara un passo, è il suo che vale.
+                'speed' => $sottorazza?->speed ?? config("dnd.species.{$species}.speed", 9),
                 // Al primo livello il dado vita si prende pieno.
                 'hp_max' => max(1, $hitDie + $abilityScores->modifier(Ability::Con)),
                 'hp_current' => max(1, $hitDie + $abilityScores->modifier(Ability::Con)),
@@ -85,14 +96,19 @@ final class CreateCharacter
                 'saving_throws' => collect(ClassRules::savingThrows($class))
                     ->mapWithKeys(fn (string $ability) => [$ability => true])
                     ->all(),
-                'skills' => $this->skillMap($skills, $background),
+                'skills' => $this->skillMap($skills, $background, $backgroundSkills),
                 'spell_slots_used' => [],
                 'spell_ability' => SpellSlots::abilityFor($class)?->value,
-                'species_traits' => config("dnd.species.{$species}.traits"),
+                // Razza e sottorazza di seguito: sulla scheda si deve leggere
+                // da dove viene ogni bonus, non solo il totale nei punteggi.
+                'species_traits' => collect([
+                    config("dnd.species.{$species}.traits"),
+                    $sottorazza?->traits,
+                ])->filter()->join("\n\n"),
                 'background_feature' => config("dnd.backgrounds.features.{$background}"),
             ]);
 
-            $this->giveStartingItems($character, $class, $background, $equipmentChoices);
+            $this->giveStartingItems($character, $class, $background, $equipmentChoices, $pack);
             $this->giveSpells($character, $spells);
             $this->autoEquip($character);
 
@@ -171,9 +187,59 @@ final class CreateCharacter
      * @param  list<string>  $chosen
      * @return array<string,string>
      */
-    private function skillMap(array $chosen, string $background): array
+    /**
+     * Quante abilità lascia scegliere il background. Zero per i tredici del
+     * manuale, che le danno fisse.
+     */
+    public static function freeSkillsFor(?string $background): int
     {
-        $fromBackground = config("dnd.backgrounds.list.{$background}.skills", []);
+        return (int) config("dnd.backgrounds.list.{$background}.free_skills", 0);
+    }
+
+    /** Lo zaino scelto, o il primo dell'elenco se il background ne prevede uno. */
+    public static function pack(?string $background, ?int $index): ?array
+    {
+        if (self::freeSkillsFor($background) === 0) {
+            return null;
+        }
+
+        $zaini = config('dnd.backgrounds.packs', []);
+
+        return $zaini[$index] ?? $zaini[0] ?? null;
+    }
+
+    /** @param  list<string>  $chosen */
+    private function validateBackgroundSkills(string $background, array $chosen): void
+    {
+        $quante = self::freeSkillsFor($background);
+
+        if ($quante === 0) {
+            return;
+        }
+
+        $chosen = array_values(array_unique($chosen));
+
+        if (count($chosen) !== $quante) {
+            throw new InvalidArgumentException("Il background «{$background}» vuole {$quante} abilità a scelta.");
+        }
+
+        $esistenti = array_keys(config('dnd.character.skills', []));
+
+        foreach ($chosen as $skill) {
+            if (! in_array($skill, $esistenti, true)) {
+                throw new InvalidArgumentException("Abilità sconosciuta: {$skill}.");
+            }
+        }
+    }
+
+    private function skillMap(array $chosen, string $background, array $backgroundSkills = []): array
+    {
+        // «Personalizzato» non ne impone nessuna: le sue sono quelle che il
+        // giocatore ha scelto, e valgono come se fossero fisse.
+        $fromBackground = [
+            ...config("dnd.backgrounds.list.{$background}.skills", []),
+            ...$backgroundSkills,
+        ];
 
         return collect([...$chosen, ...$fromBackground])
             ->unique()
@@ -190,7 +256,7 @@ final class CreateCharacter
      *
      * @param  array<int,int>  $choices  indice della scelta => indice dell'opzione
      */
-    private function giveStartingItems(Character $character, string $class, string $background, array $choices): void
+    private function giveStartingItems(Character $character, string $class, string $background, array $choices, ?int $pack = null): void
     {
         $equipment = config("dnd.equipment.{$class}", ['fixed' => [], 'choices' => []]);
 
@@ -203,6 +269,12 @@ final class CreateCharacter
         }
 
         $items = [...$items, ...config("dnd.starting_items.by_background.{$background}", [])];
+
+        // Lo zaino del background personalizzato: un oggetto solo, che porta
+        // il suo contenuto scritto nella descrizione.
+        if ($scelto = self::pack($background, $pack)) {
+            $items[] = ['name' => $scelto['name'], 'qty' => 1, 'category' => 'Varie'];
+        }
 
         foreach ($items as $item) {
             $character->addToInventory(

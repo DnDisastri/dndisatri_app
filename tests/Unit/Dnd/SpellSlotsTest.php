@@ -19,14 +19,12 @@ describe('tipo di incantatore', function () {
         'Guerriero' => ['Guerriero', CasterType::None],
     ]);
 
-    it('diventa un terzo con le sottoclassi da incantatore', function () {
-        expect(CasterType::for('Guerriero', 'Cavaliere Mistico'))->toBe(CasterType::Third)
-            ->and(CasterType::for('Ladro', 'Furfante Arcano'))->toBe(CasterType::Third);
-    });
+    // Le sottoclassi che lanciano ora sono righe di tabella: quei due casi
+    // stanno in SubclassCatalogueTest, dove il database c'è.
 
-    it('resta "nessuno" con le altre sottoclassi', function () {
-        expect(CasterType::for('Guerriero', 'Campione'))->toBe(CasterType::None)
-            ->and(CasterType::for('Ladro', 'Assassino'))->toBe(CasterType::None);
+    it('resta "nessuno" per una classe che non lancia, senza sottoclasse', function () {
+        expect(CasterType::for('Guerriero'))->toBe(CasterType::None)
+            ->and(CasterType::for('Ladro'))->toBe(CasterType::None);
     });
 
     it('non promuove una classe che già lancia', function () {

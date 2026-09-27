@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\NotificationCategory;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -38,7 +39,19 @@ class User extends Authenticatable implements FilamentUser
             'email_verified_at' => 'datetime',
             'approved_at' => 'datetime',
             'password' => 'hashed',
+            'muted_notifications' => 'array',
         ];
+    }
+
+    /**
+     * Le email di una categoria arrivano finché non le si spegne.
+     *
+     * Si salva chi ha spento, non chi ha acceso: una categoria aggiunta in
+     * futuro parte accesa per tutti, senza dover toccare le righe esistenti.
+     */
+    public function wantsEmailFor(NotificationCategory $categoria): bool
+    {
+        return ! in_array($categoria->value, $this->muted_notifications ?? [], true);
     }
 
     /** Approvato da un admin. Non mass-assignable: si accende solo dal gesto esplicito, mai da un form. */

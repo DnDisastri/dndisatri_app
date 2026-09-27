@@ -176,6 +176,48 @@
                                         </div>
                                     </x-inset>
                                 @endif
+
+                                {{-- Sottorazza, discendenza o etnia: cambia il
+                                     nome ma è sempre la stessa scelta, e i suoi
+                                     bonus si sommano a quelli della razza. --}}
+                                @php $sottorazze = $this->subspeciesOptions(); @endphp
+                                @if ($sottorazze->isNotEmpty())
+                                    <x-inset class="mt-3">
+                                        <p class="mb-2 text-sm text-fg">
+                                            Scegli la tua <strong>{{ strtolower($this->subspeciesLabel()) }}</strong>.
+                                        </p>
+
+                                        <div class="space-y-2">
+                                            @foreach ($sottorazze as $sottorazza)
+                                                @php $presa = $subspecies === $sottorazza->name; @endphp
+                                                <button type="button"
+                                                        wire:click="selectSubspecies('{{ $sottorazza->name }}')"
+                                                        @class([
+                                                            'w-full rounded-card border px-3 py-2 text-left transition',
+                                                            'border-active bg-surface' => $presa,
+                                                            'border-line hover:border-active' => ! $presa,
+                                                        ])>
+                                                    <span class="flex items-center gap-2">
+                                                        <span class="font-semibold text-fg">{{ $sottorazza->name }}</span>
+                                                        @foreach ($sottorazza->asi ?? [] as $abil => $punti)
+                                                            <x-badge tone="accent">+{{ $punti }} {{ Ability::from($abil)->fullName() }}</x-badge>
+                                                        @endforeach
+                                                        @if ($sottorazza->speed)
+                                                            <x-badge>Velocità {{ rtrim(rtrim(number_format($sottorazza->speed, 1, ',', ''), '0'), ',') }} m</x-badge>
+                                                        @endif
+                                                    </span>
+
+                                                    @if ($sottorazza->description)
+                                                        <span class="mt-1 block text-sm text-fg">{{ $sottorazza->description }}</span>
+                                                    @endif
+                                                    @if ($presa && $sottorazza->traits)
+                                                        <span class="mt-1 block text-sm text-muted">{{ $sottorazza->traits }}</span>
+                                                    @endif
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                    </x-inset>
+                                @endif
                             </div>
                         @endif
                     </div>
@@ -275,6 +317,53 @@
                                 @endif
 
                                 <p class="mt-2 text-xs text-muted">{{ $data['equip'] }}</p>
+
+                                {{-- Solo «Personalizzato»: gli altri le abilità
+                                     le impongono, e lo zaino ce l'hanno nel
+                                     corredo fisso. --}}
+                                @if ($this->backgroundSkillSlots() > 0)
+                                    <x-inset class="mt-3">
+                                        <p class="mb-2 text-sm text-fg">
+                                            Scegli <strong>{{ $this->backgroundSkillSlots() }} abilità</strong> in cui sei competente.
+                                        </p>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            @foreach (range(0, $this->backgroundSkillSlots() - 1) as $slot)
+                                                <select wire:model.live="backgroundSkills.{{ $slot }}"
+                                                        class="rounded-md border border-line bg-page px-3 py-2 text-sm text-fg focus:border-active focus:outline-none">
+                                                    <option value="">Scegli</option>
+                                                    @foreach (config('dnd.character.skill_names', []) as $chiave => $nome)
+                                                        <option value="{{ $chiave }}">{{ $nome }}</option>
+                                                    @endforeach
+                                                </select>
+                                            @endforeach
+                                        </div>
+
+                                        @if (count(array_filter($backgroundSkills)) !== count(array_unique(array_filter($backgroundSkills))))
+                                            <p class="mt-2 text-sm text-on-danger-soft">Scegline due diverse.</p>
+                                        @endif
+                                    </x-inset>
+
+                                    <x-inset class="mt-3">
+                                        <p class="mb-2 text-sm text-fg">E lo <strong>zaino</strong> con cui parti.</p>
+
+                                        <div class="space-y-2">
+                                            @foreach ($this->packOptions() as $indice => $zaino)
+                                                @php $preso = $pack === $indice; @endphp
+                                                <button type="button" wire:click="$set('pack', {{ $indice }})"
+                                                        @class([
+                                                            'w-full rounded-card border px-3 py-2 text-left transition',
+                                                            'border-active bg-surface' => $preso,
+                                                            'border-line hover:border-active' => ! $preso,
+                                                        ])>
+                                                    <span class="block font-semibold text-fg">{{ $zaino['name'] }}</span>
+                                                    @if ($preso)
+                                                        <span class="mt-1 block text-xs text-muted">{{ $zaino['contents'] }}</span>
+                                                    @endif
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                    </x-inset>
+                                @endif
                             </div>
                         @endif
                     </div>

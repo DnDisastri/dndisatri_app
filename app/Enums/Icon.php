@@ -50,6 +50,7 @@ enum Icon: string implements Icona, ScalableIcon
     case News = 'news';
     case Maps = 'maps';
     case Proposals = 'proposals';
+    case BugReports = 'bug-reports';
 
     // Azioni.
     case Approve = 'approve';
@@ -143,6 +144,7 @@ enum Icon: string implements Icona, ScalableIcon
             self::News => Phosphor::Newspaper,
             self::Maps => Phosphor::MapTrifold,
             self::Proposals => Phosphor::Tray,
+            self::BugReports => Phosphor::Bug,
 
             self::Approve => Phosphor::CheckCircle,
             self::Reject => Phosphor::XCircle,

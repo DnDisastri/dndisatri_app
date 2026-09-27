@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Notifications\RegistrationAwaitingApproval;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Event;
@@ -24,7 +25,7 @@ describe('accesso', function () {
 
         $this->assertAuthenticatedAs($user);
     });
-// Gli errori di accesso restano generici per non rivelare quali indirizzi appartengono a utenti registrati.
+    // Gli errori di accesso restano generici per non rivelare quali indirizzi appartengono a utenti registrati.
     it('rifiuta la password sbagliata senza dire cosa non va', function () {
 
         $user = User::factory()->player()->create();
@@ -76,7 +77,7 @@ describe('accesso', function () {
 
         $this->assertAuthenticatedAs($user->fresh());
     });
-// La radice è pubblica e mostra la landing; le altre sezioni dell'app restano protette dall'autenticazione.
+    // La radice è pubblica e mostra la landing; le altre sezioni dell'app restano protette dall'autenticazione.
     it('a chi non e entrato mostra la presentazione, non il modulo', function () {
         $this->get(route('home'))
             ->assertOk()
@@ -118,7 +119,43 @@ describe('registrazione', function () {
             ->and($user->isDm())->toBeFalse()
             ->and($user->isAdmin())->toBeFalse();
     });
-// I ruoli inviati dal client vengono ignorati: le autorizzazioni superiori possono essere assegnate solo lato server.
+    // Il badge nel pannello lo vede solo chi ci entra: senza avviso un
+    // iscritto resterebbe fuori finché a qualcuno non viene in mente.
+    it('avvisa gli amministratori che c\'è qualcuno da approvare', function () {
+        Notification::fake();
+
+        $admin = User::factory()->admin()->create();
+        $dm = User::factory()->dm()->create();
+        $giocatore = User::factory()->player()->create();
+
+        $this->post(route('register'), [
+            'name' => 'Delia',
+            'email' => 'delia@dndisastri.test',
+            'password' => 'password-lunga',
+            'password_confirmation' => 'password-lunga',
+        ]);
+
+        Notification::assertSentTo($admin, RegistrationAwaitingApproval::class);
+        Notification::assertNotSentTo([$dm, $giocatore], RegistrationAwaitingApproval::class);
+    });
+
+    it('nell\'avviso mette nome e indirizzo di chi si è iscritto', function () {
+        $admin = User::factory()->admin()->create();
+
+        $this->post(route('register'), [
+            'name' => 'Delia',
+            'email' => 'delia@dndisastri.test',
+            'password' => 'password-lunga',
+            'password_confirmation' => 'password-lunga',
+        ]);
+
+        $avviso = $admin->notifications()->first();
+
+        expect($avviso->data['body'])->toContain('Delia')
+            ->toContain('delia@dndisastri.test');
+    });
+
+    // I ruoli inviati dal client vengono ignorati: le autorizzazioni superiori possono essere assegnate solo lato server.
     it('non lascia scegliere il ruolo da chi si registra', function () {
         $this->post(route('register'), [
             'name' => 'Furbo',
@@ -170,7 +207,7 @@ describe('password dimenticata', function () {
 
         Notification::assertSentTo($user, ResetPassword::class);
     });
-// Anche il recupero password usa una risposta indistinguibile per evitare l'enumerazione degli account.
+    // Anche il recupero password usa una risposta indistinguibile per evitare l'enumerazione degli account.
     it('risponde allo stesso modo per un indirizzo sconosciuto', function () {
         Notification::fake();
 

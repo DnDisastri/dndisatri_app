@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Enums\NotificationCategory;
 use App\Models\PendingChange;
 
 /**
@@ -12,6 +13,11 @@ use App\Models\PendingChange;
 final class ChangeAwaitingApproval extends InAppNotification
 {
     public function __construct(private readonly PendingChange $change) {}
+
+    public function category(): NotificationCategory
+    {
+        return NotificationCategory::Requests;
+    }
 
     public function toArray(object $notifiable): array
     {

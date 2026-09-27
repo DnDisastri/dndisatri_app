@@ -73,8 +73,12 @@ return [
     |
     */
 
+    // Non public_path(): i file di configurazione si caricano prima che
+    // AppServiceProvider applichi APP_PUBLIC_PATH, quindi qui risponderebbe
+    // ancora con la cartella di default e storage:link scriverebbe il
+    // collegamento dove non esiste nulla.
     'links' => [
-        public_path('storage') => storage_path('app/public'),
+        (env('APP_PUBLIC_PATH') ?: public_path()).'/storage' => storage_path('app/public'),
     ],
 
 ];

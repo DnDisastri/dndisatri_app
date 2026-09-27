@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Enums\NotificationCategory;
 use App\Models\TradeRequest;
 
 /** Qualcuno ti ha chiesto un oggetto: sei l'unico che sa se ce l'hai. */
@@ -13,6 +14,11 @@ final class TradeRequested extends InAppNotification
         private readonly TradeRequest $request,
         private readonly string $fromName,
     ) {}
+
+    public function category(): NotificationCategory
+    {
+        return NotificationCategory::Market;
+    }
 
     public function toArray(object $notifiable): array
     {

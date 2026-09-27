@@ -24,7 +24,7 @@ class CharactersRelationManager extends RelationManager
                 TextColumn::make('name')
                     ->label('Nome')
                     ->weight('bold')
-                    ->description(fn (Character $record) => collect([$record->class, $record->race])
+                    ->description(fn (Character $record) => collect([$record->class, $record->speciesLabel()])
                         ->filter()
                         ->implode(' · ') ?: null)
                     ->searchable(),
@@ -60,6 +60,6 @@ class CharactersRelationManager extends RelationManager
                     ->openUrlInNewTab(),
             ])
             ->emptyStateHeading('Nessun personaggio')
-            ->emptyStateDescription("Questo utente non ha ancora creato una scheda.");
+            ->emptyStateDescription('Questo utente non ha ancora creato una scheda.');
     }
 }

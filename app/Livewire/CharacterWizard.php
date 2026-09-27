@@ -7,8 +7,10 @@ use App\Domain\Dnd\Ability;
 use App\Domain\Dnd\AbilityScores;
 use App\Domain\Dnd\ClassRules;
 use App\Domain\Dnd\PointBuy;
+use App\Domain\Dnd\SubraceCatalogue;
 use App\Models\Build;
 use App\Models\Character;
+use App\Models\Subrace;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use Livewire\Component;
@@ -52,6 +54,9 @@ class CharacterWizard extends Component
     // Passo 2
     public string $species = '';
 
+    /** Drow, elfo dei boschi, nano delle colline. Vuota se la razza non ne ha. */
+    public string $subspecies = '';
+
     /** @var array<string,int> i +1 a scelta di Umano Variante e Mezzelfo */
     public array $speciesChoices = [];
 
@@ -61,6 +66,12 @@ class CharacterWizard extends Component
 
     // Passo 4
     public string $background = '';
+
+    /** @var array<int,string> le abilità scelte, per i background che lo permettono */
+    public array $backgroundSkills = [];
+
+    /** Indice dello zaino scelto, per i background che ne offrono uno. */
+    public ?int $pack = null;
 
     // Passo 5
     /** @var list<string> */
@@ -181,13 +192,62 @@ class CharacterWizard extends Component
         $this->species = $species;
 
         // I +1 a scelta valgono per la specie che li dava: cambiando specie
-        // vanno rifatti, o il conteggio in `canAdvance` non torna più.
+        // vanno rifatti, o il conteggio in `canAdvance` non torna più. Stessa
+        // cosa per la sottorazza, che appartiene alla razza di prima.
         $this->speciesChoices = [];
+        $this->subspecies = '';
+    }
+
+    public function selectSubspecies(string $subspecies): void
+    {
+        $this->subspecies = $subspecies;
+    }
+
+    /** @return Collection<int,Subrace> */
+    public function subspeciesOptions(): Collection
+    {
+        return app(SubraceCatalogue::class)->of($this->species);
+    }
+
+    /**
+     * Come si chiama la scelta, che non è la stessa cosa per tutte le razze.
+     *
+     * Per un dragonide è la discendenza e non cambia i punteggi; per un umano
+     * è l'etnia ed è solo un modo di dire da dove viene.
+     */
+    public function subspeciesLabel(): string
+    {
+        return match ($this->species) {
+            'Dragonide' => 'Discendenza draconica',
+            'Umano', 'Umano (Variante)' => 'Etnia',
+            default => 'Sottorazza',
+        };
     }
 
     public function selectBackground(string $background): void
     {
+        if ($background === $this->background) {
+            return;
+        }
+
         $this->background = $background;
+
+        // Appartengono al background di prima: tenerle vorrebbe dire un
+        // Accolito con le abilità scelte da Personalizzato.
+        $this->backgroundSkills = [];
+        $this->pack = null;
+    }
+
+    /** Quante abilità lascia scegliere il background scelto. Zero per quasi tutti. */
+    public function backgroundSkillSlots(): int
+    {
+        return CreateCharacter::freeSkillsFor($this->background);
+    }
+
+    /** @return list<array{name: string, contents: string}> */
+    public function packOptions(): array
+    {
+        return $this->backgroundSkillSlots() > 0 ? config('dnd.backgrounds.packs', []) : [];
     }
 
     /** Apre o chiude la descrizione di un incantesimo: pura comodità di lettura. */
@@ -290,10 +350,16 @@ class CharacterWizard extends Component
     {
         return match ($this->step) {
             1 => filled($this->name) && ClassRules::exists($this->class),
+            // Se la razza ha sottorazze, sceglierne una non è facoltativo: un
+            // elfo è di qualche tipo, non «elfo e basta».
             2 => filled($this->species)
-                && count(array_filter($this->speciesChoices)) === PointBuy::freeBonusesFor($this->species),
+                && count(array_filter($this->speciesChoices)) === PointBuy::freeBonusesFor($this->species)
+                && (filled($this->subspecies) || ! app(SubraceCatalogue::class)->required($this->species)),
             3 => PointBuy::isValid($this->scores),
-            4 => filled($this->background),
+            // Se il background lascia scegliere le abilità, sceglierle non
+            // è facoltativo, e non si ripetono.
+            4 => filled($this->background)
+                && count(array_unique(array_filter($this->backgroundSkills))) === $this->backgroundSkillSlots(),
             5 => count($this->skills) === ClassRules::skillCount($this->class),
             6 => true,
             default => true,
@@ -317,6 +383,9 @@ class CharacterWizard extends Component
                 spells: array_values($this->spells),
                 equipmentChoices: $this->equipment,
                 story: filled($this->story) ? $this->story : null,
+                subspecies: filled($this->subspecies) ? $this->subspecies : null,
+                backgroundSkills: array_values(array_filter($this->backgroundSkills)),
+                pack: $this->pack,
             );
         } catch (InvalidArgumentException $e) {
             $this->addError('creazione', $e->getMessage());
@@ -332,7 +401,12 @@ class CharacterWizard extends Component
     /** I punteggi finali, bonus di specie compresi. */
     public function finalScores(): array
     {
-        return PointBuy::withSpecies($this->scores, $this->species, array_filter($this->speciesChoices));
+        return PointBuy::withSpecies(
+            $this->scores,
+            $this->species,
+            array_filter($this->speciesChoices),
+            $this->subspecies ?: null,
+        );
     }
 
     public function remainingPoints(): int
@@ -343,7 +417,10 @@ class CharacterWizard extends Component
     /** Le abilità che questa classe può scegliere, con quelle del background già segnate. */
     public function skillOptions(): Collection
     {
-        $fromBackground = config("dnd.backgrounds.list.{$this->background}.skills", []);
+        $fromBackground = [
+            ...config("dnd.backgrounds.list.{$this->background}.skills", []),
+            ...array_filter($this->backgroundSkills),
+        ];
         $names = config('dnd.character.skill_names', []);
 
         return collect(ClassRules::skillChoices($this->class))

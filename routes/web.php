@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AboutController;
+use App\Http\Controllers\BugReportController;
 use App\Http\Controllers\BuildController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CharacterController;
@@ -43,8 +44,14 @@ Route::middleware('auth')->group(function () {
     Route::get('profilo', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('profilo', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('profilo/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+    Route::put('profilo/notifiche', [ProfileController::class, 'updateNotifications'])->name('profile.notifications');
 
     Route::get('profilo/richiami', [ProfileController::class, 'warnings'])->name('profile.warnings');
+
+    Route::get('segnala', [BugReportController::class, 'create'])->name('bug-reports.create');
+    Route::post('segnala', [BugReportController::class, 'store'])
+        ->middleware('throttle:6,1')
+        ->name('bug-reports.store');
 
     Route::get('gilda', [GuildController::class, 'index'])->name('guild.index');
 

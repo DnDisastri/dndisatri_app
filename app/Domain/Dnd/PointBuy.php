@@ -79,14 +79,29 @@ final class PointBuy
      * @param  array<string,int>  $chosen  i +1 a scelta, per le specie che li hanno
      * @return array<string,int>
      */
-    public static function withSpecies(array $scores, ?string $species, array $chosen = []): array
-    {
+    public static function withSpecies(
+        array $scores,
+        ?string $species,
+        array $chosen = [],
+        ?string $subspecies = null,
+    ): array {
         $bonuses = config("dnd.species.{$species}.asi", []);
 
         if (isset($bonuses['all'])) {
             $bonuses = collect(Ability::cases())
                 ->mapWithKeys(fn (Ability $a) => [$a->value => $bonuses['all']])
                 ->all();
+        }
+
+        // La sottorazza **aggiunge**, non sostituisce: un elfo alto ha +2
+        // Destrezza dall'elfo e +1 Intelligenza dalla sottorazza. Le
+        // discendenze draconiche e le etnie umane non portano niente.
+        $daSottorazza = app(SubraceCatalogue::class)->find($species, $subspecies)?->asi ?? [];
+
+        foreach ($daSottorazza as $ability => $bonus) {
+            if (isset($scores[$ability])) {
+                $scores[$ability] += $bonus;
+            }
         }
 
         foreach ([...$bonuses, ...$chosen] as $ability => $bonus) {

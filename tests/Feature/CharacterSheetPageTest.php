@@ -535,11 +535,13 @@ describe('la scheda di un altro', function () {
         $this->actingAs($this->estraneo)
             ->get(route('characters.show', $this->pg))
             ->assertOk()
-            ->assertDontSee('Punti ferita')
-            ->assertDontSee('Iniz.')
-            ->assertDontSee('Vel.')
-            ->assertDontSee('Comp.')
-            ->assertDontSee('PF');
+            // Sul testo e non sull'HTML: «PF» capita dentro un token CSRF
+            // generato a caso, e il test fallisce senza motivo.
+            ->assertDontSeeText('Punti ferita')
+            ->assertDontSeeText('Iniz.')
+            ->assertDontSeeText('Vel.')
+            ->assertDontSeeText('Comp.')
+            ->assertDontSeeText('PF');
     });
 
     it('della Storia resta la storia, e solo quella', function () {

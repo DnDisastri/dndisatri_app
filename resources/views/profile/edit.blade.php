@@ -57,6 +57,35 @@
         </form>
     </x-panel>
 
+    <x-panel title="Notifiche email">
+        <form method="POST" action="{{ route('profile.notifications') }}" class="flex flex-col gap-4">
+            @csrf
+            @method('PUT')
+
+            <p class="text-sm text-muted">
+                Quello che succede nel gruppo lo trovi sempre nella campanella.
+                Qui scegli di cosa vuoi ricevere anche un'email.
+            </p>
+
+{{-- Il valore inviato è chi resta acceso; chi manca finisce fra i silenziati. --}}
+            <div class="flex flex-col gap-3">
+                @foreach (\App\Enums\NotificationCategory::cases() as $categoria)
+                    <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-line p-3 hover:bg-page">
+                        <input type="checkbox" name="categorie[]" value="{{ $categoria->value }}"
+                               @checked($user->wantsEmailFor($categoria))
+                               class="mt-1 h-4 w-4 shrink-0 accent-active">
+                        <span>
+                            <span class="block text-sm font-semibold text-fg">{{ $categoria->label() }}</span>
+                            <span class="block text-xs text-muted">{{ $categoria->description() }}</span>
+                        </span>
+                    </label>
+                @endforeach
+            </div>
+
+            <x-button class="self-start">Salva preferenze</x-button>
+        </form>
+    </x-panel>
+
     <x-panel title="I miei eroi">
         <div class="space-y-2">
             @forelse ($characters as $character)
@@ -65,7 +94,7 @@
                     <span >
                         <span class="font-semibold text-fg">{{ $character->name }}</span>
                         <span class="text-sm text-muted">
-                            · {{ $character->race }} · {{ $character->class }} · liv. {{ $character->level }}
+                            · {{ $character->speciesLabel() }} · {{ $character->class }} · liv. {{ $character->level }}
                         </span>
                     </span>
                     <x-grado :level="$character->level" />

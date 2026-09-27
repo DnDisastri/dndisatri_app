@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Enums\NotificationCategory;
 use App\Enums\PendingChangeStatus;
 use App\Models\DmRequest;
 
@@ -16,6 +17,11 @@ use App\Models\DmRequest;
 final class DmRequestDecided extends InAppNotification
 {
     public function __construct(private readonly DmRequest $request) {}
+
+    public function category(): NotificationCategory
+    {
+        return NotificationCategory::Requests;
+    }
 
     public function toArray(object $notifiable): array
     {

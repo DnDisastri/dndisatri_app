@@ -33,7 +33,7 @@
         </h2>
 
         <p class="mt-1 text-sm text-muted">
-            {{ $character->race }} · <x-classi :character="$character" />
+            {{ $character->speciesLabel() }} · <x-classi :character="$character" />
             · livello {{ $character->level }}
         </p>
         <p class="mt-1 text-sm text-muted">Giocato da {{ $character->user->name }}</p>

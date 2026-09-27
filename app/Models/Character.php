@@ -32,7 +32,7 @@ use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
 #[Fillable([
-    'user_id', 'name', 'class', 'subclass', 'race', 'background', 'story',
+    'user_id', 'name', 'class', 'subclass', 'race', 'subrace', 'background', 'story',
     'level', 'hit_die', 'str', 'dex', 'con', 'int', 'wis', 'cha',
     'speed', 'hp_max', 'hp_current', 'hp_temp', 'gp',
     'death_save_successes', 'death_save_failures',
@@ -293,7 +293,37 @@ class Character extends Model
         return $this->items()->where('name', $name)->sum('qty') >= $qty;
     }
 
+    /** L'opzione che permette a un umano di non avere un'etnia. */
+    private const SENZA_SOTTORAZZA = 'Nessuna';
+
+    /**
+     * Come si scrive la specie di questo personaggio.
+     *
+     * I nomi delle sottorazze sono di due tipi. Alcuni contengono già la
+     * razza («Elfo Alto», «Nano delle Colline») e bastano da soli. Altri no
+     * («Nero», «Piedelesto») e senza la razza davanti non si capiscono.
+     */
+    public function speciesLabel(): string
+    {
+        if (blank($this->subrace) || $this->subrace === self::SENZA_SOTTORAZZA) {
+            return (string) $this->race;
+        }
+
+        return str_contains($this->subrace, (string) $this->race)
+            ? $this->subrace
+            : "{$this->race} {$this->subrace}";
+    }
+
     // === Registro ===
+
+    /**
+     * Il tetto di ogni importo in oro: è il massimo di `unsignedInteger`, il
+     * tipo di `gp` e delle colonne del mercato. Oltre, il database rifiuta la
+     * scrittura e la richiesta muore con un 500 invece che con un errore nel
+     * modulo. Se un giorno servisse un limite di gioco più basso, si abbassa
+     * qui e vale ovunque.
+     */
+    public const MAX_GP = 4_294_967_295;
 
     /**
      * Scrive una riga nel Registro. Va chiamata DOPO aver aggiornato l'oro,
