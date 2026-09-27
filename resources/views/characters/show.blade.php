@@ -26,7 +26,7 @@
                     <x-grado class="mt-1 self-end" :level="$character->level" />
 
                     <p class="text-sm ">
-                        {{ $character->subrace ? "{$character->subrace} ({$character->race})" : $character->race }}
+                        {{ $character->speciesLabel() }}
                     </p>
                     <p class="text-sm ">
                         <x-classi :character="$character" />

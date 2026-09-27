@@ -293,6 +293,27 @@ class Character extends Model
         return $this->items()->where('name', $name)->sum('qty') >= $qty;
     }
 
+    /** L'opzione che permette a un umano di non avere un'etnia. */
+    private const SENZA_SOTTORAZZA = 'Nessuna';
+
+    /**
+     * Come si scrive la specie di questo personaggio.
+     *
+     * I nomi delle sottorazze sono di due tipi. Alcuni contengono già la
+     * razza («Elfo Alto», «Nano delle Colline») e bastano da soli. Altri no
+     * («Nero», «Piedelesto») e senza la razza davanti non si capiscono.
+     */
+    public function speciesLabel(): string
+    {
+        if (blank($this->subrace) || $this->subrace === self::SENZA_SOTTORAZZA) {
+            return (string) $this->race;
+        }
+
+        return str_contains($this->subrace, (string) $this->race)
+            ? $this->subrace
+            : "{$this->race} {$this->subrace}";
+    }
+
     // === Registro ===
 
     /**

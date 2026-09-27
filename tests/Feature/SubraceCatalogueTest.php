@@ -8,6 +8,7 @@ use App\Domain\Dnd\SubraceCatalogue;
 use App\Filament\Resources\Subraces\Pages\ListSubraces;
 use App\Filament\Resources\Subraces\SubraceResource;
 use App\Livewire\CharacterWizard;
+use App\Models\Character;
 use App\Models\Subrace;
 use App\Models\User;
 use Database\Seeders\SubraceSeeder;
@@ -188,5 +189,33 @@ describe('il pannello', function () {
             ->test(ListSubraces::class)
             ->assertTableActionHidden('delete', $daManuale)
             ->assertTableActionVisible('delete', $homebrew);
+    });
+});
+
+// I nomi sono di due tipi: alcuni contengono già la razza, altri no.
+describe('come si scrive la specie', function () {
+    it('non ripete la razza quando il nome la contiene già', function (string $razza, string $sottorazza, string $atteso) {
+        $eroe = Character::factory()->create(['race' => $razza, 'subrace' => $sottorazza]);
+
+        expect($eroe->speciesLabel())->toBe($atteso);
+    })->with([
+        'elfo alto' => ['Elfo', 'Elfo Alto', 'Elfo Alto'],
+        'nano delle colline' => ['Nano', 'Nano delle Colline', 'Nano delle Colline'],
+        'dragonide nero' => ['Dragonide', 'Nero', 'Dragonide Nero'],
+        'halfling piedelesto' => ['Halfling', 'Piedelesto', 'Halfling Piedelesto'],
+        'drow' => ['Elfo', 'Drow', 'Elfo Drow'],
+    ]);
+
+    it('senza sottorazza resta la sola razza', function () {
+        $eroe = Character::factory()->create(['race' => 'Tiefling', 'subrace' => null]);
+
+        expect($eroe->speciesLabel())->toBe('Tiefling');
+    });
+
+    // «Nessuna» è l'opzione che permette a un umano di non avere un'etnia.
+    it('e l\'etnia «Nessuna» non si scrive', function () {
+        $eroe = Character::factory()->create(['race' => 'Umano', 'subrace' => 'Nessuna']);
+
+        expect($eroe->speciesLabel())->toBe('Umano');
     });
 });

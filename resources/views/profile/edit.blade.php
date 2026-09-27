@@ -94,7 +94,7 @@
                     <span >
                         <span class="font-semibold text-fg">{{ $character->name }}</span>
                         <span class="text-sm text-muted">
-                            · {{ $character->race }} · {{ $character->class }} · liv. {{ $character->level }}
+                            · {{ $character->speciesLabel() }} · {{ $character->class }} · liv. {{ $character->level }}
                         </span>
                     </span>
                     <x-grado :level="$character->level" />
