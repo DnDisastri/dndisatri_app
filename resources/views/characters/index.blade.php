@@ -44,7 +44,7 @@
                             <x-grado class="self-end" :level="$character->level" />
 
                             <p class="text-sm ">
-                                {{ $character->race }} 
+                                {{ $character->speciesLabel() }} 
                             </p>
                             <p class="text-sm ">
                                 <x-classi :character="$character" />

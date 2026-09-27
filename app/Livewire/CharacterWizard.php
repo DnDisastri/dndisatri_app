@@ -7,8 +7,10 @@ use App\Domain\Dnd\Ability;
 use App\Domain\Dnd\AbilityScores;
 use App\Domain\Dnd\ClassRules;
 use App\Domain\Dnd\PointBuy;
+use App\Domain\Dnd\SubraceCatalogue;
 use App\Models\Build;
 use App\Models\Character;
+use App\Models\Subrace;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use Livewire\Component;
@@ -51,6 +53,9 @@ class CharacterWizard extends Component
 
     // Passo 2
     public string $species = '';
+
+    /** Drow, elfo dei boschi, nano delle colline. Vuota se la razza non ne ha. */
+    public string $subspecies = '';
 
     /** @var array<string,int> i +1 a scelta di Umano Variante e Mezzelfo */
     public array $speciesChoices = [];
@@ -181,8 +186,36 @@ class CharacterWizard extends Component
         $this->species = $species;
 
         // I +1 a scelta valgono per la specie che li dava: cambiando specie
-        // vanno rifatti, o il conteggio in `canAdvance` non torna più.
+        // vanno rifatti, o il conteggio in `canAdvance` non torna più. Stessa
+        // cosa per la sottorazza, che appartiene alla razza di prima.
         $this->speciesChoices = [];
+        $this->subspecies = '';
+    }
+
+    public function selectSubspecies(string $subspecies): void
+    {
+        $this->subspecies = $subspecies;
+    }
+
+    /** @return Collection<int,Subrace> */
+    public function subspeciesOptions(): Collection
+    {
+        return app(SubraceCatalogue::class)->of($this->species);
+    }
+
+    /**
+     * Come si chiama la scelta, che non è la stessa cosa per tutte le razze.
+     *
+     * Per un dragonide è la discendenza e non cambia i punteggi; per un umano
+     * è l'etnia ed è solo un modo di dire da dove viene.
+     */
+    public function subspeciesLabel(): string
+    {
+        return match ($this->species) {
+            'Dragonide' => 'Discendenza draconica',
+            'Umano', 'Umano (Variante)' => 'Etnia',
+            default => 'Sottorazza',
+        };
     }
 
     public function selectBackground(string $background): void
@@ -290,8 +323,11 @@ class CharacterWizard extends Component
     {
         return match ($this->step) {
             1 => filled($this->name) && ClassRules::exists($this->class),
+            // Se la razza ha sottorazze, sceglierne una non è facoltativo: un
+            // elfo è di qualche tipo, non «elfo e basta».
             2 => filled($this->species)
-                && count(array_filter($this->speciesChoices)) === PointBuy::freeBonusesFor($this->species),
+                && count(array_filter($this->speciesChoices)) === PointBuy::freeBonusesFor($this->species)
+                && (filled($this->subspecies) || ! app(SubraceCatalogue::class)->required($this->species)),
             3 => PointBuy::isValid($this->scores),
             4 => filled($this->background),
             5 => count($this->skills) === ClassRules::skillCount($this->class),
@@ -317,6 +353,7 @@ class CharacterWizard extends Component
                 spells: array_values($this->spells),
                 equipmentChoices: $this->equipment,
                 story: filled($this->story) ? $this->story : null,
+                subspecies: filled($this->subspecies) ? $this->subspecies : null,
             );
         } catch (InvalidArgumentException $e) {
             $this->addError('creazione', $e->getMessage());
@@ -332,7 +369,12 @@ class CharacterWizard extends Component
     /** I punteggi finali, bonus di specie compresi. */
     public function finalScores(): array
     {
-        return PointBuy::withSpecies($this->scores, $this->species, array_filter($this->speciesChoices));
+        return PointBuy::withSpecies(
+            $this->scores,
+            $this->species,
+            array_filter($this->speciesChoices),
+            $this->subspecies ?: null,
+        );
     }
 
     public function remainingPoints(): int

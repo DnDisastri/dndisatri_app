@@ -22,8 +22,9 @@ class AppServiceProvider extends ServiceProvider
             $this->app->usePublicPath($publicPath);
         }
 
-        // Singleton perché faccia da memoria per la durata della richiesta.
+        // Singleton perché facciano da memoria per la durata della richiesta.
         $this->app->singleton(SubclassCatalogue::class);
+        $this->app->singleton(SubraceCatalogue::class);
     }
 
     /**

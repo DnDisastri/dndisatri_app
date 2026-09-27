@@ -9,6 +9,7 @@ use App\Domain\Dnd\AbilityScores;
 use App\Domain\Dnd\ClassRules;
 use App\Domain\Dnd\PointBuy;
 use App\Domain\Dnd\SpellSlots;
+use App\Domain\Dnd\SubraceCatalogue;
 use App\Enums\EquipmentSlot;
 use App\Models\Character;
 use App\Models\User;
@@ -53,16 +54,19 @@ final class CreateCharacter
         array $equipmentChoices = [],
         ?string $subclass = null,
         ?string $story = null,
+        ?string $subspecies = null,
     ): Character {
         $this->validate($name, $class, $species, $background, $boughtScores, $skills, $spells);
 
-        $scores = PointBuy::withSpecies($boughtScores, $species, $speciesChoices);
+        $sottorazza = app(SubraceCatalogue::class)->find($species, $subspecies);
+
+        $scores = PointBuy::withSpecies($boughtScores, $species, $speciesChoices, $subspecies);
         $abilityScores = AbilityScores::fromArray($scores);
         $hitDie = ClassRules::hitDie($class);
 
         return DB::transaction(function () use (
             $owner, $name, $class, $species, $background, $subclass, $story,
-            $scores, $abilityScores, $hitDie, $skills, $spells, $equipmentChoices
+            $scores, $abilityScores, $hitDie, $skills, $spells, $equipmentChoices, $sottorazza
         ) {
             $character = Character::create([
                 'user_id' => $owner->getKey(),
@@ -70,6 +74,7 @@ final class CreateCharacter
                 'class' => $class,
                 'subclass' => $subclass,
                 'race' => $species,
+                'subrace' => $sottorazza?->name,
                 'background' => $background,
                 // Quello che gli altri leggeranno di lui. Alla creazione si
                 // scrive liberamente: è dopo che le modifiche passano da un DM.
@@ -77,7 +82,9 @@ final class CreateCharacter
                 'level' => 1,
                 'hit_die' => $hitDie,
                 ...$scores,
-                'speed' => config("dnd.species.{$species}.speed", 9),
+                // L'elfo dei boschi cammina più svelto della sua razza: se la
+                // sottorazza dichiara un passo, è il suo che vale.
+                'speed' => $sottorazza?->speed ?? config("dnd.species.{$species}.speed", 9),
                 // Al primo livello il dado vita si prende pieno.
                 'hp_max' => max(1, $hitDie + $abilityScores->modifier(Ability::Con)),
                 'hp_current' => max(1, $hitDie + $abilityScores->modifier(Ability::Con)),
@@ -88,7 +95,12 @@ final class CreateCharacter
                 'skills' => $this->skillMap($skills, $background),
                 'spell_slots_used' => [],
                 'spell_ability' => SpellSlots::abilityFor($class)?->value,
-                'species_traits' => config("dnd.species.{$species}.traits"),
+                // Razza e sottorazza di seguito: sulla scheda si deve leggere
+                // da dove viene ogni bonus, non solo il totale nei punteggi.
+                'species_traits' => collect([
+                    config("dnd.species.{$species}.traits"),
+                    $sottorazza?->traits,
+                ])->filter()->join("\n\n"),
                 'background_feature' => config("dnd.backgrounds.features.{$background}"),
             ]);
 
