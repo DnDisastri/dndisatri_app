@@ -67,6 +67,12 @@ class CharacterWizard extends Component
     // Passo 4
     public string $background = '';
 
+    /** @var array<int,string> le abilità scelte, per i background che lo permettono */
+    public array $backgroundSkills = [];
+
+    /** Indice dello zaino scelto, per i background che ne offrono uno. */
+    public ?int $pack = null;
+
     // Passo 5
     /** @var list<string> */
     public array $skills = [];
@@ -220,7 +226,28 @@ class CharacterWizard extends Component
 
     public function selectBackground(string $background): void
     {
+        if ($background === $this->background) {
+            return;
+        }
+
         $this->background = $background;
+
+        // Appartengono al background di prima: tenerle vorrebbe dire un
+        // Accolito con le abilità scelte da Personalizzato.
+        $this->backgroundSkills = [];
+        $this->pack = null;
+    }
+
+    /** Quante abilità lascia scegliere il background scelto. Zero per quasi tutti. */
+    public function backgroundSkillSlots(): int
+    {
+        return CreateCharacter::freeSkillsFor($this->background);
+    }
+
+    /** @return list<array{name: string, contents: string}> */
+    public function packOptions(): array
+    {
+        return $this->backgroundSkillSlots() > 0 ? config('dnd.backgrounds.packs', []) : [];
     }
 
     /** Apre o chiude la descrizione di un incantesimo: pura comodità di lettura. */
@@ -329,7 +356,10 @@ class CharacterWizard extends Component
                 && count(array_filter($this->speciesChoices)) === PointBuy::freeBonusesFor($this->species)
                 && (filled($this->subspecies) || ! app(SubraceCatalogue::class)->required($this->species)),
             3 => PointBuy::isValid($this->scores),
-            4 => filled($this->background),
+            // Se il background lascia scegliere le abilità, sceglierle non
+            // è facoltativo, e non si ripetono.
+            4 => filled($this->background)
+                && count(array_unique(array_filter($this->backgroundSkills))) === $this->backgroundSkillSlots(),
             5 => count($this->skills) === ClassRules::skillCount($this->class),
             6 => true,
             default => true,
@@ -354,6 +384,8 @@ class CharacterWizard extends Component
                 equipmentChoices: $this->equipment,
                 story: filled($this->story) ? $this->story : null,
                 subspecies: filled($this->subspecies) ? $this->subspecies : null,
+                backgroundSkills: array_values(array_filter($this->backgroundSkills)),
+                pack: $this->pack,
             );
         } catch (InvalidArgumentException $e) {
             $this->addError('creazione', $e->getMessage());
@@ -385,7 +417,10 @@ class CharacterWizard extends Component
     /** Le abilità che questa classe può scegliere, con quelle del background già segnate. */
     public function skillOptions(): Collection
     {
-        $fromBackground = config("dnd.backgrounds.list.{$this->background}.skills", []);
+        $fromBackground = [
+            ...config("dnd.backgrounds.list.{$this->background}.skills", []),
+            ...array_filter($this->backgroundSkills),
+        ];
         $names = config('dnd.character.skill_names', []);
 
         return collect(ClassRules::skillChoices($this->class))
