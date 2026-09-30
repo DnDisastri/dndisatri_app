@@ -6,7 +6,12 @@
 
         @php $mio = auth()->id() === $character->user_id; @endphp
 
-        <x-panel>
+        {{-- Da `xl` il pannello (PF, dadi, strumenti DM) resta a vista a sinistra
+             mentre le sezioni scorrono a destra; sotto, la colonna è una sola
+             perché le sezioni non ci starebbero. `min-w-0` lascia al carosello
+             delle sezioni la larghezza della colonna. --}}
+        <div class="space-y-4 xl:grid xl:grid-cols-[20rem_minmax(0,1fr)] xl:items-start xl:gap-6 xl:space-y-0">
+        <x-panel class="xl:sticky xl:top-8 xl:max-h-[calc(100dvh-4rem)] xl:overflow-y-auto">
             <div class="flex flex-row justify-between items-center gap-1 mb-1">
                 <h2 class="text-xl text-fg  ">{{ $character->name }}</h2>
 
@@ -59,6 +64,7 @@
             @endif
         </x-panel>
 
+        <div class="min-w-0 space-y-4">
         {{-- Sezioni a swipe (app.js), senza reload; l'indirizzo segue la
              sezione, così un refresh riapre lì. --}}
         @if (count($sezioni) > 1)
@@ -86,6 +92,8 @@
         @else
             @include('characters.sezioni.' . $sezione->value)
         @endif
+        </div>
+        </div>
 
         <x-back dove="sotto" :href="$mio ? route('characters.index') : route('guild.index')">
             {{ $mio ? 'Torna ai miei eroi' : 'Torna alla Gilda' }}

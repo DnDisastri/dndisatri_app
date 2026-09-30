@@ -17,7 +17,7 @@
     };
 @endphp
 
-<x-pagina larghezza="media" class="space-y-6">
+<x-pagina class="space-y-6">
 
     <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="min-w-0">
@@ -83,6 +83,8 @@
             comparirà qui.
         </x-empty>
     @else
+        {{-- Su PC la serata a sinistra e il tavolo a destra. --}}
+        <div class="space-y-6 xl:grid xl:grid-cols-2 xl:items-start xl:gap-6 xl:space-y-0">
         <section class="space-y-3">
             <div class="flex items-baseline justify-between">
                 <h2 class="text-xs uppercase tracking-wide text-muted">
@@ -137,6 +139,7 @@
 
             @include('dm.partials.tavolo', ['tavolo' => $tavolo])
         </section>
+        </div>
     @endif
 </x-pagina>
 @endsection

@@ -24,7 +24,7 @@
     $frecciaNominaCampagna = ! in_array($da, ['libro-mastro', 'serate', 'regia'], true);
 @endphp
 
-<x-pagina larghezza="media" class="space-y-6">
+<x-pagina class="space-y-6">
 
     <x-back dove="sopra" :href="$ritorno['url']">
         {{ $ritorno['testo'] }}
@@ -55,6 +55,9 @@
         </p>
     </div>
 
+    {{-- Su desktop il resoconto a sinistra, presenze e strumenti del DM a destra. --}}
+    <div class="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
+    <div class="space-y-6">
     @if ($session->hasRecap())
         <x-panel>
             <p class="text-xs uppercase tracking-wide text-muted">Com'è andata</p>
@@ -73,6 +76,9 @@
     @elseif (! $session->isUpcoming())
         <x-empty>Il resoconto non è ancora stato scritto.</x-empty>
     @endif
+    </div>
+
+    <div class="space-y-6">
 {{-- Le presenze vengono mostrate solo dopo la serata: una prenotazione alla quest non equivale a una presenza. --}}
     @unless ($session->isUpcoming())
         <x-panel>
@@ -203,6 +209,9 @@
             @endcan
         </x-panel>
     @endif
+
+    </div>
+    </div>
 
     @if ($precedente || $prossima)
         <nav class="mt-8 flex items-stretch justify-between gap-3 border-t border-line pt-4 text-sm">

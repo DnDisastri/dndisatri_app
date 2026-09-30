@@ -13,7 +13,7 @@
         || auth()->user()->can('promote', $quest);
 @endphp
 
-<x-pagina larghezza="media" class="space-y-6">
+<x-pagina class="space-y-6">
 
     <div class="space-y-4">
 
@@ -56,6 +56,9 @@
         </div>
     </div>
 
+    {{-- Su desktop la storia a sinistra, i posti e le azioni a destra. --}}
+    <div class="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
+    <div class="space-y-6">
     @unless ($quest->isActive())
         <x-panel>
             <p class="text-xs uppercase tracking-wide text-muted">Com'è andata</p>
@@ -126,6 +129,9 @@
         @endif
     </x-panel>
 
+    </div>
+
+    <div class="space-y-6">
     <x-panel>
         <div class="flex items-baseline justify-between gap-3">
             <h3 class="flex items-center gap-2 text-lg font-semibold text-fg">
@@ -305,5 +311,7 @@
             @endcan
         </x-panel>
     @endif
+    </div>
+    </div>
 </x-pagina>
 @endsection

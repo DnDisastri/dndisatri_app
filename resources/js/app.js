@@ -252,8 +252,19 @@ if (scheda) {
         });
     }, { passive: true });
 
-    tab.forEach((t, j) => t.addEventListener('click', () => {
-        scheda.scrollTo({ left: j * scheda.clientWidth, behavior: 'smooth' });
+    const vaiA = (j) => scheda.scrollTo({ left: j * scheda.clientWidth, behavior: 'smooth' });
+
+    tab.forEach((t, j) => t.addEventListener('click', () => vaiA(j)));
+
+    // Su PC non c'è lo swipe: le frecce sfogliano le sezioni dalla barra.
+    tab.forEach((t, j) => t.addEventListener('keydown', (evento) => {
+        const passo = { ArrowRight: 1, ArrowLeft: -1 }[evento.key];
+        if (!passo) return;
+
+        evento.preventDefault();
+        const prossima = (j + passo + tab.length) % tab.length;
+        tab[prossima].focus();
+        vaiA(prossima);
     }));
 
     // I componenti Livewire dentro le sezioni cambiano altezza da soli: la si

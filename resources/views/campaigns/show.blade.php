@@ -11,12 +11,12 @@
         <div class="absolute inset-0 -z-10 bg-page" style="opacity: {{ $campaign->backgroundVeil() }}"></div>
     @endif
 
-<x-pagina larghezza="media" class="space-y-6">
+<x-pagina class="space-y-6">
 
     <div class="text-center">
         @if ($campaign->coverUrl())
             <img src="{{ $campaign->coverUrl() }}" alt=""
-                 class="mb-4 aspect-video w-full rounded-card border border-line object-cover">
+                 class="mx-auto mb-4 aspect-video w-full max-w-3xl rounded-card border border-line object-cover">
         @endif
 
         <h2 class="text-2xl text-fg">{{ $campaign->title }}</h2>
@@ -39,6 +39,9 @@
         @endif
     </div>
 
+    {{-- Su desktop il racconto a sinistra, quest, mappe e compagnia a destra. --}}
+    <div class="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
+    <div class="space-y-6">
     @if ($lastSession)
         <x-card :href="route('sessions.show', $lastSession)">
             <p class="text-xs uppercase tracking-wide text-muted">L'ultima serata</p>
@@ -93,6 +96,9 @@
         </x-card>
     @endif
 
+    </div>
+
+    <div class="space-y-6">
     @if ($quests->isNotEmpty() || $questsConcluse > 0)
         <div>
             <h3 class="mb-3 flex items-center gap-2 text-lg font-semibold text-fg">
@@ -184,6 +190,9 @@
             </div>
         </div>
     @endif
+
+    </div>
+    </div>
 
     <x-back :href="route('campaigns.index')">Torna alle campagne</x-back>
 </x-pagina>
