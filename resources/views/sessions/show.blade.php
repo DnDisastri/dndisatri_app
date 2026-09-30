@@ -24,7 +24,7 @@
     $frecciaNominaCampagna = ! in_array($da, ['libro-mastro', 'serate', 'regia'], true);
 @endphp
 
-<div class="mx-auto max-w-3xl space-y-6 px-4 py-6">
+<x-pagina larghezza="media" class="space-y-6">
 
     <x-back dove="sopra" :href="$ritorno['url']">
         {{ $ritorno['testo'] }}
@@ -240,5 +240,5 @@
             @endif
         </nav>
     @endif
-</div>
+</x-pagina>
 @endsection

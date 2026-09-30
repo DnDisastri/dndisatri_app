@@ -11,7 +11,7 @@
         <div class="absolute inset-0 -z-10 bg-page" style="opacity: {{ $campaign->backgroundVeil() }}"></div>
     @endif
 
-<div class="mx-auto max-w-3xl space-y-6 px-4 py-6">
+<x-pagina larghezza="media" class="space-y-6">
 
     <div class="text-center">
         @if ($campaign->coverUrl())
@@ -186,6 +186,6 @@
     @endif
 
     <x-back :href="route('campaigns.index')">Torna alle campagne</x-back>
-</div>
+</x-pagina>
 </div>
 @endsection

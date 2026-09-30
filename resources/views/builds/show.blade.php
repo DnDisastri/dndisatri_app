@@ -2,7 +2,7 @@
 @section('title', $build->title)
 
 @section('content')
-<div class="mx-auto max-w-3xl space-y-4 px-4 py-6">
+<x-pagina larghezza="media" class="space-y-4">
 
     <div class="relative flex min-h-36 items-end overflow-hidden rounded-card bg-primary p-4">
         @if ($build->coverUrl())
@@ -85,5 +85,5 @@
     </div>
 
     <x-back dove="sotto" :href="route('builds.index')">Torna alle build</x-back>
-</div>
+</x-pagina>
 @endsection

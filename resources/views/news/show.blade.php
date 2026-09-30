@@ -3,7 +3,7 @@
 
 @section('content')
 
-<div class="mx-auto max-w-2xl px-4 py-6">
+<x-pagina larghezza="lettura">
 
 {{-- Gli admin possono aprire anche bozze e pubblicazioni programmate; la nota chiarisce che non sono ancora visibili agli utenti. --}}
     @unless ($post->isPublished())
@@ -74,5 +74,5 @@
     @endif
 
     <x-back :href="route('news.index')">Torna alle news</x-back>
-</div>
+</x-pagina>
 @endsection

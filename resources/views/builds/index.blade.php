@@ -2,7 +2,7 @@
 @section('title', 'Build consigliate')
 
 @section('content')
-<div class="mx-auto max-w-3xl px-4 py-6">
+<x-pagina larghezza="media">
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="\App\Enums\Icon::Builds" class="h-7 w-7" /> Build consigliate
     </h2>
@@ -40,5 +40,5 @@
             Non c'è ancora nessuna build consigliata. Le scrivono i dungeon master dal Pannello.
         </x-empty>
     @endforelse
-</div>
+</x-pagina>
 @endsection

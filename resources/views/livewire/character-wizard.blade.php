@@ -11,7 +11,7 @@
     ];
 @endphp
 
-<div class="mx-auto max-w-3xl space-y-4 px-4 py-6">
+<x-pagina larghezza="media" class="space-y-4">
 
     {{-- Dove siamo. Tre stati distinti, e non è un vezzo: prima «fatto» e
          «da fare» avevano la stessa classe e non si distinguevano. Navy per i
@@ -561,4 +561,4 @@
             </x-button>
         @endif
     </div>
-</div>
+</x-pagina>

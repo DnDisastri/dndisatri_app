@@ -2,7 +2,7 @@
 @section('title', 'Gilda')
 
 @section('content')
-<div class="mx-auto max-w-5xl px-4 py-6">
+<x-pagina>
     <h2 class="mb-1 flex items-center justify-center gap-2 text-center text-2xl text-fg">
         <x-icona :is="\App\Enums\Icon::Guild" class="h-7 w-7" /> Gilda BlowUp
     </h2>
@@ -58,5 +58,5 @@
             </div>
         </section>
     @endif
-</div>
+</x-pagina>
 @endsection

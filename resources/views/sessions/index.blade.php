@@ -13,7 +13,7 @@
     $vuotePrima = $primo->dayOfWeekIso - 1;
 @endphp
 
-<div class="mx-auto max-w-3xl space-y-6 px-4 py-6">
+<x-pagina larghezza="media" class="space-y-6">
 
     <div>
         <h2 class="flex items-center gap-2 text-2xl text-fg">
@@ -138,5 +138,5 @@
             </x-button>
         </section>
     @endif
-</div>
+</x-pagina>
 @endsection

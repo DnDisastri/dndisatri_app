@@ -3,7 +3,7 @@
 
 @section('content')
 
-<div class="mx-auto max-w-3xl space-y-6 px-4 py-6">
+<x-pagina larghezza="media" class="space-y-6">
 
     <x-back dove="sopra" :href="route('sessions.show', ['session' => $session, 'da' => 'regia'])">
         Torna alla serata
@@ -27,5 +27,5 @@
     <x-panel title="Combattimento">
         <livewire:combat-tracker :session="$session" />
     </x-panel>
-</div>
+</x-pagina>
 @endsection

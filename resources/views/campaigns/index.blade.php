@@ -2,7 +2,7 @@
 @section('title', 'Campagne')
 
 @section('content')
-<div class="mx-auto max-w-4xl px-4 py-6">
+<x-pagina>
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="\App\Enums\Icon::Campaigns" class="h-7 w-7" /> Campagne
     </h2>
@@ -47,5 +47,5 @@
             </x-empty>
         @endforelse
     </div>
-</div>
+</x-pagina>
 @endsection

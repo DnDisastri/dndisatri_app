@@ -12,12 +12,16 @@
 <head>
     @include('partials.testa')
 </head>
-<body class="min-h-screen flex flex-col antialiased">
-    @includeWhen(auth()->check(), 'partials.header')
+{{-- `lg:pl-64` lascia il posto alla barra laterale, che è fissa. --}}
+<body @class(['min-h-screen flex flex-col antialiased', 'lg:pl-64' => auth()->check()])>
+    @auth
+        @include('partials.header')
+        @include('partials.barra-laterale')
+    @endauth
 
     <main class="flex-1">
         @if (session('status'))
-            <div class="mx-auto max-w-4xl px-4 pt-4">
+            <div class="mx-auto max-w-6xl px-4 pt-4 md:px-6 lg:px-8">
                 <x-note>{{ session('status') }}</x-note>
             </div>
         @endif
@@ -27,7 +31,7 @@
              il clic il mondo può essere cambiato — un posto che si riempie
              mentre lo si stava assegnando. --}}
         @if (session('error'))
-            <div class="mx-auto max-w-4xl px-4 pt-4">
+            <div class="mx-auto max-w-6xl px-4 pt-4 md:px-6 lg:px-8">
                 <x-note tone="danger">{{ session('error') }}</x-note>
             </div>
         @endif
@@ -42,16 +46,11 @@
     </footer>
 
     {{-- Lo spazio che la barra in basso occupa: senza, la fine di ogni pagina
-         finirebbe sotto le pillole e non si potrebbe leggere. --}}
+         finirebbe sotto le pillole. Su desktop la barra non c'è. --}}
     @auth
-        <div class="h-20 shrink-0" aria-hidden="true"></div>
-    @endauth
+        <div class="h-20 shrink-0 lg:hidden" aria-hidden="true"></div>
 
-    {{-- Un DM abita un'altra app: la barra in basso cambia mestiere (Regia,
-         serate, tavolo) invece di elencare Eroi/Mercato/Eventi. Gli admin no —
-         loro amministrano dal Pannello e non conducono al tavolo. --}}
-    @auth
-        @include(auth()->user()->isDm() ? 'partials.nav-dm' : 'partials.nav')
+        @include('partials.nav')
     @endauth
 </body>
 </html>

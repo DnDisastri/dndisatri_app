@@ -4,7 +4,7 @@
 @php use App\Enums\PendingChangeStatus; @endphp
 
 @section('content')
-<div class="mx-auto max-w-3xl px-4 py-6">
+<x-pagina larghezza="media">
 
     <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h2 class="flex items-center gap-2 text-2xl text-fg">
@@ -106,5 +106,5 @@
             </p>
         @endforelse
     </div>
-</div>
+</x-pagina>
 @endsection

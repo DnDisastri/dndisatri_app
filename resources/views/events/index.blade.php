@@ -2,7 +2,7 @@
 @section('title', 'Eventi')
 
 @section('content')
-<div class="mx-auto max-w-3xl px-4 py-6">
+<x-pagina larghezza="media">
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="\App\Enums\Icon::Events" class="h-7 w-7" /> Eventi
     </h2>
@@ -45,5 +45,5 @@
             @endforeach
         </div>
     @endif
-</div>
+</x-pagina>
 @endsection

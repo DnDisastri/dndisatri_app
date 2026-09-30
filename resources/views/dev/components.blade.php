@@ -13,7 +13,7 @@
     $toni = ['neutral' => 'neutral', 'accent' => 'accent', 'danger' => 'danger'];
 @endphp
 
-<div class="mx-auto max-w-3xl space-y-8 px-4 py-6">
+<x-pagina larghezza="media" class="space-y-8">
 
     <div>
         <h2 class="text-2xl text-fg">La vetrina</h2>
@@ -207,5 +207,5 @@
             </div>
         </div>
     </x-panel>
-</div>
+</x-pagina>
 @endsection

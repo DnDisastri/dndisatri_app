@@ -1,4 +1,4 @@
-<div class="mx-auto max-w-4xl px-4 py-6">
+<x-pagina>
     <h2 class="mb-4 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="\App\Enums\Icon::Shop" class="h-7 w-7" /> Negozio della gilda
     </h2>
@@ -162,4 +162,4 @@
             </div>
         </x-modal>
     @endif
-</div>
+</x-pagina>

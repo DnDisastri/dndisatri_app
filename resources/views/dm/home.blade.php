@@ -17,7 +17,7 @@
     };
 @endphp
 
-<div class="mx-auto max-w-3xl space-y-6 px-4 py-6">
+<x-pagina larghezza="media" class="space-y-6">
 
     <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="min-w-0">
@@ -138,5 +138,5 @@
             @include('dm.partials.tavolo', ['tavolo' => $tavolo])
         </section>
     @endif
-</div>
+</x-pagina>
 @endsection

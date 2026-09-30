@@ -2,7 +2,7 @@
 @section('title', $character->name)
 
 @section('content')
-    <div class="mx-auto max-w-5xl space-y-4 px-4 py-6">
+    <x-pagina class="space-y-4">
 
         @php $mio = auth()->id() === $character->user_id; @endphp
 
@@ -90,5 +90,5 @@
         <x-back dove="sotto" :href="$mio ? route('characters.index') : route('guild.index')">
             {{ $mio ? 'Torna ai miei eroi' : 'Torna alla Gilda' }}
         </x-back>
-    </div>
+    </x-pagina>
 @endsection

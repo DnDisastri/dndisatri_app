@@ -15,7 +15,7 @@
     ])->filter(fn ($s) => filled($s['url']) && Str::startsWith($s['url'], ['http://', 'https://']));
 @endphp
 
-<div class="mx-auto max-w-2xl px-4 py-8">
+<x-pagina larghezza="lettura">
     @if ($about?->coverUrl())
         {{-- Copertina decorativa: il titolo è già testo. --}}
         <img src="{{ $about->coverUrl() }}" alt=""
@@ -50,5 +50,5 @@
     @endif
 
     <x-back :href="url('/')">Torna indietro</x-back>
-</div>
+</x-pagina>
 @endsection

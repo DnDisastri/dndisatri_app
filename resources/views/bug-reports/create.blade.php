@@ -2,7 +2,7 @@
 @section('title', 'Segnala un problema')
 
 @section('content')
-<div class="mx-auto max-w-2xl space-y-6 px-4 py-6">
+<x-pagina larghezza="lettura" class="space-y-6">
     <x-back :href="$provenienza" dove="sopra">Torna dov'eri</x-back>
 
     <h2 class="flex items-center gap-2 text-2xl text-fg">
@@ -44,5 +44,5 @@
             <x-button class="self-start">Invia</x-button>
         </form>
     </x-panel>
-</div>
+</x-pagina>
 @endsection

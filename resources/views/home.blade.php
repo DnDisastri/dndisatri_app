@@ -2,7 +2,7 @@
 @section('title', 'Home')
 
 @section('content')
-<div class="mx-auto max-w-3xl space-y-10 px-4 py-6">
+<x-pagina larghezza="media" class="space-y-10">
 
     <div>
         <h2 class="text-2xl text-fg">Bentornato, {{ auth()->user()->name }}</h2>
@@ -170,5 +170,5 @@
             Come funziona? Vai alle FAQs
         </x-button>
     </section>
-</div>
+</x-pagina>
 @endsection

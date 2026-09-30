@@ -5,7 +5,7 @@
 
 @php use App\Enums\Icon; @endphp
 
-<div class="mx-auto max-w-2xl px-4 py-6">
+<x-pagina larghezza="lettura">
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="Icon::News" class="h-7 w-7" /> News
     </h2>
@@ -47,5 +47,5 @@
             <x-empty size="lg">Non c'è ancora nessuna news.</x-empty>
         @endforelse
     </div>
-</div>
+</x-pagina>
 @endsection

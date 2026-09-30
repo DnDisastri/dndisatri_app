@@ -12,7 +12,7 @@
 @endphp
 
 @section('content')
-<div class="mx-auto max-w-2xl space-y-4 px-4 py-6">
+<x-pagina larghezza="lettura" class="space-y-4">
 
     <x-back dove="sopra" :href="route('market.trades')">Torna al mercato</x-back>
 
@@ -104,5 +104,5 @@
             @endforeach
         </section>
     @endif
-</div>
+</x-pagina>
 @endsection

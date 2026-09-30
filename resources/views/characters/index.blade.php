@@ -2,7 +2,7 @@
 @section('title', 'I miei eroi')
 
 @section('content')
-    <div class="mx-auto max-w-3xl space-y-6 px-4 py-6">
+    <x-pagina larghezza="media" class="space-y-6">
         <h2 class="flex items-center gap-2 text-2xl text-fg">
             <x-icona :is="\App\Enums\Icon::Characters" class="h-7 w-7" /> I miei eroi
         </h2>
@@ -118,5 +118,5 @@
                 @endforelse
             </div>
         </x-panel>
-    </div>
+    </x-pagina>
 @endsection

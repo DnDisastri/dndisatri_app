@@ -1,4 +1,4 @@
-<div class="mx-auto max-w-2xl px-4 py-6">
+<x-pagina larghezza="lettura">
     <h2 class="mb-4 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="\App\Enums\Icon::Trades" class="h-7 w-7" /> Scambi
     </h2>
@@ -299,4 +299,4 @@
             </div>
         </x-modal>
     @endif
-</div>
+</x-pagina>

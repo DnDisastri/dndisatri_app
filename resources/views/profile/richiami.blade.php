@@ -2,7 +2,7 @@
 @section('title', 'I miei richiami')
 
 @section('content')
-<div class="mx-auto max-w-2xl space-y-4 px-4 py-6">
+<x-pagina larghezza="lettura" class="space-y-4">
 
     <x-back dove="sopra" :href="route('profile.edit')">Torna al profilo</x-back>
 
@@ -64,5 +64,5 @@
     @empty
         <x-empty size="lg">Non hai mai ricevuto un richiamo.</x-empty>
     @endforelse
-</div>
+</x-pagina>
 @endsection
