@@ -58,7 +58,7 @@
         <x-legenda-difficolta class="mt-3" />
     </details>
 
-    <div class="grid gap-3 sm:grid-cols-2">
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         @forelse ($quests as $quest)
 
             <x-quest-card :quest="$quest" :dim="$quest->isFull()" />

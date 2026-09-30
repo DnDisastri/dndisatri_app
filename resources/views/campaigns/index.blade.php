@@ -28,7 +28,7 @@
         </div>
     @endif
 
-    <div class="grid grid-cols-2 gap-1">
+    <div class="grid grid-cols-2 gap-1 md:grid-cols-3 xl:grid-cols-4">
         @forelse ($campaigns as $campaign)
 
             <x-poster variant="tile"

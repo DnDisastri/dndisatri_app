@@ -2,7 +2,7 @@
 @section('title', 'Home')
 
 @section('content')
-<x-pagina larghezza="media" class="space-y-10">
+<x-pagina class="space-y-10">
 
     <div>
         <h2 class="text-2xl text-fg">Bentornato, {{ auth()->user()->name }}</h2>
@@ -33,9 +33,12 @@
 
             {{-- `-mx-4` sfonda il padding della pagina e `scroll-px-4` riallinea
                  lo snap: la prima card resta a filo del contenuto, le altre
-                 escono dai bordi dello schermo invece di essere tagliate corte. --}}
+                 escono dai bordi dello schermo invece di essere tagliate corte.
+                 Da `lg` gli eventi (al massimo quattro) passano in griglia:
+                 col mouse un carosello senza barra non si scorre. --}}
             <div class="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 scroll-px-4
-                        [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
+                        md:-mx-6 md:px-6 md:scroll-px-6 lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible xl:grid-cols-3 2xl:grid-cols-4 lg:px-0 lg:pb-0">
                 @foreach ($events as $event)
                     <x-poster
                         :href="route('events.show', $event)"
@@ -45,11 +48,11 @@
                         label="Nuovo evento"
                         :meta="'il '.$event->starts_at->format('d/m/y')"
                         :title="$event->title"
-                        class="w-72 shrink-0 snap-start" />
+                        class="w-72 shrink-0 snap-start lg:w-auto" />
                 @endforeach
             </div>
 
-            <x-button variant="secondary" size="lg" full class="mt-3" :href="route('events.index')">
+            <x-button variant="secondary" size="lg" full class="mt-3 lg:mx-auto lg:flex lg:w-fit" :href="route('events.index')">
                 Vedi tutti gli eventi
             </x-button>
         </section>
@@ -63,7 +66,7 @@
             <p class="mt-1 text-sm text-muted">Le storie aperte in questo momento</p>
         </div>
 
-        <div class="grid grid-cols-2 gap-1">
+        <div class="grid grid-cols-2 gap-1 md:grid-cols-3 xl:grid-cols-4">
             @forelse ($campaigns as $campaign)
 
                 <x-poster variant="tile"
@@ -76,58 +79,61 @@
             @endforelse
         </div>
 
-        <x-button variant="secondary" size="lg" full class="mt-3" :href="route('campaigns.index')">
+        <x-button variant="secondary" size="lg" full class="mt-3 lg:mx-auto lg:flex lg:w-fit" :href="route('campaigns.index')">
             Vedi tutte le campagne
         </x-button>
     </section>
 
-    <section>
-        <h3 class="font-display mb-3 flex items-center gap-2 text-lg font-normal text-fg">
-            <x-icona :is="\App\Enums\Icon::Sessions" class="h-5 w-5" /> I prossimi tavoli
-        </h3>
+    {{-- Su desktop tavoli e quest affiancati: sono due elenchi brevi. --}}
+    <div class="space-y-10 lg:grid lg:grid-cols-2 lg:gap-8 lg:space-y-0">
+        <section>
+            <h3 class="font-display mb-3 flex items-center gap-2 text-lg font-normal text-fg">
+                <x-icona :is="\App\Enums\Icon::Sessions" class="h-5 w-5" /> I prossimi tavoli
+            </h3>
 
-        <div class="space-y-2">
-            @forelse ($sessions as $session)
+            <div class="space-y-2">
+                @forelse ($sessions as $session)
 
-                <x-card padding="sm" :href="route('sessions.show', $session)"
-                        class="flex items-baseline justify-between gap-3">
-                    <span>
-                        <span class="block font-semibold text-fg">{{ $session->campaign?->title }}</span>
-                        <span class="block text-sm text-muted">{{ $session->displayTitle() }}</span>
-                    </span>
-                    <span class="shrink-0 text-right text-sm text-muted">
-                        {{ $session->played_at->translatedFormat('j M') }}<br>
-                        {{ $session->played_at->format('H:i') }}
-                    </span>
-                </x-card>
-            @empty
-                <x-empty>Nessun tavolo in programma.</x-empty>
-            @endforelse
-        </div>
+                    <x-card padding="sm" :href="route('sessions.show', $session)"
+                            class="flex items-baseline justify-between gap-3">
+                        <span>
+                            <span class="block font-semibold text-fg">{{ $session->campaign?->title }}</span>
+                            <span class="block text-sm text-muted">{{ $session->displayTitle() }}</span>
+                        </span>
+                        <span class="shrink-0 text-right text-sm text-muted">
+                            {{ $session->played_at->translatedFormat('j M') }}<br>
+                            {{ $session->played_at->format('H:i') }}
+                        </span>
+                    </x-card>
+                @empty
+                    <x-empty>Nessun tavolo in programma.</x-empty>
+                @endforelse
+            </div>
 
-        <x-button variant="secondary" size="lg" full class="mt-3" :href="route('sessions.index')">
-            Vedi il calendario
-        </x-button>
-    </section>
+            <x-button variant="secondary" size="lg" full class="mt-3" :href="route('sessions.index')">
+                Vedi il calendario
+            </x-button>
+        </section>
 
-    <section>
-        <h3 class="font-display mb-3 flex items-center gap-2 text-lg font-normal text-fg">
-            <x-icona :is="\App\Enums\Icon::Quests" class="h-5 w-5" /> Le quest
-        </h3>
+        <section>
+            <h3 class="font-display mb-3 flex items-center gap-2 text-lg font-normal text-fg">
+                <x-icona :is="\App\Enums\Icon::Quests" class="h-5 w-5" /> Le quest
+            </h3>
 
-        <div class="space-y-2">
-            @forelse ($quests as $quest)
+            <div class="space-y-2">
+                @forelse ($quests as $quest)
 
-                <x-quest-card :quest="$quest" />
-            @empty
-                <x-empty>Nessuna quest aperta in questo momento.</x-empty>
-            @endforelse
-        </div>
+                    <x-quest-card :quest="$quest" />
+                @empty
+                    <x-empty>Nessuna quest aperta in questo momento.</x-empty>
+                @endforelse
+            </div>
 
-        <x-button variant="secondary" size="lg" full class="mt-3" :href="route('quests.index')">
-            Vedi tutte le quest
-        </x-button>
-    </section>
+            <x-button variant="secondary" size="lg" full class="mt-3" :href="route('quests.index')">
+                Vedi tutte le quest
+            </x-button>
+        </section>
+    </div>
 
     @if ($posts->isNotEmpty())
         <section>
@@ -135,7 +141,7 @@
                 <x-icona :is="\App\Enums\Icon::News" class="h-5 w-5" /> News & novità
             </h3>
 
-            <div class="space-y-3">
+            <div class="grid gap-3 md:grid-cols-3">
                 @foreach ($posts as $post)
                     <x-card padding="sm" :href="route('news.show', $post)">
                         <div class="flex items-baseline justify-between gap-2">
@@ -158,14 +164,14 @@
                 @endforeach
             </div>
 
-            <x-button variant="secondary" size="lg" full class="mt-3" :href="route('news.index')">
+            <x-button variant="secondary" size="lg" full class="mt-3 lg:mx-auto lg:flex lg:w-fit" :href="route('news.index')">
                 Vedi tutte le news
             </x-button>
         </section>
     @endif
 
     <section>
-        <x-button variant="quiet" size="lg" full :href="route('faq.index')">
+        <x-button variant="quiet" size="lg" full class="lg:mx-auto lg:flex lg:w-fit" :href="route('faq.index')">
             <x-icona :is="\App\Enums\Icon::Faq" class="h-5 w-5" />
             Come funziona? Vai alle FAQs
         </x-button>

@@ -26,7 +26,7 @@
             <h3 class="mb-2 text-sm font-bold uppercase tracking-wide text-muted">{{ $titolo }}</h3>
         @endif
 
-        <div class="mb-6 grid grid-cols-2 gap-3">
+        <div class="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
             @forelse ($elenco as $item)
                 <x-market-card :nome="$item->name" :prezzo="$item->price"
                                :apri="'apri('.$item->id.')'"

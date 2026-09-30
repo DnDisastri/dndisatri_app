@@ -10,7 +10,7 @@
 @endphp
 
 @section('content')
-<x-pagina larghezza="media">
+<x-pagina>
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="\App\Enums\Icon::Ledger" class="h-7 w-7" /> Libro Mastro
     </h2>
@@ -60,7 +60,8 @@
         </div>
     @endif
 
-    <div class="space-y-8">
+    {{-- Su desktop serate e quest affiancate. --}}
+    <div class="space-y-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-8 lg:space-y-0">
 
         <section>
             <h3 class="mb-3 flex items-center gap-2 text-lg font-semibold text-fg">

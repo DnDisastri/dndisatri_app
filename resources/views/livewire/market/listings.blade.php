@@ -15,7 +15,9 @@
             <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-muted">Metti in vendita</h3>
 
             <div class="space-y-3">
-                <div>
+                {{-- Da tablet oggetto, quantità e prezzo stanno su una riga. --}}
+                <div class="space-y-3 md:flex md:items-end md:gap-3 md:space-y-0">
+                <div class="md:flex-1">
                     <label for="itemName" class="mb-1 block text-sm text-fg">Dallo zaino</label>
                     <select id="itemName" wire:model="itemName"
                             class="w-full rounded-md border border-line bg-page px-3 py-2 text-fg">
@@ -28,7 +30,7 @@
                     </select>
                 </div>
 
-                <div class="flex gap-3">
+                <div class="flex gap-3 md:flex-1">
                     <div class="w-24">
                         <label for="sellQty" class="mb-1 block text-sm text-fg">Quantità</label>
                         <input id="sellQty" type="number" min="1" wire:model="sellQty"
@@ -41,8 +43,9 @@
                                class="w-full rounded-md border border-line bg-page px-3 py-2 text-fg">
                     </div>
                 </div>
+                </div>
 
-                <x-button size="lg" full type="button" wire:click="sell">Pubblica l'annuncio</x-button>
+                <x-button size="lg" full type="button" wire:click="sell" class="md:ml-auto md:flex md:w-fit">Pubblica l'annuncio</x-button>
 
                 <p class="text-xs text-muted">
                     L'oggetto esce subito dallo zaino e resta in deposito finché qualcuno compra
@@ -70,7 +73,7 @@
     @foreach ($sezioni as $titolo => $elenco)
         <h3 class="mb-2 text-sm font-bold uppercase tracking-wide text-muted">{{ $titolo }}</h3>
 
-        <div class="mb-6 grid grid-cols-2 gap-3">
+        <div class="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
             @forelse ($elenco as $listing)
                 {{-- Nel blocco dei propri il venditore non si scrive: lo dice
                      già il titolo, e ripeterlo su ogni card sarebbe la stessa

@@ -2,7 +2,7 @@
 @section('title', 'Build consigliate')
 
 @section('content')
-<x-pagina larghezza="media">
+<x-pagina>
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="\App\Enums\Icon::Builds" class="h-7 w-7" /> Build consigliate
     </h2>
@@ -11,8 +11,9 @@
         Le sfogli sempre; per usarne una serve non avere già un personaggio.
     </p>
 
+    <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
     @forelse ($builds as $build)
-        <x-card :href="route('builds.show', $build)" flush padding="none" class="mb-3">
+        <x-card :href="route('builds.show', $build)" flush padding="none">
             @if ($build->coverUrl())
                 <div class="relative">
                     <img src="{{ $build->coverUrl() }}" alt="" class="h-24 w-full object-cover">
@@ -36,9 +37,10 @@
             </div>
         </x-card>
     @empty
-        <x-empty size="lg">
+        <x-empty size="lg" class="col-span-full">
             Non c'è ancora nessuna build consigliata. Le scrivono i dungeon master dal Pannello.
         </x-empty>
     @endforelse
+    </div>
 </x-pagina>
 @endsection

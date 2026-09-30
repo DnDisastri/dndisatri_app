@@ -22,7 +22,7 @@
         </form>
     @endif
 
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
         @forelse ($characters as $character)
             <x-eroe :character="$character" :warn="in_array($character->user_id, $sottoRichiamo ?? [], true)" />
         @empty
@@ -51,7 +51,7 @@
                 «In memoria di coloro che hanno dato tutto per la causa…»
             </p>
 
-            <div class="grid gap-4 sm:grid-cols-2">
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                 @foreach ($fallen as $character)
                     <x-eroe :character="$character" :warn="in_array($character->user_id, $sottoRichiamo ?? [], true)" />
                 @endforeach

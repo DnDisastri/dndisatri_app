@@ -1,4 +1,4 @@
-<x-pagina larghezza="lettura">
+<x-pagina>
     <h2 class="mb-4 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="\App\Enums\Icon::Trades" class="h-7 w-7" /> Scambi
     </h2>
@@ -7,6 +7,9 @@
     </p>
     <x-market-nav attiva="market.trades" :character="$character" :characters="$this->myCharacters()" />
 
+    {{-- Su PC gli scambi a sinistra e il modulo a destra, che resta in vista. --}}
+    <div class="xl:grid xl:grid-cols-2 xl:items-start xl:gap-8">
+    <div>
     {{-- Quelle arrivate stanno in cima: sono le uniche che aspettano qualcosa
          da te, e sono il motivo per cui uno apre questa pagina. --}}
     <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-muted">
@@ -141,8 +144,10 @@
         </div>
     @endif
 
+    </div>
+
     @if ($character)
-        <x-card>
+        <x-card class="xl:sticky xl:top-8">
             <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-muted">Proponi uno scambio</h3>
 
             <div class="mb-4">
@@ -243,6 +248,7 @@
             </x-button>
         </x-card>
     @endif
+    </div>
 
     {{-- Rispondere a una richiesta: si sceglie dal proprio zaino cosa dare,
          perché quello che è arrivato erano solo parole. --}}

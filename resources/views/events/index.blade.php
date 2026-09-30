@@ -2,7 +2,7 @@
 @section('title', 'Eventi')
 
 @section('content')
-<x-pagina larghezza="media">
+<x-pagina>
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="\App\Enums\Icon::Events" class="h-7 w-7" /> Eventi
     </h2>
@@ -23,7 +23,7 @@
     @if ($upcoming->isNotEmpty())
         <h3 class="mb-3 text-lg font-semibold text-fg">In arrivo</h3>
 {{-- Usa `gap` perché lo spazio appartiene alla griglia; `space-y` sfalserebbe le card tra le righe. --}}
-        <div class="mb-8 grid grid-cols-2 gap-1">
+        <div class="mb-8 grid grid-cols-2 gap-1 md:grid-cols-3 xl:grid-cols-4">
             @foreach ($upcoming as $event)
                 <x-poster :href="route('events.show', $event)" :image="$copertina($event)"
                           :meta="'il '.$event->starts_at->format('d/m/y')"
@@ -36,7 +36,7 @@
     @if ($past->isNotEmpty())
         <h3 class="mb-3 text-lg font-semibold text-fg">Già passati</h3>
 
-        <div class="grid grid-cols-2 gap-1">
+        <div class="grid grid-cols-2 gap-1 md:grid-cols-3 xl:grid-cols-4">
             @foreach ($past as $event)
                 <x-poster :href="route('events.show', $event)" :image="$copertina($event)"
                           :meta="'il '.$event->starts_at->format('d/m/y')"

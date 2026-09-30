@@ -2,11 +2,14 @@
 @section('title', 'I miei eroi')
 
 @section('content')
-    <x-pagina larghezza="media" class="space-y-6">
+    <x-pagina class="space-y-6">
         <h2 class="flex items-center gap-2 text-2xl text-fg">
             <x-icona :is="\App\Enums\Icon::Characters" class="h-7 w-7" /> I miei eroi
         </h2>
 
+        {{-- Su desktop gli eroi a sinistra, le richieste in una colonna a destra. --}}
+        <div class="space-y-6 lg:grid lg:grid-cols-3 lg:items-start lg:gap-6 lg:space-y-0">
+        <div class="space-y-6 lg:col-span-2">
         @if ($characters->isEmpty())
             <x-panel>
                 <p class="text-lg font-semibold text-fg">Non hai ancora un personaggio</p>
@@ -24,13 +27,15 @@
                 </p>
             </x-panel>
         @else
+            <div class="grid gap-6 md:grid-cols-2 md:gap-4">
             @foreach ($characters as $character)
-                <x-panel>
+                <x-panel class="flex flex-col">
                     <div class="flex flex-row justify-between items-center gap-1 mb-1">
                         <p class="text-lg font-normal font-display text-fg">{{ $character->name }}</p>
                         <x-menu-personaggio :character="$character" />
                     </div>
-                    <div class="flex items-center justify-center gap-3 ">
+                    {{-- `flex-1`: nella griglia i pulsanti restano allineati anche se le card hanno altezze diverse. --}}
+                    <div class="flex flex-1 items-center justify-center gap-3">
                         @if ($character->photoUrl())
                             <img src="{{ $character->photoUrl() }}" alt="{{ $character->name }}"
                                 class="h-20 w-20 shrink-0 rounded-lg object-cover">
@@ -75,6 +80,7 @@
                     </x-button>
                 </x-panel>
             @endforeach
+            </div>
 
             @can('create', App\Models\Character::class)
                 <p class="text-center">
@@ -89,6 +95,7 @@
                 </a>
             </p>
         @endif
+        </div>
 
         <x-panel>
             <div class="flex items-baseline justify-between gap-2">
@@ -118,5 +125,6 @@
                 @endforelse
             </div>
         </x-panel>
+        </div>
     </x-pagina>
 @endsection
