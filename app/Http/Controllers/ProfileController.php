@@ -10,13 +10,6 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 
-/**
- * Il mio profilo (P37).
- *
- * È la pagina della **persona**, non del personaggio: nome, email, password.
- * Quello che si può fare con un eroe sta ne «I miei eroi» (P42), e qui i
- * personaggi compaiono solo come elenco con il collegamento alla scheda.
- */
 class ProfileController extends Controller
 {
     public function edit(Request $request): View
@@ -26,8 +19,7 @@ class ProfileController extends Controller
         return view('profile.edit', [
             'user' => $user,
             'characters' => $user->characters()
-                // I vivi prima: `died_at` è nullo per loro, e in coda ci vanno
-                // i caduti dal più recente.
+                // I vivi prima (`died_at` nullo), poi i caduti dal più recente.
                 ->orderByRaw('died_at is not null')
                 ->orderByDesc('died_at')
                 ->orderBy('name')
@@ -37,38 +29,18 @@ class ProfileController extends Controller
         ]);
     }
 
-    /**
-     * I miei richiami (P38): lo storico completo.
-     *
-     * Nel profilo (P37) c'è solo il riepilogo di due numeri; qui c'è la lista —
-     * quando, chi l'ha dato, il motivo, quanto è durato, chi l'ha tolto. E **non
-     * si cancella** quando un richiamo viene tolto: è il punto del meccanismo,
-     * serve a ricordare e non a punire per sempre.
-     *
-     * La pagina esiste per chiunque sia loggato: chi non ha richiami la apre e
-     * legge che non ne ha — meglio di un 404 su un indirizzo che il profilo
-     * potrebbe aver linkato.
-     */
+    /** Lo storico dei richiami: un richiamo revocato resta in elenco. */
     public function warnings(Request $request): View
     {
         $user = $request->user();
 
         return view('profile.richiami', [
             'activeWarning' => $user->activeWarning(),
-            // I più recenti in cima: l'ultimo preso è quello che interessa di
-            // più, e se ce n'è uno attivo è quasi sempre lì. **Chi** l'ha dato e
-            // tolto non si carica di proposito — vedi la nota nella vista.
+            // Chi l'ha dato e tolto non si carica di proposito: vedi la vista.
             'warnings' => $user->warnings()->latest()->get(),
         ]);
     }
 
-    /**
-     * Nome ed email.
-     *
-     * Il nome è univoco — nella Gilda i giocatori si riconoscono da lì — e
-     * `ignore` toglie di mezzo il caso in cui uno salva senza aver cambiato
-     * niente, che altrimenti si scontrerebbe con sé stesso.
-     */
     public function update(Request $request): RedirectResponse
     {
         $user = $request->user();
@@ -86,14 +58,8 @@ class ProfileController extends Controller
     }
 
     /**
-     * La password.
-     *
-     * Si chiede quella attuale anche a chi è già dentro: una sessione lasciata
-     * aperta su un telefono in giro non deve bastare a cambiare le chiavi di
-     * casa.
-     *
-     * Dopo il cambio si rigenera l'identificativo di sessione: è la difesa
-     * contro chi se ne fosse impossessato prima.
+     * La password attuale si chiede anche a chi è dentro (sessione lasciata
+     * aperta); dopo il cambio la sessione si rigenera.
      */
     public function updatePassword(Request $request): RedirectResponse
     {
@@ -111,13 +77,7 @@ class ProfileController extends Controller
         return back()->with('status', 'Password cambiata.');
     }
 
-    /**
-     * Le categorie di email.
-     *
-     * Si salva chi è **spento**, non chi è acceso: una categoria aggiunta in
-     * futuro parte accesa per tutti, senza dover ripassare sulle righe già
-     * salvate. Il modulo manda le spuntate, e il complemento è il resto.
-     */
+    /** Il modulo manda le categorie attive; si salvano le disattivate (vedi NotificationCategory). */
     public function updateNotifications(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -125,15 +85,21 @@ class ProfileController extends Controller
             'categorie.*' => [Rule::enum(NotificationCategory::class)],
         ]);
 
+        $user = $request->user();
         $accese = $validated['categorie'] ?? [];
+        $mostrate = collect(NotificationCategory::forUser($user))
+            ->map(fn (NotificationCategory $categoria) => $categoria->value);
 
-        $spente = collect(NotificationCategory::cases())
-            ->map(fn (NotificationCategory $categoria) => $categoria->value)
+        // Le categorie non mostrate restano com'erano: un giocatore promosso DM
+        // non deve trovarsi «Da approvare» disattivata.
+        $spente = $mostrate
             ->reject(fn (string $valore) => in_array($valore, $accese, true))
+            ->merge(collect($user->muted_notifications ?? [])->diff($mostrate))
+            ->unique()
             ->values()
             ->all();
 
-        $request->user()->forceFill(['muted_notifications' => $spente])->save();
+        $user->forceFill(['muted_notifications' => $spente])->save();
 
         return back()->with('status', 'Preferenze salvate.');
     }

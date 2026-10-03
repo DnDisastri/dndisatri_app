@@ -169,6 +169,13 @@ describe('il pannello', function () {
     });
 });
 
+// «Segnalazioni» racconta al giocatore le sue; quella da leggere è un lavoro per l'admin.
+it('avvisa l\'admin nella categoria «Da approvare»', function () {
+    $report = BugReport::factory()->create();
+
+    expect((new BugReportFiled($report))->category())->toBe(NotificationCategory::Approvals);
+});
+
 // Le preferenze salvano gli spenti, quindi una categoria nuova parte accesa
 // per chi aveva già scelto: è la prima volta che succede davvero.
 it('la categoria nuova è accesa per chi aveva già salvato le preferenze', function () {

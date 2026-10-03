@@ -7,7 +7,6 @@
         <x-icona :is="\App\Enums\Icon::Profile" class="h-7 w-7" /> Il mio profilo
     </h2>
 
-{{-- Il richiamo attivo resta in evidenza perché modifica il comportamento delle azioni di mercato. --}}
     @if ($activeWarning)
         <x-note tone="danger">
             <span class="font-semibold">Sei sotto richiamo</span> dal
@@ -42,7 +41,6 @@
         <form method="POST" action="{{ route('profile.password') }}" class="flex flex-col gap-4">
             @csrf
             @method('PUT')
-{{-- Richiede la password attuale anche con una sessione autenticata, per evitare modifiche da sessioni lasciate aperte. --}}
             <x-field name="current_password" label="Password attuale" type="password"
                      autocomplete="current-password" required />
 
@@ -67,9 +65,9 @@
                 Qui scegli di cosa vuoi ricevere anche un'email.
             </p>
 
-{{-- Il valore inviato è chi resta acceso; chi manca finisce fra i silenziati. --}}
+{{-- Si inviano le categorie attive: quelle non spuntate diventano disattivate. --}}
             <div class="flex flex-col gap-3">
-                @foreach (\App\Enums\NotificationCategory::cases() as $categoria)
+                @foreach (\App\Enums\NotificationCategory::forUser($user) as $categoria)
                     <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-line p-3 hover:bg-page">
                         <input type="checkbox" name="categorie[]" value="{{ $categoria->value }}"
                                @checked($user->wantsEmailFor($categoria))
@@ -116,7 +114,6 @@
             </a>
         </p>
     </x-panel>
-{{-- Mostra lo storico solo a chi ha ricevuto almeno un richiamo. --}}
     @if ($warningHistory['count'] > 0)
         <x-panel title="I miei richiami">
             <p class="text-sm text-muted">

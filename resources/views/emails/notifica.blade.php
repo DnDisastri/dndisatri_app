@@ -1,11 +1,4 @@
-{{--
-    Il modello di ogni email del gruppo.
-
-    Stili in linea e impaginazione a tabella: i client di posta ignorano i
-    fogli di stile esterni e buona parte di quelli interni. I colori sono
-    scritti a mano e non come variabili per lo stesso motivo, e sono quelli
-    della palette dell'app.
---}}
+{{-- Stili in linea, tabelle e colori scritti a mano: i client di posta ignorano fogli di stile e variabili. --}}
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -29,7 +22,7 @@
                         <td style="padding:28px 24px 8px;">
                             <p style="margin:0 0 4px; color:#666666; font-size:13px;">Ciao {{ $destinatario->name }},</p>
                             <h1 style="margin:0 0 12px; color:#1a1a1a; font-size:21px; line-height:1.3;">{{ $titolo }}</h1>
-                            <p style="margin:0; color:#1a1a1a; font-size:15px; line-height:1.6;">{{ $corpo }}</p>
+                            <p style="margin:0; color:#1a1a1a; font-size:15px; line-height:1.6;">{!! nl2br(e($corpo)) !!}</p>
                         </td>
                     </tr>
 
@@ -49,7 +42,7 @@
                         <td style="border-top:1px solid #d9d9d9; padding:16px 24px; color:#666666; font-size:12px; line-height:1.6;">
                             Ricevi questa email perché nel tuo profilo è attiva la categoria
                             «{{ $categoria->label() }}».
-                            <a href="{{ route('profile.edit') }}" style="color:#2c3e6e;">Puoi spegnerla quando vuoi</a>.
+                            Puoi disattivarla quando vuoi <a href="{{ route('profile.edit') }}" style="color:#2c3e6e;">dal tuo profilo</a>.
                         </td>
                     </tr>
 

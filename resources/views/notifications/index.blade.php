@@ -17,7 +17,6 @@
                 </x-button>
             @else
                 @if ($daSvuotare > 0)
-{{-- "Svuota" archivia tutte le notifiche attive; l'archiviazione singola resta disponibile su ogni card. --}}
                     <form method="POST" action="{{ route('notifications.clear') }}">
                         @csrf
                         <x-button variant="quiet" size="sm">
@@ -50,7 +49,7 @@
                         </p>
 
                         @if (filled($data['body'] ?? null))
-                            <p class="mt-1 text-sm text-muted">{{ $data['body'] }}</p>
+                            <p class="mt-1 whitespace-pre-line text-sm text-muted">{{ $data['body'] }}</p>
                         @endif
 
                         @if (filled($data['url'] ?? null))
