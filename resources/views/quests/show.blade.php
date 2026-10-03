@@ -56,7 +56,6 @@
         </div>
     </div>
 
-    {{-- Su desktop la storia a sinistra, i posti e le azioni a destra. --}}
     <div class="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
     <div class="space-y-6">
     @unless ($quest->isActive())
@@ -284,11 +283,11 @@
                         <div class="space-y-1 text-sm text-fg">
                             <label class="flex items-center gap-2">
                                 <input type="radio" name="outcome" value="completed" checked>
-                                Completata — è andata a buon fine
+                                Completata: è andata a buon fine
                             </label>
                             <label class="flex items-center gap-2">
                                 <input type="radio" name="outcome" value="closed">
-                                Chiusa — l'abbiamo lasciata perdere
+                                Chiusa: l'abbiamo lasciata perdere
                             </label>
                         </div>
 

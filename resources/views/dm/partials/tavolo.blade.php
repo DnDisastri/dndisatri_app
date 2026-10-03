@@ -3,8 +3,7 @@
 @if ($tavolo->isEmpty())
     <x-empty>Nessuno si è ancora seduto a questo tavolo.</x-empty>
 @else
-    {{-- Le colonne seguono lo spazio del contenitore, non lo schermo: lo stesso
-         tavolo sta a tutta pagina nella Regia e in mezza colonna nella serata. --}}
+    {{-- Colonne in base al contenitore: pagina intera in Regia, mezza colonna nella serata. --}}
     <div class="@container">
     <div class="grid grid-cols-1 gap-3 @md:grid-cols-2">
         @foreach ($tavolo as $pg)

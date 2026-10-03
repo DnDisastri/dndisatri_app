@@ -11,17 +11,13 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
 /**
- * Le voci di navigazione, in un posto solo: la barra in basso, il menù
- * dell'intestazione e la barra laterale del desktop le leggono da qui.
- *
- * Ogni voce è `['nome', 'href', 'icona', 'attiva']`; `href` è null per le
- * voci che non hanno ancora una pagina, che si disegnano spente.
+ * Unica fonte delle voci per barra in basso, menù e barra laterale.
+ * Voce: `['nome', 'href', 'icona', 'attiva']`; `href` null = pagina che non c'è ancora, voce spenta.
  */
 final class Navigazione
 {
     /**
-     * Le cinque destinazioni fisse: due coppie e un cerchio in mezzo. Il DM ha
-     * le sue, perché apre l'app per la serata e il tavolo, non per gli eroi.
+     * Due coppie e un cerchio in mezzo; il DM ha voci sue.
      *
      * @return array{sinistra: list<array>, centro: array, destra: list<array>}
      */
