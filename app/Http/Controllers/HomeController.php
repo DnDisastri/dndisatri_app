@@ -14,9 +14,7 @@ class HomeController extends Controller
     /** La Home: novità, campagne, tavoli, quest e news del gruppo. */
     public function index(): View
     {
-        // Gli ospiti vedono la presentazione: due pagine sullo stesso `/`, e la
-        // scelta sta qui perché due rotte su `/` non si possono dichiarare
-        // (Laravel prende la prima che combacia, le middleware non contano).
+        // Ospiti e utenti condividono `/`: due rotte sullo stesso indirizzo non si possono dichiarare.
         if (! auth()->check()) {
             return view('prelogin', ['illustrazioni' => $this->illustrazioni()]);
         }
@@ -31,11 +29,10 @@ class HomeController extends Controller
             ->limit(6)
             ->get();
 
-        // Al plurale: in una sera possono esserci più tavoli.
         $sessions = GameSession::query()
             ->upcoming()
             ->with('campaign')
-            ->limit(4)
+            ->limit(5)
             ->get();
 
         $quests = Quest::query()
@@ -46,7 +43,7 @@ class HomeController extends Controller
             ->get()
             // Posti liberi in PHP: `freeSlots()` è già la regola, non si duplica in SQL.
             ->filter(fn (Quest $quest) => ! $quest->isFull())
-            ->take(4);
+            ->take(3);
 
         $posts = Post::published()->limit(3)->get();
 

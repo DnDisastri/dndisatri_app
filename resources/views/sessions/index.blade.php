@@ -22,7 +22,6 @@
         <p class="mt-1 text-sm text-muted">Quando si gioca, tavolo per tavolo.</p>
     </div>
 
-    {{-- Su desktop il calendario resta fermo a sinistra e le serate scorrono a destra. --}}
     <div class="space-y-6 lg:grid lg:grid-cols-5 lg:items-start lg:gap-8 lg:space-y-0">
     <x-panel class="lg:sticky lg:top-8 lg:col-span-2">
 {{-- Il mese resta nell'URL, così la vista può essere condivisa e riaperta nello stesso stato. --}}
@@ -114,17 +113,22 @@
 {{-- Gli eventi mostrano sempre i prossimi appuntamenti e non seguono il mese selezionato nel calendario. --}}
     @if ($events->isNotEmpty())
         <section>
-            <div class="mb-3">
-                <h3 class="font-display flex items-center gap-2 text-lg font-normal text-fg">
-                    <x-icona :is="Icon::Events" class="h-5 w-5" /> La bacheca del bardo
-                </h3>
-                <p class="mt-1 text-sm text-muted">Ecco i prossimi eventi in programma</p>
+            <div class="mb-3 flex items-end justify-between gap-4">
+                <div>
+                    <h3 class="font-display flex items-center gap-2 text-lg font-normal text-fg">
+                        <x-icona :is="Icon::Events" class="h-5 w-5" /> La bacheca del bardo
+                    </h3>
+                    <p class="mt-1 text-sm text-muted">Ecco i prossimi eventi in programma</p>
+                </div>
+
+                <x-button variant="secondary" class="shrink-0 max-md:hidden" :href="route('events.index')">
+                    Vedi tutti gli eventi
+                </x-button>
             </div>
 
-            {{-- Da `lg` gli eventi passano in griglia, come in Home. --}}
             <div class="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 scroll-px-4
                         [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
-                        md:-mx-6 md:px-6 md:scroll-px-6 lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible xl:grid-cols-3 2xl:grid-cols-4 lg:px-0 lg:pb-0">
+                        md:-mx-6 md:px-6 md:scroll-px-6 lg:mx-0 lg:grid lg:grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] lg:overflow-visible lg:px-0 lg:pb-0">
                 @foreach ($events as $event)
                     <x-poster
                         :href="route('events.show', $event)"
@@ -138,10 +142,12 @@
                 @endforeach
             </div>
 
-            <x-button variant="secondary" size="lg" full class="mt-3 lg:mx-auto lg:flex lg:w-fit" :href="route('events.index')">
+            <x-button variant="secondary" size="lg" full class="mt-3 md:hidden" :href="route('events.index')">
                 Vedi tutti gli eventi
             </x-button>
         </section>
     @endif
+
+    <x-back :href="route('home')">Torna alla Home</x-back>
 </x-pagina>
 @endsection

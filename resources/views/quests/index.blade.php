@@ -73,5 +73,7 @@
             </x-empty>
         @endforelse
     </div>
+
+    <x-back :href="route('home')">Torna alla Home</x-back>
 </x-pagina>
 @endsection

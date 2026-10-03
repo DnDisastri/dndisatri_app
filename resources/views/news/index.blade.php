@@ -47,5 +47,7 @@
             <x-empty size="lg" class="col-span-full">Non c'è ancora nessuna news.</x-empty>
         @endforelse
     </div>
+
+    <x-back :href="route('home')">Torna alla Home</x-back>
 </x-pagina>
 @endsection

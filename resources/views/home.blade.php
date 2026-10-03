@@ -24,21 +24,25 @@
 {{-- Il carosello usa CSS scroll-snap e resta navigabile anche senza JavaScript. --}}
     @if ($events->isNotEmpty())
         <section>
-            <div class="mb-3">
-                <h3 class="font-display flex items-center gap-2 text-lg font-normal text-fg">
-                    <x-icona :is="\App\Enums\Icon::Events" class="h-5 w-5" /> La bacheca del bardo
-                </h3>
-                <p class="mt-1 text-sm text-muted">Ecco i prossimi eventi in programma</p>
+            {{-- Dal tablet il pulsante sta nella riga del titolo, sul telefono sotto. --}}
+            <div class="mb-3 flex items-end justify-between gap-4">
+                <div>
+                    <h3 class="font-display flex items-center gap-2 text-lg font-normal text-fg">
+                        <x-icona :is="\App\Enums\Icon::Events" class="h-5 w-5" /> La bacheca del bardo
+                    </h3>
+                    <p class="mt-1 text-sm text-muted">Ecco i prossimi eventi in programma</p>
+                </div>
+
+                <x-button variant="secondary" class="shrink-0 max-md:hidden" :href="route('events.index')">
+                    Vedi tutti gli eventi
+                </x-button>
             </div>
 
-            {{-- `-mx-4` sfonda il padding della pagina e `scroll-px-4` riallinea
-                 lo snap: la prima card resta a filo del contenuto, le altre
-                 escono dai bordi dello schermo invece di essere tagliate corte.
-                 Da `lg` gli eventi (al massimo quattro) passano in griglia:
-                 col mouse un carosello senza barra non si scorre. --}}
+            {{-- `-mx-4` e `scroll-px-4`: le card escono dal bordo dello schermo invece di tagliarsi.
+                 Da `lg` griglia: col mouse un carosello senza barra non si scorre. --}}
             <div class="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 scroll-px-4
                         [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
-                        md:-mx-6 md:px-6 md:scroll-px-6 lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible xl:grid-cols-3 2xl:grid-cols-4 lg:px-0 lg:pb-0">
+                        md:-mx-6 md:px-6 md:scroll-px-6 lg:mx-0 lg:grid lg:grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] lg:overflow-visible lg:px-0 lg:pb-0">
                 @foreach ($events as $event)
                     <x-poster
                         :href="route('events.show', $event)"
@@ -52,18 +56,24 @@
                 @endforeach
             </div>
 
-            <x-button variant="secondary" size="lg" full class="mt-3 lg:mx-auto lg:flex lg:w-fit" :href="route('events.index')">
+            <x-button variant="secondary" size="lg" full class="mt-3 md:hidden" :href="route('events.index')">
                 Vedi tutti gli eventi
             </x-button>
         </section>
     @endif
 
     <section>
-        <div class="mb-3">
-            <h3 class="font-display flex items-center gap-2 text-lg font-normal text-fg">
-                <x-icona :is="\App\Enums\Icon::Campaigns" class="h-5 w-5" /> Le campagne
-            </h3>
-            <p class="mt-1 text-sm text-muted">Le storie aperte in questo momento</p>
+        <div class="mb-3 flex items-end justify-between gap-4">
+            <div>
+                <h3 class="font-display flex items-center gap-2 text-lg font-normal text-fg">
+                    <x-icona :is="\App\Enums\Icon::Campaigns" class="h-5 w-5" /> Le campagne
+                </h3>
+                <p class="mt-1 text-sm text-muted">Le storie aperte in questo momento</p>
+            </div>
+
+            <x-button variant="secondary" class="shrink-0 max-md:hidden" :href="route('campaigns.index')">
+                Vedi tutte le campagne
+            </x-button>
         </div>
 
         <div class="grid grid-cols-2 gap-1 md:grid-cols-3 xl:grid-cols-4">
@@ -79,12 +89,11 @@
             @endforelse
         </div>
 
-        <x-button variant="secondary" size="lg" full class="mt-3 lg:mx-auto lg:flex lg:w-fit" :href="route('campaigns.index')">
+        <x-button variant="secondary" size="lg" full class="mt-3 md:hidden" :href="route('campaigns.index')">
             Vedi tutte le campagne
         </x-button>
     </section>
 
-    {{-- Su desktop tavoli e quest affiancati: sono due elenchi brevi. --}}
     <div class="space-y-10 lg:grid lg:grid-cols-2 lg:gap-8 lg:space-y-0">
         <section>
             <h3 class="font-display mb-3 flex items-center gap-2 text-lg font-normal text-fg">
@@ -137,9 +146,15 @@
 
     @if ($posts->isNotEmpty())
         <section>
-            <h3 class="font-display font-normal mb-3 flex items-center gap-2 text-lg  text-fg">
-                <x-icona :is="\App\Enums\Icon::News" class="h-5 w-5" /> News & novità
-            </h3>
+            <div class="mb-3 flex items-end justify-between gap-4">
+                <h3 class="font-display flex items-center gap-2 text-lg font-normal text-fg">
+                    <x-icona :is="\App\Enums\Icon::News" class="h-5 w-5" /> News & novità
+                </h3>
+
+                <x-button variant="secondary" class="shrink-0 max-md:hidden" :href="route('news.index')">
+                    Vedi tutte le news
+                </x-button>
+            </div>
 
             <div class="grid gap-3 md:grid-cols-3">
                 @foreach ($posts as $post)
@@ -164,14 +179,14 @@
                 @endforeach
             </div>
 
-            <x-button variant="secondary" size="lg" full class="mt-3 lg:mx-auto lg:flex lg:w-fit" :href="route('news.index')">
+            <x-button variant="secondary" size="lg" full class="mt-3 md:hidden" :href="route('news.index')">
                 Vedi tutte le news
             </x-button>
         </section>
     @endif
 
     <section>
-        <x-button variant="quiet" size="lg" full class="lg:mx-auto lg:flex lg:w-fit" :href="route('faq.index')">
+        <x-button variant="quiet" size="lg" full class="md:mx-auto md:flex md:w-fit" :href="route('faq.index')">
             <x-icona :is="\App\Enums\Icon::Faq" class="h-5 w-5" />
             Come funziona? Vai alle FAQs
         </x-button>
