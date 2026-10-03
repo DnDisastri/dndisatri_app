@@ -6,8 +6,7 @@
     use App\Enums\Icon;
     use Illuminate\Support\Str;
 
-    // I tre social fissi: si mostrano solo quelli con un link http(s), così un
-    // href malformato o `javascript:` non diventa mai cliccabile.
+    // Solo link http(s): un href `javascript:` non deve diventare cliccabile.
     $social = collect([
         ['icona' => Icon::Instagram, 'label' => 'Instagram', 'url' => $about?->socials['instagram'] ?? null],
         ['icona' => Icon::Tiktok, 'label' => 'TikTok', 'url' => $about?->socials['tiktok'] ?? null],
@@ -15,7 +14,7 @@
     ])->filter(fn ($s) => filled($s['url']) && Str::startsWith($s['url'], ['http://', 'https://']));
 @endphp
 
-<div class="mx-auto max-w-2xl px-4 py-8">
+<x-pagina larghezza="stretta">
     @if ($about?->coverUrl())
         {{-- Copertina decorativa: il titolo è già testo. --}}
         <img src="{{ $about->coverUrl() }}" alt=""
@@ -49,6 +48,6 @@
         </div>
     @endif
 
-    <x-back :href="url('/')">Torna indietro</x-back>
-</div>
+    <x-back :href="route('home')">Torna alla Home</x-back>
+</x-pagina>
 @endsection

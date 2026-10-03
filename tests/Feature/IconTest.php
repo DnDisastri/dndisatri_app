@@ -78,3 +78,12 @@ it('non lascia nomi di icone sparsi nel codice', function () {
 
     expect($colpevoli)->toBe([]);
 });
+
+// Il pannello usa le stesse icone del selettore tema dell'app.
+it('dà al selettore tema del pannello le icone dell\'app', function () {
+    $this->actingAs(App\Models\User::factory()->dm()->create())->get('/admin')->assertOk();
+
+    expect(Filament\Support\Facades\FilamentIcon::resolve(Filament\View\PanelsIconAlias::THEME_SWITCHER_SYSTEM_BUTTON))->toBe(Icon::ThemeAuto)
+        ->and(Filament\Support\Facades\FilamentIcon::resolve(Filament\View\PanelsIconAlias::THEME_SWITCHER_LIGHT_BUTTON))->toBe(Icon::ThemeLight)
+        ->and(Filament\Support\Facades\FilamentIcon::resolve(Filament\View\PanelsIconAlias::THEME_SWITCHER_DARK_BUTTON))->toBe(Icon::ThemeDark);
+});

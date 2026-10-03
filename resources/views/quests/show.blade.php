@@ -13,7 +13,7 @@
         || auth()->user()->can('promote', $quest);
 @endphp
 
-<div class="mx-auto max-w-3xl space-y-6 px-4 py-6">
+<x-pagina class="space-y-6">
 
     <div class="space-y-4">
 
@@ -56,6 +56,8 @@
         </div>
     </div>
 
+    <div class="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
+    <div class="space-y-6">
     @unless ($quest->isActive())
         <x-panel>
             <p class="text-xs uppercase tracking-wide text-muted">Com'è andata</p>
@@ -126,6 +128,9 @@
         @endif
     </x-panel>
 
+    </div>
+
+    <div class="space-y-6">
     <x-panel>
         <div class="flex items-baseline justify-between gap-3">
             <h3 class="flex items-center gap-2 text-lg font-semibold text-fg">
@@ -278,11 +283,11 @@
                         <div class="space-y-1 text-sm text-fg">
                             <label class="flex items-center gap-2">
                                 <input type="radio" name="outcome" value="completed" checked>
-                                Completata — è andata a buon fine
+                                Completata: è andata a buon fine
                             </label>
                             <label class="flex items-center gap-2">
                                 <input type="radio" name="outcome" value="closed">
-                                Chiusa — l'abbiamo lasciata perdere
+                                Chiusa: l'abbiamo lasciata perdere
                             </label>
                         </div>
 
@@ -305,5 +310,7 @@
             @endcan
         </x-panel>
     @endif
-</div>
+    </div>
+    </div>
+</x-pagina>
 @endsection

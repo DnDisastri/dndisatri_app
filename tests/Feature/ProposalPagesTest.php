@@ -152,6 +152,28 @@ describe('registrare un bottino', function () {
 });
 
 describe('le mie richieste', function () {
+    it('si dividono in pagine, dalla più recente', function () {
+        $owner = User::factory()->player()->create();
+        $pg = Character::factory()->ownedBy($owner)->create();
+
+        foreach (range(1, 17) as $i) {
+            PendingChange::factory()->forCharacter($pg)->create(['summary' => "Richiesta numero {$i}."]);
+        }
+
+        $this->actingAs($owner)->get(route('proposals.index'))
+            ->assertOk()
+            ->assertSee('Richiesta numero 17.')
+            ->assertSee('Richiesta numero 3.')
+            ->assertDontSee('Richiesta numero 2.')
+            ->assertSee('Più vecchie');
+
+        $this->actingAs($owner)->get(route('proposals.index', ['page' => 2]))
+            ->assertOk()
+            ->assertSee('Richiesta numero 2.')
+            ->assertDontSee('Richiesta numero 3.')
+            ->assertSee('Più recenti');
+    });
+
     it('mostrano solo le proprie, con l\'esito ma senza chi ha deciso', function () {
         $owner = User::factory()->player()->create();
         $dm = User::factory()->dm()->create(['name' => 'Aurelio il Narratore']);

@@ -5,13 +5,13 @@
 
 @php use App\Enums\Icon; @endphp
 
-<div class="mx-auto max-w-2xl px-4 py-6">
+<x-pagina>
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="Icon::News" class="h-7 w-7" /> News
     </h2>
     <p class="mb-6 text-sm text-muted">Gli annunci della gilda, dal più recente.</p>
 
-    <div class="space-y-4">
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         @forelse ($posts as $post)
 {{-- `flush` permette alla copertina di arrivare fino ai bordi della card. --}}
             <x-card flush padding="none" :href="route('news.show', $post)">
@@ -44,8 +44,10 @@
                 </div>
             </x-card>
         @empty
-            <x-empty size="lg">Non c'è ancora nessuna news.</x-empty>
+            <x-empty size="lg" class="col-span-full">Non c'è ancora nessuna news.</x-empty>
         @endforelse
     </div>
-</div>
+
+    <x-back :href="route('home')">Torna alla Home</x-back>
+</x-pagina>
 @endsection

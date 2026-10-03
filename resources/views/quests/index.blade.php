@@ -8,7 +8,7 @@
     use App\Enums\QuestDifficulty;
 @endphp
 
-<div class="mx-auto max-w-4xl px-4 py-6">
+<x-pagina>
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="Icon::Quests" class="h-7 w-7" /> Quest
     </h2>
@@ -58,7 +58,7 @@
         <x-legenda-difficolta class="mt-3" />
     </details>
 
-    <div class="grid gap-3 sm:grid-cols-2">
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         @forelse ($quests as $quest)
 
             <x-quest-card :quest="$quest" :dim="$quest->isFull()" />
@@ -73,5 +73,7 @@
             </x-empty>
         @endforelse
     </div>
-</div>
+
+    <x-back :href="route('home')">Torna alla Home</x-back>
+</x-pagina>
 @endsection

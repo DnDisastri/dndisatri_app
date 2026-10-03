@@ -11,12 +11,9 @@
     ];
 @endphp
 
-<div class="mx-auto max-w-3xl space-y-4 px-4 py-6">
+<x-pagina larghezza="stretta" class="space-y-4">
 
-    {{-- Dove siamo. Tre stati distinti, e non è un vezzo: prima «fatto» e
-         «da fare» avevano la stessa classe e non si distinguevano. Navy per i
-         passi conclusi, rosso per quello corrente («sei qui», §5 della guida),
-         spento per quelli che ancora non si toccano. --}}
+    {{-- Tre stati: navy fatto, rosso corrente («sei qui»), spento da fare. --}}
     <div>
         <p class="mb-2 text-xs font-medium text-muted">
             Passo {{ $step }} di {{ CharacterWizard::LAST_STEP }}: {{ $titles[$step] }}
@@ -39,12 +36,10 @@
     @enderror
 
     <x-panel :title="$titles[$step]">
-        {{-- 1. Nome, storia e classe. La classe decide dado vita, tiri salvezza
-             e quante abilità si sceglieranno. --}}
+        {{-- 1. Nome, storia e classe. --}}
         @if ($step === 1)
             <div class="space-y-4">
-                {{-- L'altra porta: partire da una build già pensata. Solo se non
-                     si è già partiti da una. --}}
+                {{-- Partire da una build: solo se non si è già partiti da una. --}}
                 @unless ($buildTitle)
                     <a href="{{ route('builds.index') }}" wire:navigate
                        class="flex items-center gap-3 rounded-md border border-dashed border-primary bg-surface px-3 py-2.5 text-sm">
@@ -59,8 +54,7 @@
                            class="w-full rounded-md border border-line bg-page px-3 py-2 text-fg placeholder:text-muted focus:border-active focus:outline-none">
                 </div>
 
-                {{-- La storia: l'unico campo pubblico, quello che leggono gli altri
-                     giocatori. Facoltativo — si può scrivere anche dopo. --}}
+                {{-- Unico campo pubblico: lo leggono gli altri giocatori. --}}
                 <div>
                     <label for="storia" class="mb-1 block text-sm font-medium text-fg">
                         La sua storia <span class="font-normal text-muted">(facoltativa)</span>
@@ -116,8 +110,7 @@
             </div>
         @endif
 
-        {{-- 2. Specie a schedine: aprire è scegliere. I bonus si sommano DOPO
-             l'acquisto dei punteggi. --}}
+        {{-- 2. Specie: i bonus si sommano dopo l'acquisto dei punteggi. --}}
         @if ($step === 2)
             <div class="space-y-2">
                 @foreach ($speciesList as $option)
@@ -177,9 +170,7 @@
                                     </x-inset>
                                 @endif
 
-                                {{-- Sottorazza, discendenza o etnia: cambia il
-                                     nome ma è sempre la stessa scelta, e i suoi
-                                     bonus si sommano a quelli della razza. --}}
+                                {{-- La sottorazza aggiunge i suoi bonus a quelli della razza. --}}
                                 @php $sottorazze = $this->subspeciesOptions(); @endphp
                                 @if ($sottorazze->isNotEmpty())
                                     <x-inset class="mt-3">
@@ -225,8 +216,7 @@
             </div>
         @endif
 
-        {{-- 3. Point buy: 27 punti, da 8 a 15. I bonus di specie vengono dopo,
-             ed è per questo che il tetto qui è 15 e non 20. --}}
+        {{-- 3. Point buy, 27 punti da 8 a 15: il tetto è 15 perché i bonus di specie vengono dopo. --}}
         @if ($step === 3)
             <p class="mb-3 text-sm text-muted">
                 Hai 27 punti. Ogni punteggio parte da 8 e arriva al massimo a 15.
@@ -260,8 +250,6 @@
                                 class="h-8 w-8 shrink-0 rounded-full bg-surface text-lg disabled:opacity-30"
                                 @disabled($bought >= PointBuy::MAX_SCORE || PointBuy::remaining([...$scores, $ability->value => $bought + 1]) < 0)>+</button>
 
-                        {{-- Nome e pillola «+specie» impilati al centro: la pillola ha
-                             un posto suo e va a capo da sola, senza affollare la riga. --}}
                         <span class="flex min-w-0 flex-1 flex-col gap-0.5">
                             <span class="text-sm text-fg">{{ $ability->fullName() }}</span>
                             @if ($extra > 0)
@@ -280,8 +268,7 @@
             </div>
         @endif
 
-        {{-- 4. Background a schedine: competenze, oro, la feature (dato che
-             c'era già ma non si mostrava) e il kit. --}}
+        {{-- 4. Background. --}}
         @if ($step === 4)
             <div class="space-y-2">
                 @foreach ($backgrounds as $option => $data)
@@ -371,9 +358,7 @@
             </div>
         @endif
 
-        {{-- 5. Abilità: quelle del background arrivano già, e restano bloccate —
-             pre-spuntate e non togliibili, perché riselezionarle non darebbe
-             nulla e sprecherebbe una scelta di classe. --}}
+        {{-- 5. Abilità: quelle del background arrivano bloccate, riselezionarle sprecherebbe una scelta di classe. --}}
         @if ($step === 5)
             <p class="mb-3 text-sm text-muted">
                 Scegli <strong>{{ ClassRules::skillCount($class) }}</strong> abilità del tuo {{ $class }}.
@@ -389,9 +374,7 @@
             <div class="grid gap-2 sm:grid-cols-2">
                 @foreach ($this->skillOptions() as $key => $skill)
                     @if ($skill['fromBackground'])
-                        {{-- Già competente dal background: spuntata e bloccata. Non
-                             passa da `wire:model` — non deve entrare fra le scelte
-                             di classe, e infatti il contatore non la conta. --}}
+                        {{-- Fuori da `wire:model`: non deve contare fra le scelte di classe. --}}
                         <div class="flex items-center gap-2 rounded-md border border-line bg-page px-3 py-2 text-sm">
                             <input type="checkbox" checked disabled class="accent-active">
                             <span class="text-muted">{{ $skill['name'] }}</span>
@@ -442,9 +425,7 @@
             </p>
         @endif
 
-        {{-- 7. Incantesimi a schedine: la spunta sceglie, il resto della riga
-             apre la descrizione (che prima era un tooltip, invisibile sul
-             telefono). Solo per chi ne lancia al primo livello. --}}
+        {{-- 7. Incantesimi, solo per chi ne lancia al primo livello: la spunta sceglie, la riga apre la descrizione. --}}
         @if ($step === 7)
             @php $options = $this->spellOptions(); @endphp
 
@@ -477,9 +458,7 @@
             @endif
         @endif
 
-        {{-- 8. Riepilogo: tutto quello che si è scelto, con un «Modifica» per
-             blocco che apre il passo e riporta qui. Ci arrivano tutti, non solo
-             chi parte da una build. --}}
+        {{-- 8. Riepilogo: «Modifica» apre il passo e riporta qui. --}}
         @if ($step === 8)
             @if ($buildTitle)
                 <x-note tone="info" class="mb-3">
@@ -561,4 +540,4 @@
             </x-button>
         @endif
     </div>
-</div>
+</x-pagina>

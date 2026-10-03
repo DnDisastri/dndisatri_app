@@ -12,6 +12,7 @@ use App\Http\Controllers\GameSessionController;
 use App\Http\Controllers\GuildController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LedgerController;
+use App\Http\Controllers\MarketController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\ProfileController;
@@ -21,9 +22,6 @@ use App\Http\Controllers\QuestController;
 use App\Http\Controllers\ReactionController;
 use App\Http\Controllers\SupervisionController;
 use App\Livewire\CharacterWizard;
-use App\Livewire\Market\Listings;
-use App\Livewire\Market\Shop;
-use App\Livewire\Market\Trades;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -116,9 +114,9 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('mercato')->name('market.')->group(function () {
         Route::redirect('/', '/mercato/emporio')->name('index');
-        Route::get('emporio', Shop::class)->name('shop');
-        Route::get('annunci', Listings::class)->name('listings');
-        Route::get('scambi', Trades::class)->name('trades');
+        Route::get('emporio', [MarketController::class, 'show'])->defaults('sezione', 'market.shop')->name('shop');
+        Route::get('annunci', [MarketController::class, 'show'])->defaults('sezione', 'market.listings')->name('listings');
+        Route::get('scambi', [MarketController::class, 'show'])->defaults('sezione', 'market.trades')->name('trades');
 
         Route::get('vigilanza', [SupervisionController::class, 'mine'])->name('supervision');
     });

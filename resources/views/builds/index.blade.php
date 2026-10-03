@@ -2,7 +2,7 @@
 @section('title', 'Build consigliate')
 
 @section('content')
-<div class="mx-auto max-w-3xl px-4 py-6">
+<x-pagina>
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="\App\Enums\Icon::Builds" class="h-7 w-7" /> Build consigliate
     </h2>
@@ -11,21 +11,25 @@
         Le sfogli sempre; per usarne una serve non avere già un personaggio.
     </p>
 
+    <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
     @forelse ($builds as $build)
-        <x-card :href="route('builds.show', $build)" flush padding="none" class="mb-3">
-            @if ($build->coverUrl())
-                <div class="relative">
-                    <img src="{{ $build->coverUrl() }}" alt="" class="h-24 w-full object-cover">
-                    @if ($build->tag)
-                        <span class="absolute left-2 top-2"><x-badge tone="accent">{{ $build->tag }}</x-badge></span>
-                    @endif
-                </div>
-            @endif
+        <x-card :href="route('builds.show', $build)" flush padding="none">
+            {{-- La fascia c'è sempre: la pillola resta nello stesso punto anche senza copertina. --}}
+            <div class="relative h-24">
+                @if ($build->coverUrl())
+                    <img src="{{ $build->coverUrl() }}" alt="" class="h-full w-full object-cover">
+                @else
+                    <span class="flex h-full w-full items-center justify-center bg-page">
+                        <x-icona :is="\App\Enums\Icon::Builds" class="h-8 w-8 text-muted" />
+                    </span>
+                @endif
+
+                @if ($build->tag)
+                    <span class="absolute left-2 top-2"><x-badge tone="accent">{{ $build->tag }}</x-badge></span>
+                @endif
+            </div>
 
             <div class="p-4">
-                @if (! $build->coverUrl() && $build->tag)
-                    <x-badge tone="accent" class="mb-1">{{ $build->tag }}</x-badge>
-                @endif
                 <p class="font-semibold text-fg">{{ $build->title }}</p>
                 <p class="text-xs text-muted">
                     {{ $build->class }}@if ($build->subclass) · {{ $build->subclass }}@endif
@@ -36,9 +40,12 @@
             </div>
         </x-card>
     @empty
-        <x-empty size="lg">
+        <x-empty size="lg" class="col-span-full">
             Non c'è ancora nessuna build consigliata. Le scrivono i dungeon master dal Pannello.
         </x-empty>
     @endforelse
-</div>
+    </div>
+
+    <x-back :href="route('home')">Torna alla Home</x-back>
+</x-pagina>
 @endsection

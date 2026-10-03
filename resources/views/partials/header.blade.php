@@ -1,10 +1,10 @@
 @php
     $unread = auth()->user()->unreadNotifications()->count();
-    $canPanel = auth()->user()->isDm() || auth()->user()->isAdmin();
 @endphp
 
 {{-- backdrop-blur crea uno stacking context: z-40 mantiene l'header sopra al main. --}}
-<header class="relative z-40 flex items-center justify-between gap-3 bg-page/90 px-4 py-3 backdrop-blur">
+{{-- Da `lg` in su la sostituisce la barra laterale. --}}
+<header class="relative z-40 flex items-center justify-between gap-3 bg-page/90 px-4 py-3 backdrop-blur md:px-6 lg:hidden">
     {{-- Evita un 404 usando un fallback se logo.png manca. --}}
     <a href="{{ route('home') }}" title="{{ config('app.name') }}" class="relative block h-11 w-11">
         @if (file_exists(public_path('logo.png')))
@@ -16,8 +16,7 @@
             </span>
         @endif
 
-        {{-- L'icona casa al centro del logo: è la scorciatoia alla Home, solo
-             qui nella barra da loggati (non nel prelogin). --}}
+        {{-- L'icona casa porta alla Home (solo da loggati). --}}
         <span class="pointer-events-none absolute inset-0 flex items-center justify-center">
             <x-icona :is="\App\Enums\Icon::Home" class="h-7 w-7 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]" />
         </span>
@@ -37,7 +36,7 @@
         </a>
 
         {{-- details gestisce il menu senza JavaScript. --}}
-        <details class="relative">
+        <details class="relative" data-tendina>
             <summary title="Menù"
                      class="flex h-12 w-12 cursor-pointer list-none items-center justify-center rounded-full
                             bg-active text-on-active transition hover:opacity-90 [&::-webkit-details-marker]:hidden">
@@ -50,66 +49,7 @@
                     {{ auth()->user()->name }}
                 </p>
 
-                @foreach ([
-                    ['Gilda', route('guild.index'), \App\Enums\Icon::Guild],
-                    ['Build consigliate', route('builds.index'), \App\Enums\Icon::Builds],
-                    ['Le mie richieste', route('proposals.index'), \App\Enums\Icon::Proposals],
-                    ['Il mio profilo', route('profile.edit'), \App\Enums\Icon::Profile],
-                    ['FAQs', route('faq.index'), \App\Enums\Icon::Faq],
-                    ['Chi siamo', route('about'), \App\Enums\Icon::General],
-                    ['Segnala un problema', route('bug-reports.create'), \App\Enums\Icon::BugReports],
-                ] as [$voce, $indirizzo, $icona])
-                    <a href="{{ $indirizzo }}" class="flex items-center gap-3 px-4 py-2.5 text-sm text-fg hover:bg-page">
-                        <x-icona :is="$icona" class="h-5 w-5 shrink-0 text-muted" />
-                        {{ $voce }}
-                    </a>
-                @endforeach
-
-                {{-- Compare solo quando il browser dice che l'app si può
-                     installare: lo scopre app.js (evento beforeinstallprompt). --}}
-                <button type="button" data-installa hidden
-                        class="flex w-full items-center gap-3 border-t border-line px-4 py-2.5 text-left text-sm text-fg hover:bg-page">
-                    <x-icona :is="\App\Enums\Icon::Install" class="h-5 w-5 shrink-0 text-muted" />
-                    Installa l'app
-                </button>
-
-                {{-- iOS non ha il pulsante d'installazione: qui l'istruzione,
-                     mostrata da app.js solo su iPhone/iPad non già installati. --}}
-                <p data-ios-install hidden class="flex items-start gap-3 border-t border-line px-4 py-2.5 text-xs text-muted">
-                    <x-icona :is="\App\Enums\Icon::Install" class="h-5 w-5 shrink-0" />
-                    <span>Per installare: tocca <span class="font-semibold text-fg">Condividi</span> e poi «Aggiungi a Home».</span>
-                </p>
-
-                @if ($canPanel)
-                    <a href="/admin" class="flex items-center gap-3 border-t border-line px-4 py-2.5 text-sm text-fg hover:bg-page">
-                        <x-icona :is="\App\Enums\Icon::Panel" class="h-5 w-5 shrink-0 text-muted" />
-                        Pannello
-                    </a>
-                @endif
-
-                {{-- Auto segue il tema di sistema; app.js aggiorna aria-pressed. --}}
-                <div class="border-t border-line px-4 py-3">
-                    <p class="mb-2 text-xs uppercase tracking-wide text-muted">Tema</p>
-
-                    <div class="flex gap-1" role="group" aria-label="Tema">
-                        @foreach (['auto' => 'Auto', 'light' => 'Chiaro', 'dark' => 'Scuro'] as $valore => $etichetta)
-                            <button type="button" data-tema="{{ $valore }}" aria-pressed="false"
-                                    class="flex-1 rounded-full border border-line px-2 py-1.5 text-xs font-semibold
-                                           text-fg transition hover:border-active
-                                           aria-pressed:border-active aria-pressed:bg-active aria-pressed:text-on-active">
-                                {{ $etichetta }}
-                            </button>
-                        @endforeach
-                    </div>
-                </div>
-
-                <form method="POST" action="{{ route('logout') }}" class="border-t border-line">
-                    @csrf
-                    <button type="submit" class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-fg hover:bg-page">
-                        <x-icona :is="\App\Enums\Icon::Logout" class="h-5 w-5 shrink-0 text-muted" />
-                        Esci
-                    </button>
-                </form>
+                @include('partials.menu')
             </nav>
         </details>
     </div>

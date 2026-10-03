@@ -2,7 +2,7 @@
 @section('title', 'Segnala un problema')
 
 @section('content')
-<div class="mx-auto max-w-2xl space-y-6 px-4 py-6">
+<x-pagina larghezza="stretta" class="space-y-6">
     <x-back :href="$provenienza" dove="sopra">Torna dov'eri</x-back>
 
     <h2 class="flex items-center gap-2 text-2xl text-fg">
@@ -13,8 +13,7 @@
         <form method="POST" action="{{ route('bug-reports.store') }}" class="flex flex-col gap-4">
             @csrf
 
-            {{-- La pagina di partenza viaggia con il modulo: al ritorno si
-                 torna lì, e nella segnalazione dice dove guardare. --}}
+            {{-- La pagina di partenza viaggia col modulo: serve al ritorno e a chi legge la segnalazione. --}}
             <input type="hidden" name="page" value="{{ $provenienza }}">
 
             <x-field name="title" label="In una riga" required
@@ -44,5 +43,5 @@
             <x-button class="self-start">Invia</x-button>
         </form>
     </x-panel>
-</div>
+</x-pagina>
 @endsection

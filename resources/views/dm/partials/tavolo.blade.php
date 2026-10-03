@@ -3,7 +3,9 @@
 @if ($tavolo->isEmpty())
     <x-empty>Nessuno si è ancora seduto a questo tavolo.</x-empty>
 @else
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    {{-- Colonne in base al contenitore: pagina intera in Regia, mezza colonna nella serata. --}}
+    <div class="@container">
+    <div class="grid grid-cols-1 gap-3 @md:grid-cols-2">
         @foreach ($tavolo as $pg)
             @php
                 $max = $pg->effectiveHpMax();
@@ -67,5 +69,6 @@
                 </div>
             </a>
         @endforeach
+    </div>
     </div>
 @endif

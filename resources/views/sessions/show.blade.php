@@ -24,7 +24,7 @@
     $frecciaNominaCampagna = ! in_array($da, ['libro-mastro', 'serate', 'regia'], true);
 @endphp
 
-<div class="mx-auto max-w-3xl space-y-6 px-4 py-6">
+<x-pagina class="space-y-6">
 
     <x-back dove="sopra" :href="$ritorno['url']">
         {{ $ritorno['testo'] }}
@@ -55,6 +55,8 @@
         </p>
     </div>
 
+    {{-- I blocchi riempiono la griglia in ordine: una serata senza resoconto non lascia una colonna vuota. --}}
+    <div class="grid gap-6 lg:grid-cols-2 lg:items-start">
     @if ($session->hasRecap())
         <x-panel>
             <p class="text-xs uppercase tracking-wide text-muted">Com'è andata</p>
@@ -73,6 +75,7 @@
     @elseif (! $session->isUpcoming())
         <x-empty>Il resoconto non è ancora stato scritto.</x-empty>
     @endif
+
 {{-- Le presenze vengono mostrate solo dopo la serata: una prenotazione alla quest non equivale a una presenza. --}}
     @unless ($session->isUpcoming())
         <x-panel>
@@ -121,7 +124,7 @@
             </div>
 
             <p class="mt-3 text-xs text-muted">
-                Tocca un eroe per la sua scheda: lì hai i comandi da DM — punti ferita, oro, «dichiara caduto».
+                Tocca un eroe per la sua scheda: lì hai i comandi da DM (punti ferita, oro, «dichiara caduto»).
             </p>
         </x-panel>
     @endif
@@ -204,6 +207,8 @@
         </x-panel>
     @endif
 
+    </div>
+
     @if ($precedente || $prossima)
         <nav class="mt-8 flex items-stretch justify-between gap-3 border-t border-line pt-4 text-sm">
             @if ($precedente)
@@ -240,5 +245,5 @@
             @endif
         </nav>
     @endif
-</div>
+</x-pagina>
 @endsection
