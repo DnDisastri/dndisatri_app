@@ -10,13 +10,12 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
+use RuntimeException;
 
 class ViewPendingChange extends ViewRecord
 {
     protected static string $resource = PendingChangeResource::class;
 
-    // Il titolo dice cos'è la richiesta, non il suo id: «Richiesta modifica
-    // scheda» è leggibile, «Visualizza 7» no.
     public function getTitle(): string
     {
         return 'Richiesta '.lcfirst($this->record->type->label());
@@ -43,8 +42,6 @@ class ViewPendingChange extends ViewRecord
             ->color('success')
             ->requiresConfirmation()
             ->modalHeading('Applicare la modifica?')
-            // Se la scheda si è mossa nel frattempo va detto anche qui, non
-            // solo nella tabella: è l'ultimo momento utile per accorgersene.
             ->modalDescription(fn () => $this->record->isStale()
                 ? 'Attenzione: la scheda è cambiata dopo questa proposta.'
                 : 'La scheda verrà aggiornata e il movimento finirà nel Registro.')
@@ -54,11 +51,17 @@ class ViewPendingChange extends ViewRecord
             ->visible(fn () => $this->record->isPending())
             ->authorize(fn () => auth()->user()->can('approve', $this->record))
             ->action(function (array $data) {
-                app(ApprovePendingChange::class)->handle(
-                    $this->record,
-                    auth()->user(),
-                    $data['note'] ?? null,
-                );
+                try {
+                    app(ApprovePendingChange::class)->handle(
+                        $this->record,
+                        auth()->user(),
+                        $data['note'] ?? null,
+                    );
+                } catch (RuntimeException $e) {
+                    Notification::make()->title($e->getMessage())->danger()->send();
+
+                    return;
+                }
 
                 Notification::make()->title('Richiesta approvata.')->success()->send();
 

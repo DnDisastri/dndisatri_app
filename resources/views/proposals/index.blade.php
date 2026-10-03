@@ -84,6 +84,10 @@
                     <p class="mt-2 text-sm text-muted">{{ $change->summary }}</p>
                 @endif
 
+                @if ($change->note)
+                    <p class="mt-1 text-sm text-muted">{{ $change->note }}</p>
+                @endif
+
                 <p class="mt-2 text-xs text-muted">
                     Mandata {{ $change->created_at->diffForHumans() }}
                     @if ($change->reviewed_at)

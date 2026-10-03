@@ -16,7 +16,7 @@ use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
 #[Fillable([
-    'character_id', 'requested_by', 'type', 'diff', 'summary',
+    'character_id', 'requested_by', 'type', 'diff', 'summary', 'note',
     'grant_gp', 'grant_items', 'base_updated_at', 'archived_at',
 ])]
 class PendingChange extends Model
@@ -26,7 +26,6 @@ class PendingChange extends Model
     /** Vedi la nota in Trade: il predefinito del database non basta. */
     protected $attributes = ['status' => PendingChangeStatus::Pending->value];
 
-    /** Chi decide è tracciato due volte: su `reviewed_by` (per la bacheca) e nel log attività (per la sequenza). */
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
@@ -60,7 +59,6 @@ class PendingChange extends Model
         return $this->belongsTo(User::class, 'requested_by');
     }
 
-    /** Chi ha approvato o rifiutato: la bacheca è condivisa, la traccia no. */
     public function reviewedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
@@ -76,17 +74,13 @@ class PendingChange extends Model
         return $this->archived_at !== null;
     }
 
-    /** Si archivia solo una richiesta decisa: una in attesa è viva, nasconderla la perderebbe di vista. */
+    /** Una richiesta in attesa non si archivia: sparirebbe dalla bacheca. */
     public function isArchivable(): bool
     {
         return ! $this->isArchived() && ! $this->isPending();
     }
 
-    /**
-     * Il personaggio è cambiato fra la proposta e adesso. Non blocca
-     * l'approvazione: avvisa chi decide invece di sovrascrivere in silenzio. I
-     * bottini non sono mai obsoleti (si applicano come somma, non sostituzione).
-     */
+    /** Avvisa senza bloccare. I bottini non sono mai obsoleti: si sommano. */
     public function isStale(): bool
     {
         if ($this->type->appliesAsDelta() || $this->base_updated_at === null) {
@@ -96,21 +90,11 @@ class PendingChange extends Model
         return $this->character->updated_at?->gt($this->base_updated_at) ?? false;
     }
 
-    /**
-     * Chiavi del diff che non sono colonne della scheda, e che quindi non
-     * hanno un «prima» da confrontare.
-     *
-     * La foto è un file e si guarda, non si legge in una colonna. Le altre
-     * tre sono istruzioni per l'approvazione: una classe da far salire, un
-     * talento e degli incantesimi, che diventano righe a parte. Il riepilogo
-     * le racconta già tutte, e `class_up` porta dentro un array annidato che
-     * qui non si saprebbe scrivere.
-     */
+    /** Chiavi del diff che non sono colonne della scheda: senza un «prima» da confrontare. */
     private const NON_COLONNE = ['photo_path', 'class_up', 'feat', 'spells'];
 
     /**
-     * Il confronto campo per campo fra la scheda adesso e come diventerebbe. Il
-     * «prima» si legge dal personaggio ora: in archivio c'è solo il diff.
+     * Il «prima» si legge dal personaggio adesso: la richiesta salva solo il diff.
      *
      * @return Collection<int, array{label: string, before: string, after: string}>
      */
@@ -128,7 +112,6 @@ class PendingChange extends Model
             ->values();
     }
 
-    /** Il percorso (disco privato) della foto proposta, se la richiesta ne ha una. */
     public function proposedPhotoPath(): ?string
     {
         $path = $this->diff['photo_path'] ?? null;
@@ -165,12 +148,7 @@ class PendingChange extends Model
         };
     }
 
-    /**
-     * Un valore del diff scritto per essere letto.
-     *
-     * Ricorsiva di proposito: un array annidato qui dentro deve diventare
-     * testo, non far saltare la pagina di chi sta approvando.
-     */
+    /** Ricorsiva: un array annidato diventa testo invece di rompere la pagina. */
     private static function readable(mixed $value): string
     {
         return match (true) {
@@ -184,7 +162,7 @@ class PendingChange extends Model
     /** @param  array<array-key,mixed>  $value */
     private static function readableArray(array $value): string
     {
-        // Una lista è un elenco di cose: gli indici 0, 1, 2 non vanno letti.
+        // In una lista gli indici 0, 1, 2 non si scrivono.
         $lista = array_is_list($value);
 
         return collect($value)
@@ -217,7 +195,6 @@ class PendingChange extends Model
         $query->whereNull('archived_at');
     }
 
-    /** Le richieste che questo utente può vedere in bacheca. */
     public function scopeVisibleTo(Builder $query, User $user): void
     {
         if ($user->isDm() || $user->isAdmin()) {

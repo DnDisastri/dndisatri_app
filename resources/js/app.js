@@ -314,6 +314,29 @@ const sfogliabile = (scheda, tab) => {
     }
 });
 
+// Righe del bottino: si aprono una alla volta fino al limite.
+
+const righeBottino = document.querySelector('[data-righe-bottino]');
+
+if (righeBottino) {
+    const aggiungi = document.querySelector('[data-aggiungi-oggetto]');
+    const limite = document.querySelector('[data-limite-oggetti]');
+
+    aggiungi?.addEventListener('click', () => {
+        const chiuse = righeBottino.querySelectorAll('[data-riga-bottino][hidden]');
+
+        if (chiuse.length === 0) return;
+
+        chiuse[0].hidden = false;
+        chiuse[0].querySelector('input')?.focus();
+
+        if (chiuse.length === 1) {
+            aggiungi.hidden = true;
+            limite.hidden = false;
+        }
+    });
+}
+
 // Visibilità password
 
 document.querySelectorAll('[data-toggle-password]').forEach((bottone) => {

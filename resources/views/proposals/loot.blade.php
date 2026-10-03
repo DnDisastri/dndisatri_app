@@ -1,6 +1,21 @@
 @extends('layouts.app')
 @section('title', 'Registra un bottino')
 
+@use('App\Actions\Characters\ProposeChange')
+
+@php
+    $massimo = ProposeChange::LOOT_MAX_ITEMS;
+
+    // Al ritorno con un errore restano aperte tutte le righe già compilate.
+    $compilate = collect(old('items', []))
+        ->filter(fn ($riga) => collect($riga)->filter(fn ($v) => filled($v))->isNotEmpty())
+        ->keys()
+        ->max();
+    $aperte = max(3, $compilate === null ? 0 : $compilate + 1);
+
+    $campo = 'w-full rounded-md border-2 border-line bg-surface px-3 py-2 text-sm text-fg placeholder:text-muted';
+@endphp
+
 @section('content')
 <x-pagina larghezza="stretta" class="space-y-4">
     <x-panel>
@@ -8,6 +23,9 @@
         <p class="mt-1 text-sm text-muted">
             L'oro si <strong>somma</strong> a quello che hai: se spendi qualcosa mentre la
             richiesta aspetta, la spesa non viene annullata.
+        </p>
+        <p class="mt-1 text-sm text-muted">
+            Per ogni richiesta: al massimo {{ ProposeChange::LOOT_MAX_GP }} mo e {{ $massimo }} oggetti.
         </p>
     </x-panel>
 
@@ -19,32 +37,60 @@
         @csrf
 
         <x-panel title="Oro">
-            <x-field name="gp" label="Monete d'oro" type="number" min="0" value="0" />
+            <x-field name="gp" label="Monete d'oro" type="number" min="0" :max="ProposeChange::LOOT_MAX_GP" value="0" />
         </x-panel>
 
         <x-panel title="Oggetti">
-            <p class="mb-3 text-sm text-muted">Lascia in bianco le righe che non ti servono.</p>
+            <p class="mb-3 text-sm text-muted">
+                Il nome breve, la descrizione nei dettagli. Lascia in bianco le righe che non ti servono.
+            </p>
 
-            @for ($i = 0; $i < 4; $i++)
-                <div class="mb-2 grid grid-cols-6 gap-2">
-                    <input type="text" name="items[{{ $i }}][name]" placeholder="Nome"
-                           value="{{ old("items.$i.name") }}"
-                           class="col-span-3 rounded-md border-2 border-line bg-surface px-3 py-2 text-sm text-fg placeholder:text-muted">
-                    <input type="number" name="items[{{ $i }}][qty]" placeholder="Q.tà" min="1"
-                           value="{{ old("items.$i.qty") }}"
-                           class="rounded-md border-2 border-line bg-surface px-3 py-2 text-sm text-fg placeholder:text-muted">
-                    <input type="text" name="items[{{ $i }}][category]" placeholder="Categoria"
-                           value="{{ old("items.$i.category") }}"
-                           class="rounded-md border-2 border-line bg-surface px-3 py-2 text-sm text-fg placeholder:text-muted">
-                    <input type="number" name="items[{{ $i }}][value]" placeholder="Valore" min="0"
-                           value="{{ old("items.$i.value") }}"
-                           class="rounded-md border-2 border-line bg-surface px-3 py-2 text-sm text-fg placeholder:text-muted">
+            @error('items')
+                <p class="mb-3 text-sm text-on-danger-soft">{{ $message }}</p>
+            @enderror
+
+            <div data-righe-bottino>
+                @for ($i = 0; $i < $massimo; $i++)
+                    <div data-riga-bottino @if ($i >= $aperte) hidden @endif
+                         class="border-t border-line py-3 first:border-0 first:pt-0">
+                        <div class="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                            <input type="text" name="items[{{ $i }}][name]" placeholder="Nome" maxlength="100"
+                                   value="{{ old("items.$i.name") }}" aria-label="Nome dell'oggetto {{ $i + 1 }}"
+                                   class="{{ $campo }} col-span-3">
+                            <input type="number" name="items[{{ $i }}][qty]" placeholder="Q.tà" min="1" max="999"
+                                   value="{{ old("items.$i.qty") }}" aria-label="Quantità"
+                                   class="{{ $campo }}">
+                            <input type="text" name="items[{{ $i }}][category]" placeholder="Categoria" maxlength="50"
+                                   value="{{ old("items.$i.category") }}" aria-label="Categoria"
+                                   class="{{ $campo }}">
+                            <input type="number" name="items[{{ $i }}][value]" placeholder="Valore" min="0"
+                                   value="{{ old("items.$i.value") }}" aria-label="Valore in mo"
+                                   class="{{ $campo }}">
+                            <textarea name="items[{{ $i }}][details]" rows="2" placeholder="Dettagli (facoltativo)" maxlength="1000"
+                                      aria-label="Dettagli" class="{{ $campo }} col-span-3 sm:col-span-6">{{ old("items.$i.details") }}</textarea>
+                        </div>
+
+                        @foreach (['name', 'qty', 'category', 'value', 'details'] as $chiave)
+                            @error("items.$i.$chiave")
+                                <p class="mt-1 text-sm text-on-danger-soft">{{ $message }}</p>
+                            @enderror
+                        @endforeach
+                    </div>
+                @endfor
+            </div>
+
+            <div class="mt-3">
+                <div data-aggiungi-oggetto @if ($aperte >= $massimo) hidden @endif>
+                    <x-button type="button" variant="quiet" size="sm">Aggiungi un oggetto</x-button>
                 </div>
-            @endfor
+                <p data-limite-oggetti @if ($aperte < $massimo) hidden @endif class="text-sm text-muted">
+                    Hai raggiunto il limite di {{ $massimo }} oggetti: registra il resto con una seconda richiesta.
+                </p>
+            </div>
         </x-panel>
 
         <x-panel>
-            <x-field name="note" label="Da dove arriva (facoltativo)" />
+            <x-field name="note" label="Da dove arriva (facoltativo)" maxlength="255" />
         </x-panel>
 
         <div class="flex gap-3">

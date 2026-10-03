@@ -6,8 +6,8 @@ use App\Actions\Characters\CharacterPhoto;
 use App\Actions\Characters\ProposeChange;
 use App\Actions\Characters\RequestLevelUp;
 use App\Domain\Dnd\Ability;
-use App\Domain\Dnd\ItemEffectMode;
 use App\Domain\Dnd\ClassRules;
+use App\Domain\Dnd\ItemEffectMode;
 use App\Domain\Dnd\Multiclass;
 use App\Domain\Dnd\Progression;
 use App\Models\Character;
@@ -22,7 +22,6 @@ use InvalidArgumentException;
 /** Nessuna azione qui tocca la scheda: creano richieste che un DM approva in bacheca. */
 class ProposalController extends Controller
 {
-    /** Le richieste del giocatore, dalla più recente. */
     public function index(Request $request): View
     {
         $mostraArchiviate = $request->boolean('archiviate');
@@ -54,7 +53,6 @@ class ProposalController extends Controller
         return back()->with('status', 'Richiesta archiviata.');
     }
 
-    /** Svuota tutte le richieste decise: le mette via in un colpo solo. */
     public function clear(Request $request): RedirectResponse
     {
         PendingChange::visibleTo($request->user())
@@ -65,7 +63,6 @@ class ProposalController extends Controller
         return back()->with('status', 'Richieste decise archiviate.');
     }
 
-    /** Ripescarla dall'archivio: torna in lista dov'era. */
     public function restore(Request $request, PendingChange $change): RedirectResponse
     {
         $this->authorizeArchive($request, $change);
@@ -207,13 +204,18 @@ class ProposalController extends Controller
         $this->authorize('propose', $character);
 
         $validated = $request->validate([
-            'gp' => ['nullable', 'integer', 'min:0'],
-            'items' => ['nullable', 'array'],
-            'items.*.name' => ['nullable', 'string', 'max:255'],
-            'items.*.qty' => ['nullable', 'integer', 'min:1'],
-            'items.*.category' => ['nullable', 'string', 'max:255'],
-            'items.*.value' => ['nullable', 'integer', 'min:0'],
+            'gp' => ['nullable', 'integer', 'min:0', 'max:'.ProposeChange::LOOT_MAX_GP],
+            'items' => ['nullable', 'array', 'max:'.ProposeChange::LOOT_MAX_ITEMS],
+            'items.*.name' => ['nullable', 'string', 'max:100'],
+            'items.*.qty' => ['nullable', 'integer', 'min:1', 'max:999'],
+            'items.*.category' => ['nullable', 'string', 'max:50'],
+            'items.*.value' => ['nullable', 'integer', 'min:0', 'max:'.Character::MAX_GP],
+            'items.*.details' => ['nullable', 'string', 'max:1000'],
             'note' => ['nullable', 'string', 'max:255'],
+        ], [
+            'gp.max' => 'Al massimo :max mo per richiesta: per somme più alte chiedi al DM.',
+            'items.max' => 'Al massimo :max oggetti per richiesta: registra il resto con una seconda richiesta.',
+            'items.*.name.max' => 'Il nome di un oggetto può avere al massimo :max caratteri: la descrizione va nei dettagli.',
         ]);
 
         // Le righe lasciate in bianco non sono oggetti.

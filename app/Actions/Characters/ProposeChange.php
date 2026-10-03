@@ -14,21 +14,16 @@ use App\Models\User;
 use App\Notifications\ChangeAwaitingApproval;
 use InvalidArgumentException;
 
-/**
- * Le proposte semplici del giocatore: modifica della scheda, bottino di
- * sessione, oggetto magico trovato.
- *
- * Il passaggio di livello ha un'azione sua (`RequestLevelUp`) perché comporta
- * un calcolo; queste tre no.
- */
+/** Le proposte senza calcoli: il passaggio di livello sta in `RequestLevelUp`. */
 final class ProposeChange
 {
+    /** Tetti di una singola richiesta di bottino: oltre, se ne fa una seconda o si chiede al DM. */
+    public const LOOT_MAX_GP = 500;
+
+    public const LOOT_MAX_ITEMS = 10;
+
     /**
-     * Modifica della scheda.
-     *
-     * Si salva **solo quello che cambia davvero**: un modulo rimandato senza
-     * toccare niente non deve produrre una richiesta vuota da esaminare, e il
-     * DM deve vedere le due o tre cose modificate, non tutta la scheda.
+     * Si salva solo quello che cambia davvero: niente richieste vuote da esaminare.
      *
      * @param  array<string,mixed>  $proposed
      */
@@ -48,14 +43,22 @@ final class ProposeChange
     }
 
     /**
-     * Bottino di sessione.
+     * La nota resta fuori dal riassunto, che finisce anche nel Registro.
      *
-     * @param  list<array{name: string, qty?: int, category?: string, value?: int}>  $items
+     * @param  list<array{name: string, qty?: int, category?: string, value?: int, details?: string}>  $items
      */
     public function loot(Character $character, User $requester, int $gp = 0, array $items = [], ?string $note = null): PendingChange
     {
         if ($gp === 0 && $items === []) {
             throw new InvalidArgumentException('Un bottino vuoto non si registra.');
+        }
+
+        if ($gp > self::LOOT_MAX_GP) {
+            throw new InvalidArgumentException('Al massimo '.self::LOOT_MAX_GP.' mo per richiesta: per somme più alte chiedi al DM.');
+        }
+
+        if (count($items) > self::LOOT_MAX_ITEMS) {
+            throw new InvalidArgumentException('Al massimo '.self::LOOT_MAX_ITEMS.' oggetti per richiesta: registra il resto con una seconda richiesta.');
         }
 
         $parts = array_filter([
@@ -66,11 +69,11 @@ final class ProposeChange
         return $this->create($character, $requester, PendingChangeType::Loot, [
             'grant_gp' => $gp,
             'grant_items' => $items,
-            'summary' => 'Bottino: '.implode(' e ', $parts).($note ? " — {$note}" : ''),
+            'summary' => 'Bottino: '.implode(' e ', $parts),
+            'note' => filled($note) ? $note : null,
         ]);
     }
 
-    /** Oggetto magico che altera una caratteristica. */
     public function itemEffect(
         Character $character,
         User $requester,
@@ -99,8 +102,7 @@ final class ProposeChange
             'character_id' => $character->getKey(),
             'requested_by' => $requester->getKey(),
             'type' => $type,
-            // Fotografa com'era la scheda: serve ad accorgersi se cambia
-            // mentre la richiesta aspetta in bacheca.
+            // Serve ad accorgersi se la scheda cambia mentre la richiesta aspetta.
             'base_updated_at' => $character->updated_at,
             ...$attributes,
         ]);
@@ -114,8 +116,7 @@ final class ProposeChange
     {
         $current = $character->getAttribute($field);
 
-        // I campi JSON vanno confrontati per contenuto: due array uguali
-        // scritti in ordine diverso non sono una modifica.
+        // Gli array si confrontano per contenuto: l'ordine diverso non è una modifica.
         if (is_array($current) && is_array($value)) {
             ksort($current);
             ksort($value);

@@ -1,11 +1,5 @@
 @php
-    /**
-     * Il confronto fra com'è la scheda adesso e come diventerebbe.
-     *
-     * Si salva solo il diff, quindi il «prima» va letto dal personaggio in
-     * questo momento. Gli stili sono inline: il CSS del pannello non compila le
-     * utility arbitrarie di questo Blade, e senza la griglia collasserebbe.
-     */
+    // Stili inline: il CSS del pannello non compila le utility di questo Blade.
     $record = $getRecord();
     $character = $record->character;
     $rows = $record->diffRows();
@@ -97,6 +91,9 @@
                                 + {{ $item['qty'] ?? 1 }}× {{ $item['name'] }}
                                 @if ($extra)
                                     <span style="color:#6b7280;font-weight:400;">({{ implode(' · ', $extra) }})</span>
+                                @endif
+                                @if (filled($item['details'] ?? null))
+                                    <div style="color:#6b7280;font-weight:400;margin-left:1rem;word-break:break-word;">{{ $item['details'] }}</div>
                                 @endif
                             </li>
                         @endforeach

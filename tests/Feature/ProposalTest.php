@@ -25,7 +25,7 @@ describe('passaggio di livello', function () {
             ->and($change->diff['hp_max'])->toBe(28)
             ->and($change->summary)->toContain('+8 PF');
     });
-// L'ASI di Costituzione va applicato prima dei PF perché un nuovo modificatore produce anche PF retroattivi.
+    // L'ASI di Costituzione va applicato prima dei PF perché un nuovo modificatore produce anche PF retroattivi.
     it('applica l\'ASI PRIMA di calcolare i PF, e aggiunge i retroattivi', function () {
 
         $player = User::factory()->player()->create();
@@ -139,9 +139,9 @@ describe('modifica della scheda', function () {
         ]);
 
         $change = app(ProposeChange::class)->edit($character, $player, [
-            'name' => 'Elandra',         
-            'notes' => 'nuove',           
-            'background' => 'Accolito',  
+            'name' => 'Elandra',
+            'notes' => 'nuove',
+            'background' => 'Accolito',
         ]);
 
         expect($change->diff)->toBe(['notes' => 'nuove'])
@@ -155,7 +155,7 @@ describe('modifica della scheda', function () {
         expect(fn () => app(ProposeChange::class)->edit($character, $player, ['notes' => 'uguali']))
             ->toThrow(InvalidArgumentException::class);
     });
-// I campi composti vengono confrontati per contenuto e non per ordine.
+    // I campi composti vengono confrontati per contenuto e non per ordine.
     it('confronta i campi composti per contenuto', function () {
         $player = User::factory()->player()->create();
         $character = Character::factory()->ownedBy($player)->create([
@@ -166,7 +166,7 @@ describe('modifica della scheda', function () {
             'skills' => ['arcana' => 'none', 'stealth' => 'proficient'],
         ]))->toThrow(InvalidArgumentException::class);
     });
-// La proposta conserva lo stato di partenza per rilevare modifiche concorrenti prima dell'approvazione.
+    // La proposta conserva lo stato di partenza per rilevare modifiche concorrenti prima dell'approvazione.
     it('registra com\'era la scheda al momento della proposta', function () {
         $player = User::factory()->player()->create();
         $character = Character::factory()->ownedBy($player)->create(['notes' => 'a']);
@@ -193,7 +193,7 @@ describe('bottino', function () {
 
         expect($change->grant_gp)->toBe(150)
             ->and($change->summary)->toContain('150 mo')
-            ->and($change->summary)->toContain('Drago rosso');
+            ->and($change->note)->toBe('Drago rosso');
 
         app(ApprovePendingChange::class)->handle($change, User::factory()->dm()->create());
 
@@ -206,6 +206,17 @@ describe('bottino', function () {
         $character = Character::factory()->ownedBy($player)->create();
 
         expect(fn () => app(ProposeChange::class)->loot($character, $player))
+            ->toThrow(InvalidArgumentException::class);
+    });
+
+    it('rispetta i tetti anche senza passare dal modulo', function () {
+        $player = User::factory()->player()->create();
+        $character = Character::factory()->ownedBy($player)->create();
+        $troppi = array_fill(0, ProposeChange::LOOT_MAX_ITEMS + 1, ['name' => 'Torcia']);
+
+        expect(fn () => app(ProposeChange::class)->loot($character, $player, ProposeChange::LOOT_MAX_GP + 1))
+            ->toThrow(InvalidArgumentException::class)
+            ->and(fn () => app(ProposeChange::class)->loot($character, $player, 0, $troppi))
             ->toThrow(InvalidArgumentException::class);
     });
 });

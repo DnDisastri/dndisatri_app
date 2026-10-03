@@ -26,8 +26,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
@@ -43,7 +45,6 @@ class Character extends Model
 {
     use HasFactory, LogsActivity;
 
-    /** Ogni modifica alla scheda va nel log attività (approvazioni e interventi diretti dei DM). */
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
@@ -70,13 +71,12 @@ class Character extends Model
         return $this->belongsTo(User::class);
     }
 
-    /** La serata in cui è morto, se a un tavolo (null se caduto fra sessioni). */
+    /** Null se è caduto fra una sessione e l'altra. */
     public function diedInSession(): BelongsTo
     {
         return $this->belongsTo(GameSession::class, 'died_in_session_id');
     }
 
-    /** L'indirizzo della foto, o null: «non ha foto» è un'informazione, non si inventa un percorso. */
     public function photoUrl(): ?string
     {
         return $this->photo_path
@@ -116,13 +116,12 @@ class Character extends Model
         return $this->hasMany(PendingChange::class);
     }
 
-    /** Il Registro dei movimenti di oro e oggetti. */
     public function ledgerEntries(): HasMany
     {
         return $this->hasMany(LedgerEntry::class);
     }
 
-    /** Le serate a cui si è seduto: passa da `character_id` (conta «Grimm c'era», non «Marco»). */
+    /** Le presenze sono del personaggio (`character_id`), non del giocatore. */
     public function sessions(): BelongsToMany
     {
         return $this->belongsToMany(
@@ -135,13 +134,12 @@ class Character extends Model
 
     // === I dadi vita ===
 
-    /** Dadi vita totali: uno per livello. Un multiclasse avrebbe facce diverse, la scheda ne tiene una (semplificazione). */
+    /** Semplificazione: un multiclasse avrebbe dadi di facce diverse, qui ne conta uno solo. */
     public function hitDiceTotal(): int
     {
         return max(1, (int) $this->level);
     }
 
-    /** Quanti gliene restano da spendere. */
     public function hitDiceLeft(): int
     {
         return max(0, $this->hitDiceTotal() - (int) $this->hit_dice_used);
@@ -149,7 +147,6 @@ class Character extends Model
 
     // === I preferiti dell'emporio ===
 
-    /** Gli articoli dell'emporio segnati: scorciatoia per le cose che si ricomprano. */
     public function favoriteItems(): BelongsToMany
     {
         return $this->belongsToMany(MarketItem::class)
@@ -157,7 +154,7 @@ class Character extends Model
             ->orderBy('name');
     }
 
-    /** Mette o toglie la stella; ritorna se l'id è finito fra gli attaccati. */
+    /** Ritorna true se la stella è stata messa. */
     public function toggleFavorite(MarketItem $item): bool
     {
         $esito = $this->favoriteItems()->toggle($item);
@@ -167,7 +164,7 @@ class Character extends Model
         return filled($esito['attached']);
     }
 
-    /** La relazione caricata vince sulla query: nella griglia eviterebbe una query per stella. */
+    /** Usa la relazione già caricata: nella griglia evita una query per stella. */
     public function hasFavorite(MarketItem|int $item): bool
     {
         $id = $item instanceof MarketItem ? $item->getKey() : $item;
@@ -179,12 +176,11 @@ class Character extends Model
         return $this->favoriteItems()->whereKey($id)->exists();
     }
 
-    // === Classi (D14, D17) ===
+    // === Classi ===
 
-    /** Quante classi si possono avere (D19): il manuale non pone limiti. */
+    /** Limite della casa: il manuale non ne pone. */
     public const MAX_CLASSES = 3;
 
-    /** Le classi, la principale per prima. */
     public function classes(): HasMany
     {
         return $this->hasMany(CharacterClass::class)
@@ -193,11 +189,7 @@ class Character extends Model
     }
 
     /**
-     * Classe => livello, la forma che le regole del multiclasse si aspettano.
-     *
-     * Se le righe non ci sono ancora — un personaggio appena costruito in
-     * memoria, o un test che non le crea — si ricade sulla copia tenuta sulla
-     * scheda, che per un monoclasse dice la stessa cosa.
+     * Senza righe di classe (personaggio in memoria, test) ricade sulla copia della scheda.
      *
      * @return array<string,int>
      */
@@ -229,13 +221,7 @@ class Character extends Model
 
     // === Inventario ===
 
-    /**
-     * Aggiunge un oggetto, accorpandolo a uno uguale già in zaino.
-     *
-     * Non tocca mai le righe equipaggiate: comprare una seconda cotta di
-     * maglia non deve accodarsi a quella indossata, o l'indice univoco sullo
-     * slot verrebbe coinvolto in operazioni che non lo riguardano.
-     */
+    /** Accorpa solo con le righe in zaino: quelle equipaggiate hanno l'indice univoco sullo slot. */
     public function addToInventory(string $name, int $qty = 1, ?string $category = null, int $value = 0, ?string $details = null): CharacterItem
     {
         $existing = $this->items()
@@ -258,10 +244,7 @@ class Character extends Model
         ]);
     }
 
-    /**
-     * Toglie una quantità di un oggetto dall'inventario, partendo da quelli
-     * riposti. Restituisce quanti ne ha effettivamente tolti.
-     */
+    /** Restituisce quanti ne ha tolti davvero. */
     public function removeFromInventory(string $name, int $qty = 1): int
     {
         $removed = 0;
@@ -293,16 +276,9 @@ class Character extends Model
         return $this->items()->where('name', $name)->sum('qty') >= $qty;
     }
 
-    /** L'opzione che permette a un umano di non avere un'etnia. */
     private const SENZA_SOTTORAZZA = 'Nessuna';
 
-    /**
-     * Come si scrive la specie di questo personaggio.
-     *
-     * I nomi delle sottorazze sono di due tipi. Alcuni contengono già la
-     * razza («Elfo Alto», «Nano delle Colline») e bastano da soli. Altri no
-     * («Nero», «Piedelesto») e senza la razza davanti non si capiscono.
-     */
+    /** Alcune sottorazze contengono già la razza («Elfo Alto»), altre no («Piedelesto»). */
     public function speciesLabel(): string
     {
         if (blank($this->subrace) || $this->subrace === self::SENZA_SOTTORAZZA) {
@@ -316,19 +292,10 @@ class Character extends Model
 
     // === Registro ===
 
-    /**
-     * Il tetto di ogni importo in oro: è il massimo di `unsignedInteger`, il
-     * tipo di `gp` e delle colonne del mercato. Oltre, il database rifiuta la
-     * scrittura e la richiesta muore con un 500 invece che con un errore nel
-     * modulo. Se un giorno servisse un limite di gioco più basso, si abbassa
-     * qui e vale ovunque.
-     */
+    /** Il massimo di `unsignedInteger` (`gp` e mercato): oltre, il database risponde con un 500. */
     public const MAX_GP = 4_294_967_295;
 
-    /**
-     * Scrive una riga nel Registro. Va chiamata DOPO aver aggiornato l'oro,
-     * così `gp_after` racconta il saldo risultante.
-     */
+    /** Va chiamata DOPO aver aggiornato l'oro, o `gp_after` è sbagliato. */
     public function recordInLedger(
         LedgerAction $action,
         string $message,
@@ -341,14 +308,13 @@ class Character extends Model
             'action' => $action,
             'gp_delta' => $gpDelta,
             'gp_after' => $this->gp,
-            'message' => $message,
-            // Quel che serve per tornare indietro, quando il resto del sistema
-            // non lo conserva già altrove (vedi la migrazione di D12).
+            // La colonna regge testi lunghi; il taglio tiene leggibile il Registro.
+            'message' => Str::limit($message, 2000),
+            // I dati per annullare il movimento, se non stanno già altrove.
             'details' => $details,
         ]);
     }
 
-    /** L'oggetto equipaggiato in uno slot, se c'è. */
     public function equipped(EquipmentSlot $slot): ?CharacterItem
     {
         return $this->items->firstWhere('equipped_slot', $slot);
@@ -361,17 +327,12 @@ class Character extends Model
         return $this->died_at === null;
     }
 
-    /** A terra e ancora vivo (tiri salvezza contro morte): i PF sono a zero. */
     public function isDying(): bool
     {
         return $this->isAlive() && $this->hp_current <= 0;
     }
 
-    /**
-     * Segna un tiro contro morte, con la logica del pallino: ricliccare l'n-esimo
-     * quando è già acceso lo toglie (torna a n-1). Solo da morente. La logica sta
-     * qui, non nei due posti che la richiamano (scheda e tracker del DM).
-     */
+    /** Ricliccare il pallino acceso lo spegne (torna a n-1). Unica logica per scheda e tracker. */
     public function segnaTiroMorte(string $tipo, int $n): void
     {
         if (! $this->isDying()) {
@@ -398,19 +359,17 @@ class Character extends Model
 
     // === Valori derivati (App\Domain\Dnd) ===
 
-    /** Punteggi BASE: creazione più ASI, senza oggetti magici. */
+    /** Senza oggetti magici: i calcoli di gioco partono da effectiveScores(). */
     public function baseScores(): AbilityScores
     {
         return AbilityScores::fromArray($this->only(['str', 'dex', 'con', 'int', 'wis', 'cha']));
     }
 
-    /** Quanti oggetti magici si tengono in sintonia alla volta. */
     public const ATTUNEMENT_LIMIT = 3;
 
     /**
-     * Gli effetti che contano adesso: un effetto vale se l'oggetto è in sintonia
-     * (togliere la sintonia o vendere l'oggetto spegne il bonus). Benedizioni e
-     * maledizioni non hanno un oggetto, valgono sempre, le toglie solo un DM.
+     * Un effetto vale se il suo oggetto è in sintonia; senza oggetto (benedizioni,
+     * maledizioni) vale sempre.
      *
      * @return Collection<int, CharacterItemEffect>
      */
@@ -434,10 +393,6 @@ class Character extends Model
         return max(0, self::ATTUNEMENT_LIMIT - $this->attunedItems()->count());
     }
 
-    /**
-     * Punteggi EFFICACI: i base più gli effetti attivi.
-     * È da qui che parte ogni calcolo di gioco, mai da baseScores().
-     */
     public function effectiveScores(): AbilityScores
     {
         return $this->baseScores()->withEffects(
@@ -445,11 +400,7 @@ class Character extends Model
         );
     }
 
-    /**
-     * PF massimi EFFICACI: se un oggetto magico altera la Costituzione, il
-     * massimo si muove di (delta modificatore × livello) finché resta
-     * equipaggiato. Il valore salvato non viene toccato.
-     */
+    /** Un oggetto che altera la Costituzione sposta il massimo; il valore salvato non cambia. */
     public function effectiveHpMax(): int
     {
         return HitPoints::effectiveMax(
@@ -465,18 +416,13 @@ class Character extends Model
         return Progression::proficiencyBonus($this->level);
     }
 
-    /** Il grado d'avventuriero, dedotto dal livello: sale da solo. */
     public function rank(): AdventurerRank
     {
         return AdventurerRank::fromLevel($this->level);
     }
 
-    /**
-     * Quando è salito di livello l'ultima volta. Non c'è una colonna: è
-     * l'approvazione dell'ultima richiesta di passaggio; chi non è mai salito
-     * parte dalla creazione.
-     */
-    public function lastLevelUpAt(): \Illuminate\Support\Carbon
+    /** Non c'è una colonna: è l'ultima richiesta di passaggio approvata, o la creazione. */
+    public function lastLevelUpAt(): Carbon
     {
         $ultimo = $this->pendingChanges()
             ->where('type', PendingChangeType::LevelUp)
@@ -487,7 +433,6 @@ class Character extends Model
         return $ultimo?->updated_at ?? $this->created_at;
     }
 
-    /** Le sessioni giocate dall'ultimo passaggio: dice se può chiedere il prossimo (decide il DM). */
     public function sessionsSinceLastLevelUp(): int
     {
         return $this->sessions()
@@ -496,29 +441,23 @@ class Character extends Model
             ->count();
     }
 
-    /** Di norma basta una sessione giocata per poter chiedere un livello. */
     public function canRequestLevelUp(): bool
     {
         return $this->sessionsSinceLastLevelUp() >= 1;
     }
 
-    /** Il tipo di incantatore della classe principale, per quello che mostra. */
     public function casterType(): CasterType
     {
         return CasterType::for($this->class, $this->subclass);
     }
 
-    /**
-     * Gli slot incantesimo, sempre da `Multiclass` anche con una classe sola
-     * (lì torna alla tabella della classe: un'unica strada). Con più classi non
-     * si sommano gli slot: si calcola un livello da incantatore combinato.
-     */
+    /** Sempre da `Multiclass`, anche con una classe: con più classi il livello da incantatore si combina. */
     public function spellSlots(): SpellSlotSet
     {
         return Multiclass::slots($this->classLevels());
     }
 
-    /** Gli slot da patto, riserva distinta da quelli normali (torna anche col riposo breve). */
+    /** Riserva distinta: torna anche col riposo breve. */
     public function pactSlots(): SpellSlotSet
     {
         return Multiclass::pactSlots($this->classLevels());
@@ -531,10 +470,7 @@ class Character extends Model
             : SpellSlots::abilityFor($this->class);
     }
 
-    /**
-     * Classe Armatura: sempre calcolata dai punteggi efficaci e da ciò che il
-     * personaggio indossa. Non esiste nessuna colonna `ac` da cui leggerla.
-     */
+    /** Sempre calcolata: non esiste una colonna `ac`. */
     public function armorClass(): int
     {
         return ArmorClass::compute(
@@ -544,9 +480,8 @@ class Character extends Model
         );
     }
 
-    // === Incantesimi preparati (D16) ===
+    // === Incantesimi preparati ===
 
-    /** Ha almeno una classe che prepara gli incantesimi ogni giorno? */
     public function preparesSpells(): bool
     {
         return collect(array_keys($this->classLevels()))->contains(
@@ -554,11 +489,7 @@ class Character extends Model
         );
     }
 
-    /**
-     * Quanti incantesimi può tenere preparati: `modificatore + livello nella
-     * classe`, mai meno di uno. Con due classi che preparano i budget si sommano
-     * (semplificazione: ogni classe contribuisce col proprio).
-     */
+    /** `modificatore + livello nella classe`, minimo uno; con più classi i budget si sommano. */
     public function preparationLimit(): int
     {
         $total = 0;
@@ -578,8 +509,7 @@ class Character extends Model
     }
 
     /**
-     * Gli incantesimi lanciabili adesso: i trucchetti sempre (non si preparano);
-     * per le classi che non preparano coincide con quelli conosciuti.
+     * I trucchetti valgono sempre: non si preparano.
      *
      * @return Collection<int, CharacterSpell>
      */
@@ -590,7 +520,6 @@ class Character extends Model
         );
     }
 
-    /** CD per resistere agli incantesimi del personaggio, se ne lancia. */
     public function spellSaveDc(): ?int
     {
         $ability = $this->spellcastingAbility();
@@ -609,7 +538,6 @@ class Character extends Model
             : Checks::spellAttack($this->effectiveScores(), $ability, $this->proficiencyBonus());
     }
 
-    /** Bonus a un tiro salvezza, competenza compresa. */
     public function savingThrow(Ability $ability): int
     {
         return Checks::savingThrow(
@@ -620,7 +548,6 @@ class Character extends Model
         );
     }
 
-    /** Bonus a una prova di abilità, con competenza ed Esperto. */
     public function skillBonus(string $skill): int
     {
         return Checks::skill(
@@ -637,10 +564,8 @@ class Character extends Model
     }
 
     /**
-     * Gli attacchi: le armi possedute con bonus e danni già fatti. Si ricava
-     * dall'inventario (un'arma venduta sparisce da sé, come per la CA). Le righe
-     * di `character_weapons` non duplicano le armi: le correggono (spada +1, o
-     * un'arma fuori catalogo).
+     * Dall'inventario: un'arma venduta sparisce da sé. `character_weapons` non
+     * duplica le armi, le corregge (spada +1, arma fuori catalogo).
      *
      * @return Collection<int, array{name: string, ability: Ability, attack: int, damage: string, equipped: bool}>
      */
@@ -657,8 +582,7 @@ class Character extends Model
                 $catalog = config("dnd.combat.weapons.{$item->name}", []);
                 $override = $overrides->get($item->name);
 
-                // Sulla riga di correzione la caratteristica è già un Ability,
-                // perché il modello la converte; nel catalogo è una stringa.
+                // Sulla correzione è già un Ability (cast del modello); nel catalogo è una stringa.
                 $ability = $override?->attack_ability
                     ?? Ability::from($catalog['stat'] ?? Ability::Str->value);
                 $bonus = (int) ($override->weapon_bonus ?? 0);
@@ -667,9 +591,7 @@ class Character extends Model
                 $damageDie = $override->damage ?? $catalog['damage'] ?? 'Vuoto';
                 $damageMod = $scores->modifier($ability) + $bonus;
 
-                // Il catalogo dà i soli dadi ("2d6") e il modificatore lo
-                // aggiunge l'app; ma un override del DP può portarlo già completo
-                // ("1d4+3"), e allora non se ne aggiunge un altro.
+                // Una correzione può avere il modificatore già scritto ("1d4+3"): non si somma due volte.
                 $giàCompleto = (bool) preg_match('/[+-]\s*\d+\s*$/', $damageDie);
 
                 return [
@@ -682,7 +604,6 @@ class Character extends Model
                     'equipped' => $item->equipped_slot === EquipmentSlot::Weapon,
                 ];
             })
-            // Prima quella impugnata: è quella che si usa.
             ->sortByDesc('equipped')
             ->values();
     }

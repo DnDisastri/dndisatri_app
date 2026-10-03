@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Actions\Characters\ApprovePendingChange;
+use App\Actions\Characters\ProposeChange;
 use App\Enums\PendingChangeStatus;
 use App\Enums\PendingChangeType;
 use App\Models\Character;
@@ -97,7 +99,7 @@ describe('chiedere il passaggio di livello', function () {
                 'asi_first' => 'con',
             ])
             ->assertRedirect(route('characters.show', $character));
-// Il calcolo del level-up viene salvato nella richiesta, mentre il personaggio resta invariato in attesa della decisione.
+        // Il calcolo del level-up viene salvato nella richiesta, mentre il personaggio resta invariato in attesa della decisione.
         $change = PendingChange::first();
 
         expect($change->type)->toBe(PendingChangeType::LevelUp)
@@ -138,7 +140,67 @@ describe('registrare un bottino', function () {
 
         expect($change->grant_gp)->toBe(150)
             ->and($change->grant_items)->toHaveCount(1)
-            ->and($change->summary)->toContain('Drago rosso');
+            ->and($change->note)->toBe('Drago rosso')
+            ->and($change->summary)->not->toContain('Drago rosso');
+    });
+
+    it('porta i dettagli di un oggetto fino all\'inventario', function () {
+        $owner = User::factory()->player()->create();
+        $character = Character::factory()->ownedBy($owner)->create();
+
+        $this->actingAs($owner)
+            ->post(route('proposals.loot', $character), [
+                'items' => [['name' => 'Anello della Gilda', 'qty' => 1, 'details' => 'Regalo di Orcus']],
+            ])
+            ->assertRedirect(route('characters.show', $character));
+
+        app(ApprovePendingChange::class)->handle(PendingChange::first(), User::factory()->dm()->create());
+
+        expect($character->items()->where('name', 'Anello della Gilda')->value('details'))->toBe('Regalo di Orcus');
+    });
+
+    it('non accetta più di 500 mo per richiesta', function () {
+        $owner = User::factory()->player()->create();
+        $character = Character::factory()->ownedBy($owner)->create();
+
+        $this->actingAs($owner)
+            ->post(route('proposals.loot', $character), ['gp' => ProposeChange::LOOT_MAX_GP + 1])
+            ->assertSessionHasErrors('gp');
+
+        expect(PendingChange::count())->toBe(0);
+    });
+
+    it('non accetta più di 10 oggetti per richiesta', function () {
+        $owner = User::factory()->player()->create();
+        $character = Character::factory()->ownedBy($owner)->create();
+
+        $items = array_fill(0, ProposeChange::LOOT_MAX_ITEMS + 1, ['name' => 'Torcia', 'qty' => 1]);
+
+        $this->actingAs($owner)
+            ->post(route('proposals.loot', $character), ['items' => $items])
+            ->assertSessionHasErrors('items');
+    });
+
+    it('vuole un nome breve: la descrizione va nei dettagli', function () {
+        $owner = User::factory()->player()->create();
+        $character = Character::factory()->ownedBy($owner)->create();
+
+        $this->actingAs($owner)
+            ->post(route('proposals.loot', $character), [
+                'items' => [['name' => str_repeat('a', 101)]],
+            ])
+            ->assertSessionHasErrors('items.0.name');
+    });
+
+    it('apre il modulo con le righe degli oggetti', function () {
+        $owner = User::factory()->player()->create();
+        $character = Character::factory()->ownedBy($owner)->create();
+
+        $this->actingAs($owner)
+            ->get(route('proposals.loot', $character))
+            ->assertOk()
+            ->assertSee('items[9][name]', false)
+            ->assertSee('Aggiungi un oggetto');
     });
 
     it('non accetta un bottino vuoto', function () {
@@ -184,7 +246,7 @@ describe('le mie richieste', function () {
             ->create(['summary' => 'La mia richiesta']);
 
         PendingChange::factory()->create(['summary' => 'Richiesta di un altro']);
-// Il giocatore vede l'esito della propria richiesta ma non l'identità di chi l'ha revisionata.
+        // Il giocatore vede l'esito della propria richiesta ma non l'identità di chi l'ha revisionata.
         $this->actingAs($owner)
             ->get(route('proposals.index'))
             ->assertOk()
