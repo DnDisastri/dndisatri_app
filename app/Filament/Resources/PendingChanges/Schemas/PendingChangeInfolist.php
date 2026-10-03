@@ -35,6 +35,10 @@ class PendingChangeInfolist
                     TextEntry::make('summary')
                         ->label('Riassunto')
                         ->visible(fn (PendingChange $record) => filled($record->summary)),
+
+                    TextEntry::make('note')
+                        ->label('Da dove arriva')
+                        ->visible(fn (PendingChange $record) => filled($record->note)),
                 ])
                 ->columns(1),
 

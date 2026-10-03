@@ -7,20 +7,14 @@ namespace App\Notifications;
 use App\Enums\NotificationCategory;
 use App\Models\User;
 
-/**
- * Avvisa gli admin che qualcuno si è iscritto e aspetta.
- *
- * Fino a qui l'unico segnale era il badge sul menù del pannello, che si vede
- * solo se un admin entra di sua iniziativa: un iscritto poteva restare fuori
- * per giorni senza che nessuno lo sapesse.
- */
+/** Avvisa gli admin che un iscritto aspetta l'approvazione. */
 final class RegistrationAwaitingApproval extends InAppNotification
 {
     public function __construct(private readonly User $applicant) {}
 
     public function category(): NotificationCategory
     {
-        return NotificationCategory::Requests;
+        return NotificationCategory::Approvals;
     }
 
     public function toArray(object $notifiable): array
@@ -28,7 +22,8 @@ final class RegistrationAwaitingApproval extends InAppNotification
         return [
             'title' => 'Un nuovo iscritto aspetta',
             'body' => "{$this->applicant->name} ({$this->applicant->email}) si è registrato e non può entrare finché non lo approvi.",
-            'url' => '/admin/users',
+            // L'elenco e non la scheda: «Approva» sta fra le azioni della tabella.
+            'url' => route('filament.admin.resources.users.index'),
         ];
     }
 }

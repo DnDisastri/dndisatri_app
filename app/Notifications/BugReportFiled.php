@@ -14,7 +14,7 @@ final class BugReportFiled extends InAppNotification
 
     public function category(): NotificationCategory
     {
-        return NotificationCategory::Reports;
+        return NotificationCategory::Approvals;
     }
 
     public function toArray(object $notifiable): array
@@ -24,7 +24,7 @@ final class BugReportFiled extends InAppNotification
         return [
             'title' => 'Una segnalazione da leggere',
             'body' => "{$chi}: «{$this->report->title}».",
-            'url' => '/admin/bug-reports',
+            'url' => route('filament.admin.resources.bug-reports.view', $this->report),
         ];
     }
 }

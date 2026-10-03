@@ -18,40 +18,23 @@ use RuntimeException;
 /**
  * Applica una richiesta approvata al personaggio.
  *
- * È il pattern centrale del gioco: i giocatori non modificano mai la scheda
- * direttamente, propongono, e qui la proposta diventa realtà.
- *
- * Due cose da tenere a mente leggendo questo codice.
- *
- * **Il diff arriva da un giocatore.** Non si applica quello che c'è scritto:
- * si applica solo quello che quel tipo di richiesta ha il diritto di cambiare.
- * Senza l'elenco dei campi ammessi, una richiesta costruita a mano potrebbe
- * riscrivere `user_id`, `gp` o `died_at`.
- *
- * **Il bottino si somma, non sostituisce.** Rileggendo il saldo corrente sotto
- * blocco, come chiede il brief (§4.3): serve a non annullare gli acquisti fatti
- * fra la proposta e l'approvazione.
+ * Il diff arriva da un giocatore: si applicano solo i campi ammessi per quel
+ * tipo, o una richiesta costruita a mano potrebbe riscrivere `user_id`, `gp` o
+ * `died_at`. Il bottino si somma al saldo riletto sotto blocco, per non
+ * annullare le spese fatte mentre la richiesta aspettava.
  */
 final class ApprovePendingChange
 {
-    /**
-     * I campi che una modifica di scheda può toccare.
-     *
-     * Fuori di proposito: `gp` (si muove solo dal mercato e dal DM), `level`
-     * (solo dal passaggio di livello), `user_id` e `died_at` (mai da qui).
-     */
+    /** Fuori di proposito: `gp`, `level`, `user_id` e `died_at` hanno strade loro. */
     private const EDITABLE = [
         'name', 'class', 'subclass', 'race', 'background',
         'str', 'dex', 'con', 'int', 'wis', 'cha',
         'speed', 'hp_max', 'hp_current', 'hp_temp',
         'saving_throws', 'skills', 'spell_ability',
         'species_traits', 'class_features', 'subclass_features', 'background_feature', 'notes',
-        // La storia è pubblica e la foto pure: passano di qui come tutto il
-        // resto della scheda, perché è quello che vedono gli altri.
         'story', 'photo_path',
     ];
 
-    /** Quello che un passaggio di livello può cambiare, e niente di più. */
     private const LEVEL_UP = [
         'level', 'hit_die', 'subclass',
         'str', 'dex', 'con', 'int', 'wis', 'cha',
@@ -83,16 +66,15 @@ final class ApprovePendingChange
                 'review_note' => $note,
             ])->save();
 
+            $message = $locked->summary ?: $locked->type->label().' approvata';
+
             $character->refresh()->recordInLedger(
                 LedgerAction::Approve,
-                $locked->summary ?: $locked->type->label().' approvata',
+                $locked->note ? "{$message} ({$locked->note})" : $message,
                 $gpDelta,
                 $reviewer,
             );
 
-            // Il proponente va avvisato, o resterebbe a controllare la bacheca
-            // a mano. La notifica non dice chi ha deciso: quello lo vedono
-            // solo DM e admin, dal pannello.
             $locked->requestedBy()->first()?->notify(new RequestDecided($locked));
 
             return $locked;
@@ -103,9 +85,7 @@ final class ApprovePendingChange
     {
         $fields = $this->allowed($change->diff, self::EDITABLE);
 
-        // La foto non è un valore da copiare: è un file che aspetta su un
-        // disco privato e va spostato dove il mondo può vederlo. Solo adesso,
-        // perché è adesso che qualcuno l'ha guardata e ha detto di sì.
+        // La foto è un file sul disco privato: si pubblica solo ora, approvata.
         if ($pending = ($fields['photo_path'] ?? null)) {
             $published = app(CharacterPhoto::class)->publish($character, $pending);
 
@@ -125,15 +105,11 @@ final class ApprovePendingChange
     {
         $character->forceFill($this->allowed($change->diff, self::LEVEL_UP))->save();
 
-        // La classe: è l'unico punto del sistema in cui una classe nuova nasce.
-        // Sta qui e non nella richiesta perché finché non è approvata il
-        // personaggio non è multiclasse.
+        // Talento, classe e incantesimi sono righe a parte: il filtro dei campi li scarta.
         if ($classUp = ($change->diff['class_up'] ?? null)) {
             $this->applyClassUp($character, $classUp);
         }
 
-        // Un talento non è una colonna della scheda: è una riga a parte, e
-        // arriva sotto una chiave che il filtro dei campi scarta da sé.
         if ($feat = ($change->diff['feat'] ?? null)) {
             $character->feats()->create([
                 'name' => $feat['name'],
@@ -143,9 +119,7 @@ final class ApprovePendingChange
             ]);
         }
 
-        // Gli incantesimi imparati salendo, per la stessa strada dei talenti.
-        // `firstOrCreate` perché la lista non deve poter sdoppiarsi: un
-        // incantesimo si conosce o non si conosce.
+        // `firstOrCreate`: un incantesimo già conosciuto non si sdoppia.
         foreach ($change->diff['spells'] ?? [] as $spell) {
             $character->spells()->firstOrCreate(
                 ['name' => $spell],
@@ -157,11 +131,8 @@ final class ApprovePendingChange
     }
 
     /**
-     * Scrive la riga della classe e tiene allineata la copia sulla scheda.
-     *
-     * La copia (`characters.level`, `class`, `subclass`) esiste per poter
-     * ordinare ed elencare in SQL, e il patto per non farla scollare è che la
-     * scriva **solo questo metodo**, nella stessa transazione delle righe.
+     * La copia sulla scheda (`characters.level`, `class`, `subclass`) la scrive
+     * solo questo metodo, nella stessa transazione delle righe, o si scolla.
      *
      * @param  array<string,mixed>  $classUp
      */
@@ -171,8 +142,7 @@ final class ApprovePendingChange
             ['class' => $classUp['class']],
             [
                 'level' => (int) $classUp['level'],
-                // La prima classe che il personaggio abbia mai avuto: da lei, e
-                // solo da lei, vengono i tiri salvezza competenti.
+                // Solo la prima classe dà i tiri salvezza competenti.
                 'is_primary' => $character->classes()->count() === 0,
             ],
         );
@@ -181,9 +151,7 @@ final class ApprovePendingChange
             $row->forceFill(['subclass' => $classUp['subclass']])->save();
         }
 
-        // Entrando in una classe nuova arrivano poche abilità, e solo per
-        // Bardo, Ladro e Ranger. Si aggiungono a quelle che ci sono: una
-        // competenza acquisita non si perde salendo di livello.
+        // Le abilità della nuova classe si aggiungono: una competenza non si perde.
         if ($skills = ($classUp['skills'] ?? [])) {
             $current = $character->skills ?? [];
 
@@ -195,13 +163,14 @@ final class ApprovePendingChange
         }
     }
 
-    /**
-     * L'oro si somma al valore corrente e gli oggetti si accodano
-     * all'inventario: una richiesta di bottino non sovrascrive mai niente.
-     */
     private function applyLoot(Character $character, PendingChange $change): int
     {
         $gp = (int) $change->grant_gp;
+
+        // Oltre il tetto della colonna il database rifiuterebbe la scrittura con un 500.
+        if ($character->gp + $gp > Character::MAX_GP) {
+            throw new RuntimeException('Con questo bottino l\'oro del personaggio supererebbe il massimo consentito.');
+        }
 
         if ($gp !== 0) {
             $character->increment('gp', $gp);
@@ -221,16 +190,8 @@ final class ApprovePendingChange
     }
 
     /**
-     * L'oggetto magico trovato in sessione.
-     *
-     * Crea **l'oggetto prima dell'effetto**, e li lega: da qui in poi il bonus
-     * vale finché l'oggetto è in sintonia, e vendendolo sparisce da sé. Se il
-     * personaggio l'oggetto ce l'ha già — comprato o raccolto prima di chiedere
-     * l'effetto — ci si aggancia invece di crearne un doppione.
-     *
-     * La sintonia si dà subito, se c'è posto: chi ha appena trovato un oggetto
-     * magico se lo mette. Con tre già in uso l'oggetto arriva spento, e il
-     * giocatore sceglie a cosa rinunciare.
+     * L'effetto si lega all'oggetto (creato o già posseduto): vale finché è in
+     * sintonia e sparisce se lo si vende. La sintonia si dà solo se c'è posto.
      */
     private function applyItemEffect(Character $character, PendingChange $change): int
     {
