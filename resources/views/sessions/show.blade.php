@@ -55,9 +55,8 @@
         </p>
     </div>
 
-    {{-- Su desktop il resoconto a sinistra, presenze e strumenti del DM a destra. --}}
-    <div class="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
-    <div class="space-y-6">
+    {{-- I blocchi riempiono la griglia in ordine: una serata senza resoconto non lascia una colonna vuota. --}}
+    <div class="grid gap-6 lg:grid-cols-2 lg:items-start">
     @if ($session->hasRecap())
         <x-panel>
             <p class="text-xs uppercase tracking-wide text-muted">Com'è andata</p>
@@ -76,9 +75,7 @@
     @elseif (! $session->isUpcoming())
         <x-empty>Il resoconto non è ancora stato scritto.</x-empty>
     @endif
-    </div>
 
-    <div class="space-y-6">
 {{-- Le presenze vengono mostrate solo dopo la serata: una prenotazione alla quest non equivale a una presenza. --}}
     @unless ($session->isUpcoming())
         <x-panel>
@@ -127,7 +124,7 @@
             </div>
 
             <p class="mt-3 text-xs text-muted">
-                Tocca un eroe per la sua scheda: lì hai i comandi da DM — punti ferita, oro, «dichiara caduto».
+                Tocca un eroe per la sua scheda: lì hai i comandi da DM (punti ferita, oro, «dichiara caduto»).
             </p>
         </x-panel>
     @endif
@@ -210,7 +207,6 @@
         </x-panel>
     @endif
 
-    </div>
     </div>
 
     @if ($precedente || $prossima)
