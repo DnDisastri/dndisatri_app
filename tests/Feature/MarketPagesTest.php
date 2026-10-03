@@ -173,16 +173,17 @@ describe('il riquadro di dettaglio', function () {
         expect($character->fresh()->gp)->toBe(70)
             ->and($character->fresh()->ownsItem('Torcia', 3))->toBeTrue();
     });
-// Durante gli aggiornamenti Livewire la richiesta non usa la route originale, quindi lo stato attivo non può dipendere solo da `routeIs()`.
-    it('e la porta aperta resta accesa anche dopo', function () {
-        $item = MarketItem::factory()->create();
+    // Le tre sezioni stanno sulla stessa pagina: ogni indirizzo la apre sulla sua.
+    it('ogni indirizzo apre la pagina sulla sua sezione', function (string $rotta, string $nome) {
+        $html = $this->actingAs(giocatoreCon()->user)->get(route($rotta))->assertOk()->getContent();
 
-        Livewire::actingAs(giocatoreCon()->user)
-            ->test(Shop::class)
-            ->assertSeeHtml('aria-current="page"')
-            ->call('apri', $item->id)
-            ->assertSeeHtml('aria-current="page"');
-    });
+        expect($html)->toMatch('/data-url="'.preg_quote(route($rotta), '/').'"[^>]*aria-current="page"[^>]*>\s*'.$nome.'/')
+            ->and($html)->toContain("<title>{$nome} · Mercato</title>");
+    })->with([
+        ['market.shop', 'Emporio'],
+        ['market.listings', 'Annunci'],
+        ['market.trades', 'Scambi'],
+    ]);
 
     it('e negli annunci si apre allo stesso modo', function () {
         $venditore = giocatoreCon();
@@ -448,5 +449,36 @@ describe('sotto richiamo, le pagine non scavalcano la vigilanza', function () {
 
         expect($character->fresh()->gp)->toBe(90)
             ->and(SupervisedAction::count())->toBe(0);
+    });
+});
+
+// Le tre sezioni sono componenti separati sulla stessa pagina: si avvisano a vicenda.
+describe('le sezioni sulla stessa pagina', function () {
+    it('dopo un acquisto mostrano l\'esito e avvisano le altre', function () {
+        $character = giocatoreCon(100);
+        $item = MarketItem::factory()->create(['name' => 'Corda di Seta', 'price' => 10]);
+
+        Livewire::actingAs($character->user)
+            ->test(Shop::class)
+            ->call('buy', $item->id)
+            ->assertSee('Comprato: Corda di Seta.')
+            ->assertDispatched('mercato-cambiato');
+    });
+
+    it('cambiando personaggio lo cambiano anche le altre', function () {
+        $user = User::factory()->dm()->create();
+        $primo = Character::factory()->for($user)->create(['name' => 'Aaron']);
+        $secondo = Character::factory()->for($user)->create(['name' => 'Zelda']);
+
+        Livewire::actingAs($user)
+            ->test(Shop::class)
+            ->assertSet('characterId', $primo->id)
+            ->set('characterId', $secondo->id)
+            ->assertDispatched('mercato-personaggio', id: $secondo->id);
+
+        Livewire::actingAs($user)
+            ->test(App\Livewire\Market\Trades::class)
+            ->dispatch('mercato-personaggio', id: $secondo->id)
+            ->assertSet('characterId', $secondo->id);
     });
 });
