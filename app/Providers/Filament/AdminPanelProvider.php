@@ -13,6 +13,7 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Width;
+use Filament\View\PanelsIconAlias;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -36,10 +37,13 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => Color::hex('#2c3e6e'),
             ])
             ->maxContentWidth(Width::ScreenExtraLarge)
+            ->icons([
+                PanelsIconAlias::THEME_SWITCHER_SYSTEM_BUTTON => Icon::ThemeAuto,
+                PanelsIconAlias::THEME_SWITCHER_LIGHT_BUTTON => Icon::ThemeLight,
+                PanelsIconAlias::THEME_SWITCHER_DARK_BUTTON => Icon::ThemeDark,
+            ])
             ->sidebarCollapsibleOnDesktop()
             ->userMenuItems([
-                // La porta di ritorno al sito: dal pannello si torna dove si
-                // gioca, senza scrivere l'indirizzo a mano.
                 Action::make('torna_app')
                     ->label('Torna all\'app')
                     ->url(fn (): string => url('/'))

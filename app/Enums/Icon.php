@@ -36,6 +36,9 @@ enum Icon: string implements Icona, ScalableIcon
     case Install = 'install';
     case Panel = 'panel';
     case Logout = 'logout';
+    case ThemeAuto = 'theme-auto';
+    case ThemeLight = 'theme-light';
+    case ThemeDark = 'theme-dark';
 
     // Pannello.
     case Builds = 'builds';
@@ -131,6 +134,9 @@ enum Icon: string implements Icona, ScalableIcon
             self::Install => Phosphor::DownloadSimple,
             self::Panel => Phosphor::SlidersHorizontal,
             self::Logout => Phosphor::SignOut,
+            self::ThemeAuto => Phosphor::CircleHalf,
+            self::ThemeLight => Phosphor::Sun,
+            self::ThemeDark => Phosphor::Moon,
 
             self::Builds => Phosphor::Sparkle,
             self::Users => Phosphor::Users,
