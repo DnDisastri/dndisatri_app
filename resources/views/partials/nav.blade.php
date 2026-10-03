@@ -1,9 +1,5 @@
 @php
-    /*
-     * La barra in basso di telefono e tablet: due coppie e un cerchio in mezzo
-     * (voci in App\Support\Navigazione). Il rosso vuol dire una cosa sola,
-     * «sei qui». Da `lg` in su la sostituisce la barra laterale.
-     */
+    // Voci in Support/Navigazione; da `lg` la sostituisce la barra laterale.
     $barra = \App\Support\Navigazione::barra(auth()->user());
     $etichetta = auth()->user()->isDm() ? 'Navigazione DM' : 'Navigazione principale';
 @endphp
@@ -11,7 +7,6 @@
 {{-- `z-30`: un menù appena aperto le passa sopra. Il padding in basso rispetta
      la barra dei gesti di iPhone e iPad. --}}
 <nav class="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-6 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden" aria-label="{{ $etichetta }}">
-    {{-- Sul tablet le pillole non si allungano oltre `max-w-xl`. --}}
     <div class="pointer-events-auto mx-auto flex w-full max-w-xl items-center gap-3">
 
         @foreach ([$barra['sinistra'], null, $barra['destra']] as $gruppo)
@@ -30,8 +25,7 @@
                     <x-icona :is="$centro['icona']" class="h-7 w-7" />
                 </a>
             @else
-                {{-- `justify-between`: le icone agli estremi, incorniciate dal
-                     `p-1.5` con lo stesso margine in tutte le direzioni. --}}
+                {{-- `justify-between`: icone agli estremi, con lo stesso margine del `p-1.5` su ogni lato. --}}
                 <div class="flex flex-1 items-center justify-between rounded-full bg-primary p-1.5 shadow-lg shadow-black/20">
                     @foreach ($gruppo as $voce)
                         <a @if ($voce['href']) href="{{ $voce['href'] }}" @endif
