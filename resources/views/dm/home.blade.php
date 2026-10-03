@@ -28,7 +28,7 @@
         </div>
 
         @if ($mie->isNotEmpty() || $altre->isNotEmpty())
-            <details class="relative">
+            <details class="relative" data-tendina>
                 <summary class="flex cursor-pointer list-none items-center gap-2 rounded-full border border-line
                                 bg-surface px-3 py-2 text-sm font-semibold text-fg transition hover:border-active
                                 [&::-webkit-details-marker]:hidden">
@@ -83,7 +83,6 @@
             comparirà qui.
         </x-empty>
     @else
-        {{-- Su PC la serata a sinistra e il tavolo a destra. --}}
         <div class="space-y-6 xl:grid xl:grid-cols-2 xl:items-start xl:gap-6 xl:space-y-0">
         <section class="space-y-3">
             <div class="flex items-baseline justify-between">

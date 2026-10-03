@@ -16,8 +16,7 @@
             </span>
         @endif
 
-        {{-- L'icona casa al centro del logo: è la scorciatoia alla Home, solo
-             qui nella barra da loggati (non nel prelogin). --}}
+        {{-- L'icona casa porta alla Home (solo da loggati). --}}
         <span class="pointer-events-none absolute inset-0 flex items-center justify-center">
             <x-icona :is="\App\Enums\Icon::Home" class="h-7 w-7 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]" />
         </span>
@@ -37,7 +36,7 @@
         </a>
 
         {{-- details gestisce il menu senza JavaScript. --}}
-        <details class="relative">
+        <details class="relative" data-tendina>
             <summary title="Menù"
                      class="flex h-12 w-12 cursor-pointer list-none items-center justify-center rounded-full
                             bg-active text-on-active transition hover:opacity-90 [&::-webkit-details-marker]:hidden">

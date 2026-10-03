@@ -1,15 +1,8 @@
 @props(['character'])
 
 @php
-    /*
-     * Il menù dei tre pallini di un personaggio, uno solo per i due posti che
-     * lo mostrano (card «I miei eroi» e intestazione scheda).
-     *
-     * `serve` è il permesso di ogni voce: le proposte solo chi può proporre
-     * (proprietario di un personaggio vivo), il registro chi può leggerlo. Le
-     * voci senza permesso non si disegnano; se non ne resta nessuna, i pallini
-     * spariscono. Quelle senza pagina restano spente.
-     */
+    // `serve` è il permesso di ogni voce: le voci senza permesso non si disegnano,
+    // senza voci spariscono i pallini; quelle senza pagina restano spente.
     $azioni = [
         ['nome' => 'Proponi modifiche', 'rotta' => 'proposals.edit', 'serve' => 'propose', 'icona' => \App\Enums\Icon::Edit],
         ['nome' => 'Sali di livello', 'rotta' => 'proposals.level-up', 'serve' => 'propose', 'icona' => \App\Enums\Icon::LevelUp],
@@ -25,7 +18,7 @@
 @endphp
 
 @if ($voci->isNotEmpty())
-    <details class="relative shrink-0">
+    <details class="relative shrink-0" data-tendina>
         <summary title="Altro" aria-label="Altre azioni per {{ $character->name }}"
             class="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-full
                    text-muted transition hover:bg-page hover:text-fg [&::-webkit-details-marker]:hidden">
