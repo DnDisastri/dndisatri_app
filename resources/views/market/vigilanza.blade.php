@@ -12,7 +12,7 @@
 @endphp
 
 @section('content')
-<x-pagina larghezza="lettura" class="space-y-4">
+<x-pagina larghezza="stretta" class="space-y-4">
 
     <x-back dove="sopra" :href="route('market.trades')">Torna al mercato</x-back>
 
@@ -63,7 +63,6 @@
             <x-empty>Non hai niente in attesa. Quello che chiedi al mercato compare qui finché un DM non decide.</x-empty>
         @endforelse
     </section>
-{{-- Lo storico delle decisioni compare solo quando esistono azioni già revisionate. --}}
     @if ($decise->isNotEmpty())
         <section class="space-y-3">
             <h3 class="text-sm font-bold uppercase tracking-wide text-muted">Già decise</h3>

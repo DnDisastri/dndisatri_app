@@ -4,7 +4,7 @@
 @php use App\Domain\Dnd\Ability; @endphp
 
 @section('content')
-<x-pagina larghezza="lettura" class="space-y-4">
+<x-pagina larghezza="stretta" class="space-y-4">
     <x-panel>
         <h2 class="text-xl text-fg">Oggetto magico</h2>
         <p class="mt-1 text-sm text-muted">

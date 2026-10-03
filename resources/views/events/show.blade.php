@@ -2,7 +2,7 @@
 @section('title', $event->title)
 
 @section('content')
-<x-pagina larghezza="lettura">
+<x-pagina larghezza="stretta">
     <x-back dove="sopra" :href="route('events.index')">Torna agli eventi</x-back>
 
     @if ($event->cover_path)

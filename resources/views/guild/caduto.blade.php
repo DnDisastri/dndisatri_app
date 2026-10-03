@@ -10,7 +10,7 @@
 @endphp
 
 @section('content')
-<x-pagina larghezza="lettura" class="space-y-4">
+<x-pagina larghezza="stretta" class="space-y-4">
 
     <x-back dove="sopra" :href="route('guild.index').'#caduti'" class="-mb-1">
         Torna alla Gilda

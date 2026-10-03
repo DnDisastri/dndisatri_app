@@ -2,7 +2,7 @@
 @section('title', 'I miei richiami')
 
 @section('content')
-<x-pagina larghezza="lettura" class="space-y-4">
+<x-pagina larghezza="stretta" class="space-y-4">
 
     <x-back dove="sopra" :href="route('profile.edit')">Torna al profilo</x-back>
 

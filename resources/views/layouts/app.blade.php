@@ -1,12 +1,6 @@
-{{-- L'unico layout dell'applicazione, e serve due meccanismi diversi.
-
-     Le pagine normali arrivano con `@extends` e riempiono `@yield('content')`.
-     I componenti Livewire a pagina intera arrivano invece come componente, e
-     il contenuto gli viene passato in `$slot`: Livewire 4 risolve il suo
-     layout predefinito `layouts::app` proprio su questo file.
-
-     Vanno stampati tutti e due. Se ne manca uno, quelle pagine escono con
-     header e footer ma il corpo vuoto, senza il minimo errore. --}}
+{{-- Le pagine con `@extends` riempiono `content`, i Livewire a pagina intera arrivano in `$slot`
+     (Livewire risolve `layouts::app` su questo file). Vanno stampati tutti e due:
+     se ne manca uno quelle pagine escono vuote, senza errori. --}}
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
@@ -19,24 +13,8 @@
         @include('partials.barra-laterale')
     @endauth
 
+    {{-- Gli avvisi della sessione (status, error) li mostra <x-pagina>. --}}
     <main class="flex-1">
-        @if (session('status'))
-            <div class="mx-auto max-w-6xl px-4 pt-4 md:px-6 lg:px-8">
-                <x-note>{{ session('status') }}</x-note>
-            </div>
-        @endif
-
-        {{-- Il gemello scontento di `status`: un'azione che non si è potuta
-             fare, con la ragione. Serve dove fra il caricamento della pagina e
-             il clic il mondo può essere cambiato — un posto che si riempie
-             mentre lo si stava assegnando. --}}
-        @if (session('error'))
-            <div class="mx-auto max-w-6xl px-4 pt-4 md:px-6 lg:px-8">
-                <x-note tone="danger">{{ session('error') }}</x-note>
-            </div>
-        @endif
-
-        {{-- Il corpo arriva da una parte o dall'altra, mai da entrambe. --}}
         {{ $slot ?? '' }}
         @yield('content')
     </main>
@@ -45,8 +23,7 @@
         {{ config('app.name') }}
     </footer>
 
-    {{-- Lo spazio che la barra in basso occupa: senza, la fine di ogni pagina
-         finirebbe sotto le pillole. Su desktop la barra non c'è. --}}
+    {{-- Lo spazio della barra in basso, o la fine della pagina finirebbe sotto le pillole. --}}
     @auth
         <div class="h-20 shrink-0 lg:hidden" aria-hidden="true"></div>
 

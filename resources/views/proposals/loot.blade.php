@@ -2,7 +2,7 @@
 @section('title', 'Registra un bottino')
 
 @section('content')
-<x-pagina larghezza="lettura" class="space-y-4">
+<x-pagina larghezza="stretta" class="space-y-4">
     <x-panel>
         <h2 class="text-xl text-fg">Bottino di sessione</h2>
         <p class="mt-1 text-sm text-muted">

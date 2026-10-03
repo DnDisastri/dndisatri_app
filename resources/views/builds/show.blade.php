@@ -2,7 +2,7 @@
 @section('title', $build->title)
 
 @section('content')
-<x-pagina larghezza="media" class="space-y-4">
+<x-pagina larghezza="stretta" class="space-y-4">
 
     <div class="relative flex min-h-36 items-end overflow-hidden rounded-card bg-primary p-4">
         @if ($build->coverUrl())

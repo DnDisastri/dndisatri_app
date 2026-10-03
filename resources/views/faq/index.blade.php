@@ -5,7 +5,7 @@
 
 @php use App\Enums\Icon; @endphp
 
-<x-pagina larghezza="lettura">
+<x-pagina larghezza="stretta">
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="Icon::Faq" class="h-7 w-7" /> FAQs
     </h2>
@@ -48,6 +48,8 @@
     @empty
         <x-empty size="lg">La guida non è ancora pronta.</x-empty>
     @endforelse
+
+    <x-back :href="route('home')">Torna alla Home</x-back>
 </x-pagina>
 
 @if ($passi->isNotEmpty())

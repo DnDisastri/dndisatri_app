@@ -3,7 +3,7 @@
 
 @section('content')
 
-<x-pagina larghezza="lettura">
+<x-pagina larghezza="stretta">
 
 {{-- Gli admin possono aprire anche bozze e pubblicazioni programmate; la nota chiarisce che non sono ancora visibili agli utenti. --}}
     @unless ($post->isPublished())

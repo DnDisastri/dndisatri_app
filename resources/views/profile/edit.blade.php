@@ -2,7 +2,7 @@
 @section('title', 'Il mio profilo')
 
 @section('content')
-<x-pagina larghezza="lettura" class="space-y-6">
+<x-pagina larghezza="stretta" class="space-y-6">
     <h2 class="flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="\App\Enums\Icon::Profile" class="h-7 w-7" /> Il mio profilo
     </h2>
@@ -135,5 +135,7 @@
             </p>
         </x-panel>
     @endif
+
+    <x-back :href="route('home')">Torna alla Home</x-back>
 </x-pagina>
 @endsection

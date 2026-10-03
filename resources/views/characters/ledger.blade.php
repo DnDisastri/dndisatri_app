@@ -3,7 +3,7 @@
 {{-- Il registro è append-only: `gp_after` conserva il saldo dopo ogni movimento.
      Gli annullamenti aggiungono un nuovo movimento senza modificare lo storico. --}}
 @section('content')
-<x-pagina larghezza="media">
+<x-pagina larghezza="stretta">
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="\App\Enums\Icon::CharacterLedger" class="h-7 w-7" /> Registro
     </h2>
