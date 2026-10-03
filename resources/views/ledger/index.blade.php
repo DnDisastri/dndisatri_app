@@ -60,10 +60,9 @@
         </div>
     @endif
 
-    {{-- Su desktop serate e quest affiancate. --}}
     <div class="space-y-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-8 lg:space-y-0">
 
-        <section>
+        <section id="serate" class="scroll-mt-8">
             <h3 class="mb-3 flex items-center gap-2 text-lg font-semibold text-fg">
                 <x-icona :is="\App\Enums\Icon::Sessions" class="h-5 w-5" /> Le serate giocate
             </h3>
@@ -87,9 +86,10 @@
                     <x-empty>Nessuna serata con un resoconto, qui.</x-empty>
                 @endforelse
             </div>
+            <x-paginazione :pagine="$sessions->fragment('serate')" etichetta="Pagine delle serate giocate" />
         </section>
 
-        <section>
+        <section id="quest" class="scroll-mt-8">
 {{-- Il collegamento alle quest aperte conserva l'eventuale campagna selezionata. --}}
             <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <h3 class="flex items-center gap-2 text-lg font-semibold text-fg">
@@ -127,7 +127,10 @@
                     <x-empty>Nessuna quest conclusa, qui.</x-empty>
                 @endforelse
             </div>
+            <x-paginazione :pagine="$quests->fragment('quest')" etichetta="Pagine delle quest concluse" />
         </section>
     </div>
+
+    <x-back :href="route('home')">Torna alla Home</x-back>
 </x-pagina>
 @endsection
