@@ -38,20 +38,22 @@ final class CreateListing
             }
 
             // Letta prima di toglierla: l'annuncio deve descrivere l'oggetto anche dopo.
-            $source = $character->items()->where('name', $itemName)->first();
+            $source = $character->items()->where('name', $itemName)->orderByRaw('equipped_slot IS NOT NULL')->first();
+            $copia = $source ? Character::itemCopy($source) : null;
 
             $character->removeFromInventory($itemName, $qty);
 
             $listing = MarketListing::create([
                 'seller_character_id' => $character->getKey(),
                 'name' => $itemName,
-                'base' => $source?->base,
-                'magic_bonus' => (int) $source?->magic_bonus,
-                'category' => $source?->category,
+                'base' => $copia['base'] ?? null,
+                'magic_bonus' => $copia['magicBonus'] ?? 0,
+                'effects' => $copia['effects'] ?? null,
+                'category' => $copia['category'] ?? null,
                 'qty' => $qty,
                 'price_cp' => $priceCp,
-                'unit_value_cp' => $source?->value_cp ?? 0,
-                'details' => $source?->details,
+                'unit_value_cp' => $copia['valueCp'] ?? 0,
+                'details' => $copia['details'] ?? null,
             ]);
 
             $character->recordInLedger(

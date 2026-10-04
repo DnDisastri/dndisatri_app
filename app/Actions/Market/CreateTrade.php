@@ -87,13 +87,14 @@ final class CreateTrade
     private function attach(Trade $trade, array $items, TradeDirection $direction, Character $owner): void
     {
         foreach ($items as $item) {
-            $source = $owner->items()->where('name', $item['name'])->first();
+            $source = $owner->items()->where('name', $item['name'])->orderByRaw('equipped_slot IS NOT NULL')->first();
 
             $trade->items()->create([
                 'direction' => $direction,
                 'name' => $item['name'],
                 'base' => $source?->base,
                 'magic_bonus' => (int) $source?->magic_bonus,
+                'effects' => $source ? Character::itemCopy($source)['effects'] : null,
                 'category' => $source?->category,
                 'qty' => (int) ($item['qty'] ?? 1),
                 'value_cp' => $source?->value_cp ?? 0,

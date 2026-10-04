@@ -46,4 +46,10 @@ class MarketItemFactory extends Factory
     {
         return $this->state(fn () => ['is_unlimited' => false, 'stock' => 0]);
     }
+
+    /** Arrivato da un baratto: aspetta un prezzo. */
+    public function inStorage(): static
+    {
+        return $this->state(fn () => ['is_unlimited' => false, 'stock' => 1, 'in_storage' => true]);
+    }
 }

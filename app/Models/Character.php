@@ -222,7 +222,13 @@ class Character extends Model
 
     // === Inventario ===
 
-    /** Accorpa solo con le righe in zaino: quelle equipaggiate hanno l'indice univoco sullo slot. */
+    /**
+     * Accorpa solo con le righe in zaino: quelle equipaggiate hanno l'indice univoco
+     * sullo slot. Con effetti è sempre una riga nuova: gli effetti sono di quella riga,
+     * e arrivano senza sintonia.
+     *
+     * @param  list<array{ability: string, mode: string, value: int}>|null  $effects
+     */
     public function addToInventory(
         string $name,
         int $qty = 1,
@@ -231,10 +237,12 @@ class Character extends Model
         ?string $details = null,
         ?string $base = null,
         int $magicBonus = 0,
+        ?array $effects = null,
     ): CharacterItem {
-        $existing = $this->items()
+        $existing = $effects ? null : $this->items()
             ->where('name', $name)
             ->whereNull('equipped_slot')
+            ->whereDoesntHave('effects')
             ->first();
 
         if ($existing !== null) {
@@ -243,7 +251,7 @@ class Character extends Model
             return $existing->refresh();
         }
 
-        return $this->items()->create([
+        $item = $this->items()->create([
             'name' => $name,
             'category' => $category,
             'qty' => $qty,
@@ -252,19 +260,40 @@ class Character extends Model
             'base' => $base,
             'magic_bonus' => $magicBonus,
         ]);
+
+        foreach ($effects ?? [] as $effetto) {
+            $this->itemEffects()->create([
+                'character_item_id' => $item->getKey(),
+                'name' => $name,
+                'ability' => $effetto['ability'],
+                'mode' => $effetto['mode'],
+                'value' => (int) $effetto['value'],
+            ]);
+        }
+
+        return $item;
     }
 
     /**
      * Quello che `addToInventory` deve ricevere per ricreare l'oggetto altrove.
      *
-     * @return array{name: string, category: ?string, valueCp: int, details: ?string, base: ?string, magicBonus: int}
+     * @return array{name: string, category: ?string, valueCp: int, details: ?string, base: ?string, magicBonus: int, effects: list<array{ability: string, mode: string, value: int}>|null}
      */
-    public static function itemCopy(CharacterItem|MarketListing|TradeItem $source): array
+    public static function itemCopy(CharacterItem|MarketListing|TradeItem|MarketItem $source): array
     {
+        $effects = $source instanceof CharacterItem
+            ? $source->effects()->get()->map(fn (CharacterItemEffect $e) => $e->toCopy())->values()->all()
+            : ($source->effects ?? []);
+
         return [
+            'effects' => $effects ?: null,
             'name' => $source->name,
             'category' => $source->category,
-            'valueCp' => (int) ($source instanceof MarketListing ? $source->unit_value_cp : $source->value_cp),
+            'valueCp' => (int) match (true) {
+                $source instanceof MarketListing => $source->unit_value_cp,
+                $source instanceof MarketItem => $source->price_cp,
+                default => $source->value_cp,
+            },
             'details' => $source->details,
             'base' => $source->base,
             'magicBonus' => (int) $source->magic_bonus,

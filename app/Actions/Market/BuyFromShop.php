@@ -38,13 +38,7 @@ final class BuyFromShop
                 $item->decrement('stock', $qty);
             }
 
-            $buyer->addToInventory(
-                name: $item->name,
-                qty: $qty,
-                category: $item->category,
-                valueCp: $item->price_cp,
-                details: $item->details,
-            );
+            $buyer->addToInventory(...Character::itemCopy($item), qty: $qty);
 
             $buyer->recordInLedger(
                 LedgerAction::Buy,
