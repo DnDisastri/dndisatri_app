@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users\Tables;
 
+use App\Actions\Users\ApproveRegistration;
 use App\Actions\Users\DemoteFromDm;
 use App\Actions\Users\PromoteToDm;
 use App\Enums\Icon;
@@ -40,6 +41,11 @@ class UsersTable
                     ->color(fn (?string $state) => $state ? 'success' : 'warning')
                     ->sortable(),
 
+                TextColumn::make('played_before')
+                    ->label('Ha già giocato')
+                    ->state(fn (User $record) => User::playedBeforeLabel($record->played_before))
+                    ->visibleFrom('md'),
+
                 TextColumn::make('created_at')
                     ->label('Registrato')
                     ->dateTime('d/m/Y')
@@ -67,8 +73,9 @@ class UsersTable
                     ->visible(fn (User $record) => ! $record->isApproved() && auth()->user()->isAdmin())
                     ->requiresConfirmation()
                     ->modalHeading('Approvare questo account?')
-                    ->modalDescription('Da questo momento potrà accedere all\'applicazione.')
-                    ->action(fn (User $record) => $record->forceFill(['approved_at' => now()])->save()),
+                    ->modalDescription(fn (User $record) => 'Da questo momento potrà accedere all\'applicazione.'
+                        .(ApproveRegistration::sendsConfirmation($record) ? ' Riceverà una email di conferma.' : ''))
+                    ->action(fn (User $record) => app(ApproveRegistration::class)->handle($record, auth()->user())),
 
                 // La nomina che parte dall'admin: l'altra strada, la domanda
                 // del giocatore, resta in "Richieste DM".

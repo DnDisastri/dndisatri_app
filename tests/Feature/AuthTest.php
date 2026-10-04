@@ -96,6 +96,7 @@ describe('registrazione', function () {
             'email' => 'delia@dndisastri.test',
             'password' => 'password-lunga',
             'password_confirmation' => 'password-lunga',
+            'played_before' => '0',
         ])->assertRedirect(route('login'))->assertSessionHas('status');
 
         $this->assertGuest();
@@ -111,6 +112,7 @@ describe('registrazione', function () {
             'email' => 'bruno@dndisastri.test',
             'password' => 'password-lunga',
             'password_confirmation' => 'password-lunga',
+            'played_before' => '0',
         ]);
 
         $user = User::where('email', 'bruno@dndisastri.test')->first();
@@ -133,6 +135,7 @@ describe('registrazione', function () {
             'email' => 'delia@dndisastri.test',
             'password' => 'password-lunga',
             'password_confirmation' => 'password-lunga',
+            'played_before' => '0',
         ]);
 
         Notification::assertSentTo($admin, RegistrationAwaitingApproval::class);
@@ -147,6 +150,7 @@ describe('registrazione', function () {
             'email' => 'delia@dndisastri.test',
             'password' => 'password-lunga',
             'password_confirmation' => 'password-lunga',
+            'played_before' => '0',
         ]);
 
         $avviso = $admin->notifications()->first();
@@ -162,6 +166,7 @@ describe('registrazione', function () {
             'email' => 'furbo@dndisastri.test',
             'password' => 'password-lunga',
             'password_confirmation' => 'password-lunga',
+            'played_before' => '0',
             'role' => 'admin',
             'roles' => ['admin'],
         ]);
@@ -177,7 +182,44 @@ describe('registrazione', function () {
             'email' => 'altra@dndisastri.test',
             'password' => 'password-lunga',
             'password_confirmation' => 'password-lunga',
+            'played_before' => '0',
         ])->assertSessionHasErrors('name');
+    });
+
+    it('salva le risposte su come ci ha conosciuti e se ha già giocato', function () {
+        $admin = User::factory()->admin()->create();
+
+        $this->post(route('register'), [
+            'name' => 'Delia',
+            'email' => 'delia@dndisastri.test',
+            'password' => 'password-lunga',
+            'password_confirmation' => 'password-lunga',
+            'played_before' => '1',
+            'discovery_source' => 'Me ne ha parlato Bruno',
+        ])->assertRedirect(route('login'));
+
+        $nuovo = User::where('email', 'delia@dndisastri.test')->first();
+
+        expect($nuovo->played_before)->toBeTrue()
+            ->and($nuovo->discovery_source)->toBe('Me ne ha parlato Bruno')
+            ->and($admin->notifications()->first()->data['body'])
+            ->toContain('Ha già fatto sessioni con noi: sì.')
+            ->toContain('«Me ne ha parlato Bruno»');
+    });
+
+    it('chiede se ha già giocato con noi, e la provenienza resta facoltativa', function () {
+        $this->post(route('register'), [
+            'name' => 'Delia',
+            'email' => 'delia@dndisastri.test',
+            'password' => 'password-lunga',
+            'password_confirmation' => 'password-lunga',
+        ])->assertSessionHasErrors('played_before')->assertSessionDoesntHaveErrors('discovery_source');
+
+        expect(User::where('email', 'delia@dndisastri.test')->exists())->toBeFalse();
+    });
+
+    it('chi si era iscritto prima delle domande resta senza risposta', function () {
+        expect(User::playedBeforeLabel(User::factory()->player()->create()->played_before))->toBe('Non indicato');
     });
 
     it('rifiuta una password troppo corta o non confermata', function () {

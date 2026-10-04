@@ -55,6 +55,9 @@ final class ApprovePendingChange
 
             $character = Character::whereKey($locked->character_id)->lockForUpdate()->firstOrFail();
 
+            // Prima di applicare: dopo la scheda ha già i valori nuovi.
+            $locked->forceFill(['before' => $locked->snapshotOf($character)]);
+
             $delta = match ($locked->type) {
                 PendingChangeType::CharacterEdit => $this->applyEdit($character, $locked),
                 PendingChangeType::LevelUp => $this->applyLevelUp($character, $locked),

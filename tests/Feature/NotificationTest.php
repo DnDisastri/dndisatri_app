@@ -269,3 +269,63 @@ describe('archiviare le notifiche', function () {
         expect($this->notifica->fresh()->archived_at)->toBeNull();
     });
 });
+
+describe('eliminare le notifiche', function () {
+    beforeEach(function () {
+        $this->tizio = User::factory()->player()->create();
+        $character = Character::factory()->ownedBy($this->tizio)->create();
+
+        foreach (['Aldo il Nuovo', 'Aldo il Vecchio'] as $nome) {
+            $change = app(ProposeChange::class)->edit($character->fresh(), $this->tizio, ['name' => $nome]);
+            app(ApprovePendingChange::class)->handle($change, User::factory()->dm()->create());
+        }
+
+        $this->notifica = $this->tizio->notifications()->latest()->first();
+    });
+
+    it('dall\'archivio se ne elimina una, con la conferma nel modulo', function () {
+        $this->notifica->update(['archived_at' => now()]);
+
+        $this->actingAs($this->tizio)
+            ->get(route('notifications.index', ['archiviate' => 1]))
+            ->assertOk()
+            ->assertSee('data-conferma', false)
+            ->assertSee('Svuota archivio');
+
+        $this->actingAs($this->tizio)
+            ->delete(route('notifications.destroy', $this->notifica->id))
+            ->assertRedirect();
+
+        expect($this->tizio->notifications()->find($this->notifica->id))->toBeNull()
+            ->and($this->tizio->notifications()->count())->toBe(1);
+    });
+
+    it('una notifica ancora attiva non si elimina', function () {
+        $this->actingAs($this->tizio)
+            ->delete(route('notifications.destroy', $this->notifica->id))
+            ->assertNotFound();
+
+        expect($this->notifica->fresh())->not->toBeNull();
+    });
+
+    it('«svuota archivio» elimina solo le archiviate', function () {
+        $this->notifica->update(['archived_at' => now()]);
+
+        $this->actingAs($this->tizio)
+            ->delete(route('notifications.empty-archive'))
+            ->assertRedirect(route('notifications.index'));
+
+        expect($this->tizio->notifications()->count())->toBe(1)
+            ->and($this->tizio->notifications()->whereNotNull('archived_at')->count())->toBe(0);
+    });
+
+    it('quella di un altro non la si elimina', function () {
+        $this->notifica->update(['archived_at' => now()]);
+
+        $this->actingAs(User::factory()->player()->create())
+            ->delete(route('notifications.destroy', $this->notifica->id))
+            ->assertNotFound();
+
+        expect($this->notifica->fresh())->not->toBeNull();
+    });
+});

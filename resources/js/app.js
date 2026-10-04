@@ -337,6 +337,37 @@ if (righeBottino) {
     });
 }
 
+// Conferma prima dei moduli `data-conferma`
+
+const conferma = document.getElementById('conferma');
+
+if (conferma) {
+    let modulo = null;
+
+    document.addEventListener('submit', (evento) => {
+        const form = evento.target.closest('form[data-conferma]');
+        if (!form) return;
+
+        evento.preventDefault();
+        modulo = form;
+        conferma.querySelector('[data-conferma-testo]').textContent = form.dataset.conferma;
+        conferma.showModal();
+    });
+
+    // `submit()` non rilancia l'evento: il modulo parte senza ripassare di qui.
+    conferma.querySelector('[data-conferma-si]').addEventListener('click', () => {
+        conferma.close();
+        modulo?.submit();
+    });
+
+    conferma.querySelector('[data-conferma-no]').addEventListener('click', () => conferma.close());
+
+    // Il fondo scuro chiude: un click sul <dialog> stesso cade fuori dal riquadro.
+    conferma.addEventListener('click', (evento) => {
+        if (evento.target === conferma) conferma.close();
+    });
+}
+
 // Visibilità password
 
 document.querySelectorAll('[data-toggle-password]').forEach((bottone) => {

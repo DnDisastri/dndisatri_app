@@ -12,6 +12,7 @@
     $etichetta = 'font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;margin-bottom:.15rem;';
     $prima = 'color:#6b7280;text-decoration:line-through;word-break:break-word;';
     $dopo = 'color:#15803d;font-weight:600;word-break:break-word;';
+    $uguale = 'color:#9ca3af;word-break:break-word;';
 @endphp
 
 <div style="font-size:.875rem;display:flex;flex-direction:column;gap:1.25rem;">
@@ -22,19 +23,26 @@
         </p>
     @endif
 
+    @if ($record->lacksBefore())
+        <p style="border-radius:.375rem;background:#f3f4f6;color:#4b5563;padding:.5rem .75rem;">
+            Questa richiesta è stata decisa prima che si salvasse com'era la scheda:
+            qui si vede solo il <strong>Dopo</strong>.
+        </p>
+    @endif
+
     @if ($cambiaScheda)
         <div style="display:flex;flex-direction:column;gap:.9rem;">
             @foreach ($rows as $row)
                 <div style="border-bottom:1px solid #e5e7eb;padding-bottom:.7rem;">
-                    <div style="font-weight:600;margin-bottom:.35rem;">{{ $row['label'] }}</div>
+                    <div style="font-weight:600;margin-bottom:.35rem;{{ $row['changed'] ? '' : 'color:#9ca3af;' }}">{{ $row['label'] }}</div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                         <div>
                             <div style="{{ $etichetta }}">Prima</div>
-                            <div style="{{ $prima }}">{{ $row['before'] }}</div>
+                            <div style="{{ $row['changed'] ? $prima : $uguale }}">{{ $row['before'] ?? 'Non registrato' }}</div>
                         </div>
                         <div>
                             <div style="{{ $etichetta }}">Dopo</div>
-                            <div style="{{ $dopo }}">{{ $row['after'] }}</div>
+                            <div style="{{ $row['changed'] ? $dopo : $uguale }}">{{ $row['after'] }}</div>
                         </div>
                     </div>
                 </div>
@@ -46,7 +54,9 @@
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                         <div>
                             <div style="{{ $etichetta }}">Prima</div>
-                            @if ($character?->photoUrl())
+                            @if (! $record->isPending())
+                                <div style="{{ $uguale }}">Non registrato</div>
+                            @elseif ($character?->photoUrl())
                                 <img src="{{ $character->photoUrl() }}" alt="Foto attuale"
                                     style="height:9rem;width:9rem;object-fit:cover;border-radius:.5rem;">
                             @else
@@ -68,13 +78,18 @@
         <div style="display:flex;flex-direction:column;gap:.5rem;">
             <div style="{{ $etichetta }}">Bottino</div>
 
+            {{-- Decisa, la borsa attuale ha già il bottino dentro: si mostra solo cosa arriva. --}}
             @if (! $monete->isEmpty())
                 <p>
                     <strong>Monete:</strong>
-                    {{ $borsa->format() }}
-                    <span style="color:#9ca3af;">→</span>
-                    <span style="{{ $dopo }}">{{ $borsa->plus($monete)->format() }}</span>
-                    <span style="color:#6b7280;">(+{{ $monete->format() }})</span>
+                    @if ($record->isPending())
+                        {{ $borsa->format() }}
+                        <span style="color:#9ca3af;">→</span>
+                        <span style="{{ $dopo }}">{{ $borsa->plus($monete)->format() }}</span>
+                        <span style="color:#6b7280;">(+{{ $monete->format() }})</span>
+                    @else
+                        <span style="{{ $dopo }}">+{{ $monete->format() }}</span>
+                    @endif
                 </p>
             @endif
 

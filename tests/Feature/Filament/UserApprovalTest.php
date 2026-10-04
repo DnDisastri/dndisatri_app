@@ -2,10 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Actions\Users\ApproveRegistration;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\Campaign;
 use App\Models\User;
+use App\Notifications\RegistrationApproved;
+use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 
 // Un account appena registrato resta in attesa finché un admin non lo approva.
@@ -20,6 +23,83 @@ it('un admin approva un iscritto in attesa dal pannello', function () {
         ->callTableAction('approva', $inAttesa);
 
     expect($inAttesa->refresh()->isApproved())->toBeTrue();
+});
+
+it('all\'approvazione l\'iscritto riceve la conferma anche per email', function () {
+    Notification::fake();
+    $admin = User::factory()->admin()->create();
+    $inAttesa = User::factory()->player()->unapproved()->create(['played_before' => false]);
+
+    Livewire::actingAs($admin)
+        ->test(ListUsers::class)
+        ->callTableAction('approva', $inAttesa);
+
+    Notification::assertSentTo(
+        $inAttesa,
+        RegistrationApproved::class,
+        fn (RegistrationApproved $n, array $canali) => in_array('mail', $canali, true),
+    );
+});
+
+it('un account già approvato non riceve una seconda conferma', function () {
+    Notification::fake();
+    $admin = User::factory()->admin()->create();
+    $giocatore = User::factory()->player()->create(['played_before' => true]);
+
+    app(ApproveRegistration::class)->handle($giocatore, $admin);
+
+    Notification::assertNothingSent();
+});
+
+it('chi si era iscritto prima della conferma viene approvato senza email', function () {
+    Notification::fake();
+    $admin = User::factory()->admin()->create();
+    $vecchioIscritto = User::factory()->player()->unapproved()->create(['played_before' => null]);
+
+    Livewire::actingAs($admin)
+        ->test(ListUsers::class)
+        ->callTableAction('approva', $vecchioIscritto);
+
+    expect($vecchioIscritto->refresh()->isApproved())->toBeTrue();
+    Notification::assertNothingSent();
+});
+
+it('chi si iscrive dal modulo riceve la conferma quando viene approvato', function () {
+    Notification::fake();
+    $admin = User::factory()->admin()->create();
+
+    $this->post(route('register'), [
+        'name' => 'Nuova Iscritta',
+        'email' => 'nuova@example.com',
+        'password' => 'password-lunga-123',
+        'password_confirmation' => 'password-lunga-123',
+        'played_before' => '0',
+    ]);
+    auth()->logout();
+
+    $iscritto = User::where('email', 'nuova@example.com')->firstOrFail();
+    app(ApproveRegistration::class)->handle($iscritto, $admin);
+
+    Notification::assertSentTo($iscritto, RegistrationApproved::class);
+});
+
+it('solo un admin può approvare', function () {
+    $dm = User::factory()->dm()->create();
+    $inAttesa = User::factory()->player()->unapproved()->create();
+
+    expect(fn () => app(ApproveRegistration::class)->handle($inAttesa, $dm))
+        ->toThrow(RuntimeException::class);
+
+    expect($inAttesa->refresh()->isApproved())->toBeFalse();
+});
+
+it('l\'email di conferma porta alla pagina di accesso', function () {
+    $html = (new RegistrationApproved)
+        ->toMail(User::factory()->player()->create())
+        ->render();
+
+    expect((string) $html)->toContain('La tua iscrizione è approvata')
+        ->toContain(route('login'));
 });
 
 // La nomina dal pannello: l'admin decide, il giocatore non ha chiesto niente.

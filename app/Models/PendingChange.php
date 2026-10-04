@@ -43,6 +43,7 @@ class PendingChange extends Model
             'type' => PendingChangeType::class,
             'status' => PendingChangeStatus::class,
             'diff' => 'array',
+            'before' => 'array',
             'grant_coins' => 'array',
             'grant_items' => 'array',
             'base_updated_at' => 'datetime',
@@ -87,10 +88,13 @@ class PendingChange extends Model
         return ! $this->isArchived() && ! $this->isPending();
     }
 
-    /** Avvisa senza bloccare. I bottini non sono mai obsoleti: si sommano. */
+    /**
+     * Avvisa senza bloccare. Vale solo in attesa: decisa, la scheda è cambiata
+     * proprio per la decisione. I bottini non sono mai obsoleti: si sommano.
+     */
     public function isStale(): bool
     {
-        if ($this->type->appliesAsDelta() || $this->base_updated_at === null) {
+        if (! $this->isPending() || $this->type->appliesAsDelta() || $this->base_updated_at === null) {
             return false;
         }
 
@@ -100,22 +104,57 @@ class PendingChange extends Model
     /** Chiavi del diff che non sono colonne della scheda: senza un «prima» da confrontare. */
     private const NON_COLONNE = ['photo_path', 'class_up', 'feat', 'spells'];
 
+    /** @return list<string> i campi del diff che sono colonne della scheda */
+    public function columnFields(): array
+    {
+        return array_values(array_diff(array_keys($this->diff ?? []), self::NON_COLONNE));
+    }
+
     /**
-     * Il «prima» si legge dal personaggio adesso: la richiesta salva solo il diff.
+     * I valori attuali della scheda per i campi del diff: va scritta nella
+     * decisione, prima di applicarla.
      *
-     * @return Collection<int, array{label: string, before: string, after: string}>
+     * @return array<string,mixed>|null
+     */
+    public function snapshotOf(Character $character): ?array
+    {
+        $fields = $this->columnFields();
+
+        return $fields === [] ? null : collect($fields)->mapWithKeys(fn (string $f) => [$f => $character->getAttribute($f)])->all();
+    }
+
+    /** Decisa senza copia (richieste di prima della copia): il «prima» non si sa più. */
+    public function lacksBefore(): bool
+    {
+        return ! $this->isPending() && $this->before === null && $this->columnFields() !== [];
+    }
+
+    /**
+     * In attesa il «prima» è la scheda adesso; decisa, la copia salvata allora.
+     *
+     * @return Collection<int, array{label: string, before: ?string, after: string, changed: bool}>
      */
     public function diffRows(): Collection
     {
         $character = $this->character;
+        $copia = $this->isPending() ? null : $this->before;
 
         return collect($this->diff ?? [])
             ->reject(fn ($after, $field) => in_array($field, self::NON_COLONNE, true))
-            ->map(fn ($after, $field) => [
-                'label' => self::fieldLabel($field),
-                'before' => self::readable($character?->getAttribute($field)),
-                'after' => self::readable($after),
-            ])
+            ->map(function ($after, $field) use ($character, $copia) {
+                $before = match (true) {
+                    $this->isPending() => self::readable($character?->getAttribute($field)),
+                    is_array($copia) && array_key_exists($field, $copia) => self::readable($copia[$field]),
+                    default => null,
+                };
+
+                return [
+                    'label' => self::fieldLabel($field),
+                    'before' => $before,
+                    'after' => self::readable($after),
+                    'changed' => $before !== self::readable($after),
+                ];
+            })
             ->values();
     }
 
