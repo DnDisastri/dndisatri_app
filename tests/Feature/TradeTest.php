@@ -16,8 +16,8 @@ describe('scambio accettato', function () {
     it('sposta oggetti e oro nelle due direzioni', function () {
         $anna = Character::factory()->create(['gp' => 100]);
         $bruno = Character::factory()->create(['gp' => 50]);
-        $anna->addToInventory('Spada Lunga', 1, 'Armi', 15);
-        $bruno->addToInventory('Scudo', 1, 'Armature', 10);
+        $anna->addToInventory('Spada Lunga', 1, 'Armi', 1500);
+        $bruno->addToInventory('Scudo', 1, 'Armature', 1000);
 
         $trade = Trade::factory()->between($anna, $bruno)
             ->gold(give: 20, want: 0)
@@ -59,8 +59,8 @@ describe('scambio accettato', function () {
         $brunoEntry = LedgerEntry::forCharacter($bruno)->latestFirst()->first();
 
         expect($annaEntry->action)->toBe(LedgerAction::Trade)
-            ->and($annaEntry->gp_delta)->toBe(-20)
-            ->and($brunoEntry->gp_delta)->toBe(20);
+            ->and($annaEntry->cp_delta)->toBe(-2000)
+            ->and($brunoEntry->cp_delta)->toBe(2000);
     });
 });
 // Nelle proposte di scambio i beni restano negli inventari fino all'accettazione e vengono rivalidati in quel momento.
@@ -103,7 +103,7 @@ describe('la verifica riguarda entrambe le parti', function () {
         expect($anna->fresh()->gp)->toBe(5)
             ->and($bruno->fresh()->gp)->toBe(500);
     });
-// La consegna è atomica: se una delle due parti non può adempiere, nessun bene o oro si muove.
+    // La consegna è atomica: se una delle due parti non può adempiere, nessun bene o oro si muove.
     it('non lascia mai uno scambio a metà', function () {
         $anna = Character::factory()->create(['gp' => 100]);
         $bruno = Character::factory()->create(['gp' => 0]);

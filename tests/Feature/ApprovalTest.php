@@ -6,6 +6,7 @@ use App\Actions\Characters\ApprovePendingChange;
 use App\Actions\Characters\ProposeChange;
 use App\Actions\Characters\RejectPendingChange;
 use App\Domain\Dnd\Ability;
+use App\Domain\Dnd\Coins;
 use App\Enums\LedgerAction;
 use App\Enums\PendingChangeStatus;
 use App\Enums\PendingChangeType;
@@ -132,8 +133,8 @@ describe('bottino approvato', function () {
         $entry = LedgerEntry::forCharacter($character)->latestFirst()->first();
 
         expect($entry->action)->toBe(LedgerAction::Approve)
-            ->and($entry->gp_delta)->toBe(250)
-            ->and($entry->gp_after)->toBe(250)
+            ->and($entry->cp_delta)->toBe(25000)
+            ->and($entry->coins_after)->toBe(['gp' => 250])
             ->and($entry->actor_id)->toBe($dm->id);
     });
 
@@ -146,7 +147,7 @@ describe('bottino approvato', function () {
             range(1, ProposeChange::LOOT_MAX_ITEMS),
         );
 
-        $change = app(ProposeChange::class)->loot($character, $player, 200, $items, str_repeat('n', 255));
+        $change = app(ProposeChange::class)->loot($character, $player, new Coins(gp: 200), $items, str_repeat('n', 255));
 
         app(ApprovePendingChange::class)->handle($change, User::factory()->dm()->create());
 
@@ -158,14 +159,14 @@ describe('bottino approvato', function () {
             ->and($entry->message)->toContain(str_repeat('n', 255));
     });
 
-    it('si ferma se l\'oro supererebbe il massimo, senza applicare niente', function () {
-        $character = Character::factory()->create(['gp' => Character::MAX_GP - 10]);
+    it('si ferma se una pila supererebbe il massimo, senza applicare niente', function () {
+        $character = Character::factory()->create(['gp' => Coins::MAX - 10]);
         $change = PendingChange::factory()->forCharacter($character)->loot(100)->create();
 
         expect(fn () => app(ApprovePendingChange::class)->handle($change, User::factory()->dm()->create()))
             ->toThrow(RuntimeException::class);
 
-        expect($character->fresh()->gp)->toBe(Character::MAX_GP - 10)
+        expect($character->fresh()->gp)->toBe(Coins::MAX - 10)
             ->and($change->fresh()->isPending())->toBeTrue();
     });
 });

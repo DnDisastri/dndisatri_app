@@ -7,8 +7,8 @@ use App\Actions\Supervision\Supervisor;
 use App\Actions\Users\IssueWarning;
 use App\Actions\Users\LiftWarning;
 use App\Models\Character;
+use App\Models\SupervisedAction;
 use App\Models\User;
-
 
 beforeEach(function () {
     $this->dm = User::factory()->dm()->create();
@@ -19,12 +19,12 @@ beforeEach(function () {
     app(IssueWarning::class)->handle($this->sorvegliato, $this->dm, 'Ha venduto due volte lo stesso anello.');
 });
 
-function inVendita(): App\Models\SupervisedAction
+function inVendita(): SupervisedAction
 {
-    test()->anna->addToInventory('Spada Lunga', value: 15);
+    test()->anna->addToInventory('Spada Lunga', valueCp: 1500);
 
     return app(Supervisor::class)->createListing(
-        test()->sorvegliato, test()->anna, 'Spada Lunga', 1, 40,
+        test()->sorvegliato, test()->anna, 'Spada Lunga', 1, 4000,
     );
 }
 
@@ -36,7 +36,7 @@ describe('chi ci entra', function () {
             ->assertSee('Sei sotto richiamo')
             ->assertSee('Non hai niente in attesa');
     });
-// Lo storico resta consultabile anche dopo la revoca del richiamo, così le decisioni precedenti non vanno perse.
+    // Lo storico resta consultabile anche dopo la revoca del richiamo, così le decisioni precedenti non vanno perse.
     it('e chi lo è stato, per rileggere com\'è andata', function () {
         inVendita();
         app(LiftWarning::class)->handle($this->sorvegliato->warnings()->first(), $this->dm);
@@ -69,7 +69,7 @@ describe('cosa mostra', function () {
             ->assertSee('1× Spada Lunga')
             ->assertSee('40 mo');
     });
-// Per un'azione rifiutata il motivo del DM fa parte della decisione e deve restare visibile al giocatore.
+    // Per un'azione rifiutata il motivo del DM fa parte della decisione e deve restare visibile al giocatore.
     it('e di una bloccata, il motivo scritto dal DM', function () {
         $azione = inVendita();
         app(RejectSupervisedAction::class)->handle($azione, $this->dm, 'Quaranta monete per una spada da quindici.');
@@ -82,15 +82,15 @@ describe('cosa mostra', function () {
             ->assertSee('Quaranta monete per una spada da quindici.')
             ->assertSee('Puoi riproporla dal mercato');
     });
-// La vigilanza è privata: ogni giocatore può vedere soltanto le proprie azioni supervisionate.
+    // La vigilanza è privata: ogni giocatore può vedere soltanto le proprie azioni supervisionate.
     it('e non le azioni di un altro', function () {
         inVendita();
 
         $altro = User::factory()->player()->create();
         app(IssueWarning::class)->handle($altro, $this->dm, 'Motivo suo.');
         $suo = Character::factory()->ownedBy($altro)->create(['name' => 'Bruno']);
-        $suo->addToInventory('Corda di Seta', value: 1);
-        app(Supervisor::class)->createListing($altro, $suo, 'Corda di Seta', 1, 5);
+        $suo->addToInventory('Corda di Seta', valueCp: 100);
+        app(Supervisor::class)->createListing($altro, $suo, 'Corda di Seta', 1, 500);
 
         $this->actingAs($this->sorvegliato)
             ->get(route('market.supervision'))

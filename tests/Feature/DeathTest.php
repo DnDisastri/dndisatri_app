@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\Characters\KillCharacter;
+use App\Actions\Market\AcceptTrade;
 use App\Actions\Market\CreateListing;
 use App\Actions\Market\CreateTrade;
 use App\Enums\ListingStatus;
@@ -63,7 +64,7 @@ describe('il racconto della morte', function () {
         expect($fallen->died_in_session_id)->toBeNull()
             ->and($fallen->death_story)->not->toBeNull();
     });
-// La relazione con la serata è opzionale: cancellarla non deve rimuovere il racconto né riaprire il personaggio.
+    // La relazione con la serata è opzionale: cancellarla non deve rimuovere il racconto né riaprire il personaggio.
     it('cancellare la serata non cancella il caduto', function () {
         $character = Character::factory()->create();
         $session = GameSession::factory()->create();
@@ -86,9 +87,9 @@ describe('il racconto della morte', function () {
 describe('cosa lascia in sospeso', function () {
     it('i suoi annunci si ritirano e la roba gli torna', function () {
         $seller = Character::factory()->create();
-        $seller->addToInventory('Spada Lunga', value: 15);
+        $seller->addToInventory('Spada Lunga', valueCp: 1500);
 
-        $listing = app(CreateListing::class)->handle($seller, 'Spada Lunga', 1, 20);
+        $listing = app(CreateListing::class)->handle($seller, 'Spada Lunga', 1, 2000);
 
         expect($seller->fresh()->ownsItem('Spada Lunga'))->toBeFalse();
 
@@ -102,8 +103,8 @@ describe('cosa lascia in sospeso', function () {
         $vittima = Character::factory()->create(['gp' => 100]);
         $altro = Character::factory()->create(['gp' => 100]);
 
-        $mandata = app(CreateTrade::class)->handle(from: $vittima, to: $altro, giveGp: 10);
-        $ricevuta = app(CreateTrade::class)->handle(from: $altro, to: $vittima, giveGp: 5);
+        $mandata = app(CreateTrade::class)->handle(from: $vittima, to: $altro, giveCp: 1000);
+        $ricevuta = app(CreateTrade::class)->handle(from: $altro, to: $vittima, giveCp: 500);
 
         app(KillCharacter::class)->handle($vittima, User::factory()->dm()->create());
 
@@ -115,8 +116,8 @@ describe('cosa lascia in sospeso', function () {
         $vittima = Character::factory()->create(['gp' => 100]);
         $altro = Character::factory()->create(['gp' => 100]);
 
-        $vecchio = app(CreateTrade::class)->handle(from: $vittima, to: $altro, giveGp: 10);
-        app(App\Actions\Market\AcceptTrade::class)->handle($vecchio);
+        $vecchio = app(CreateTrade::class)->handle(from: $vittima, to: $altro, giveCp: 1000);
+        app(AcceptTrade::class)->handle($vecchio);
 
         app(KillCharacter::class)->handle($vittima->fresh(), User::factory()->dm()->create());
 

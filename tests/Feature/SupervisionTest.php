@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Actions\Market\BuyFromShop;
 use App\Actions\Market\CreateListing;
 use App\Actions\Market\CreateTrade;
 use App\Actions\Supervision\ApproveSupervisedAction;
@@ -12,6 +13,7 @@ use App\Actions\Users\LiftWarning;
 use App\Enums\SupervisedActionType;
 use App\Exceptions\MarketException;
 use App\Models\Character;
+use App\Models\MarketItem;
 use App\Models\MarketListing;
 use App\Models\SupervisedAction;
 use App\Models\Trade;
@@ -37,7 +39,7 @@ beforeEach(function () {
 describe('senza richiamo non cambia niente', function () {
     it('lo scambio parte subito', function () {
         $result = app(Supervisor::class)->proposeTrade(
-            $this->sorvegliato, $this->anna, $this->bruno, giveGp: 10,
+            $this->sorvegliato, $this->anna, $this->bruno, giveCp: 1000,
         );
 
         expect($result)->toBeInstanceOf(Trade::class)
@@ -45,9 +47,9 @@ describe('senza richiamo non cambia niente', function () {
     });
 
     it('e la vendita anche', function () {
-        $this->anna->addToInventory('Spada Lunga', value: 15);
+        $this->anna->addToInventory('Spada Lunga', valueCp: 1500);
 
-        $result = app(Supervisor::class)->createListing($this->sorvegliato, $this->anna, 'Spada Lunga', 1, 20);
+        $result = app(Supervisor::class)->createListing($this->sorvegliato, $this->anna, 'Spada Lunga', 1, 2000);
 
         expect($result)->toBeInstanceOf(MarketListing::class);
     });
@@ -61,7 +63,7 @@ describe('sotto richiamo si ferma e chiede', function () {
 
     it('la proposta di scambio non parte', function () {
         $result = app(Supervisor::class)->proposeTrade(
-            $this->sorvegliato, $this->anna, $this->bruno, giveGp: 10,
+            $this->sorvegliato, $this->anna, $this->bruno, giveCp: 1000,
         );
 
         expect($result)->toBeInstanceOf(SupervisedAction::class)
@@ -70,9 +72,9 @@ describe('sotto richiamo si ferma e chiede', function () {
     });
 
     it('la messa in vendita nemmeno', function () {
-        $this->anna->addToInventory('Spada Lunga', value: 15);
+        $this->anna->addToInventory('Spada Lunga', valueCp: 1500);
 
-        $result = app(Supervisor::class)->createListing($this->sorvegliato, $this->anna, 'Spada Lunga', 1, 20);
+        $result = app(Supervisor::class)->createListing($this->sorvegliato, $this->anna, 'Spada Lunga', 1, 2000);
 
         expect($result)->toBeInstanceOf(SupervisedAction::class)
             ->and(MarketListing::count())->toBe(0)
@@ -80,7 +82,7 @@ describe('sotto richiamo si ferma e chiede', function () {
     });
 
     it('nemmeno accettare uno scambio ricevuto', function () {
-        $trade = app(CreateTrade::class)->handle(from: $this->bruno, to: $this->anna, giveGp: 20);
+        $trade = app(CreateTrade::class)->handle(from: $this->bruno, to: $this->anna, giveCp: 2000);
 
         $result = app(Supervisor::class)->acceptTrade($this->sorvegliato, $trade);
 
@@ -89,8 +91,8 @@ describe('sotto richiamo si ferma e chiede', function () {
     });
 
     it('nemmeno comprare da un annuncio', function () {
-        $this->bruno->addToInventory('Scudo', value: 10);
-        $listing = app(CreateListing::class)->handle($this->bruno, 'Scudo', 1, 15);
+        $this->bruno->addToInventory('Scudo', valueCp: 1000);
+        $listing = app(CreateListing::class)->handle($this->bruno, 'Scudo', 1, 1500);
 
         $result = app(Supervisor::class)->buyListing($this->sorvegliato, $listing, $this->anna);
 
@@ -100,7 +102,7 @@ describe('sotto richiamo si ferma e chiede', function () {
 
     it('la richiesta ricorda sotto quale richiamo è nata', function () {
         $result = app(Supervisor::class)->proposeTrade(
-            $this->sorvegliato, $this->anna, $this->bruno, giveGp: 10,
+            $this->sorvegliato, $this->anna, $this->bruno, giveCp: 1000,
         );
 
         expect($result->warning_id)->toBe($this->sorvegliato->activeWarning()->getKey());
@@ -111,9 +113,9 @@ describe('il negozio della gilda resta libero', function () {
     it('anche sotto richiamo si compra senza chiedere', function () {
         app(IssueWarning::class)->handle($this->sorvegliato, $this->dm, 'Motivo.');
 
-        $item = App\Models\MarketItem::factory()->create(['price' => 10, 'is_unlimited' => true]);
+        $item = MarketItem::factory()->create(['price_cp' => 1000, 'is_unlimited' => true]);
 
-        app(App\Actions\Market\BuyFromShop::class)->handle($this->anna, $item);
+        app(BuyFromShop::class)->handle($this->anna, $item);
 
         expect(SupervisedAction::count())->toBe(0)
             ->and($this->anna->fresh()->gp)->toBe(90);
@@ -128,7 +130,7 @@ describe('il via libera', function () {
 
     it('esegue davvero l\'operazione', function () {
         $pending = app(Supervisor::class)->proposeTrade(
-            $this->sorvegliato, $this->anna, $this->bruno, giveGp: 10,
+            $this->sorvegliato, $this->anna, $this->bruno, giveCp: 1000,
         );
 
         $trade = app(ApproveSupervisedAction::class)->handle($pending, $this->dm);
@@ -136,12 +138,12 @@ describe('il via libera', function () {
         expect($trade)->toBeInstanceOf(Trade::class)
             ->and($pending->fresh()->isPending())->toBeFalse();
     });
-// L'approvazione rivalida lo stato corrente; se l'operazione non è più possibile, la richiesta resta pendente.
+    // L'approvazione rivalida lo stato corrente; se l'operazione non è più possibile, la richiesta resta pendente.
     it('fallisce se nel frattempo il mondo è cambiato', function () {
-        $this->anna->addToInventory('Spada Lunga', value: 15);
+        $this->anna->addToInventory('Spada Lunga', valueCp: 1500);
 
         $pending = app(Supervisor::class)->createListing(
-            $this->sorvegliato, $this->anna, 'Spada Lunga', 1, 20,
+            $this->sorvegliato, $this->anna, 'Spada Lunga', 1, 2000,
         );
 
         $this->anna->removeFromInventory('Spada Lunga');
@@ -154,7 +156,7 @@ describe('il via libera', function () {
 
     it('non si decide due volte', function () {
         $pending = app(Supervisor::class)->proposeTrade(
-            $this->sorvegliato, $this->anna, $this->bruno, giveGp: 10,
+            $this->sorvegliato, $this->anna, $this->bruno, giveCp: 1000,
         );
 
         app(ApproveSupervisedAction::class)->handle($pending, $this->dm);
@@ -165,7 +167,7 @@ describe('il via libera', function () {
 
     it('avvisa il giocatore', function () {
         $pending = app(Supervisor::class)->proposeTrade(
-            $this->sorvegliato, $this->anna, $this->bruno, giveGp: 10,
+            $this->sorvegliato, $this->anna, $this->bruno, giveCp: 1000,
         );
 
         Notification::fake();
@@ -182,7 +184,7 @@ describe('il blocco', function () {
         $this->sorvegliato = $this->sorvegliato->fresh();
 
         $this->pending = app(Supervisor::class)->proposeTrade(
-            $this->sorvegliato, $this->anna, $this->bruno, giveGp: 10,
+            $this->sorvegliato, $this->anna, $this->bruno, giveCp: 1000,
         );
     });
 
@@ -222,14 +224,14 @@ describe('chi decide', function () {
         $this->sorvegliato = $this->sorvegliato->fresh();
 
         $this->pending = app(Supervisor::class)->proposeTrade(
-            $this->sorvegliato, $this->anna, $this->bruno, giveGp: 10,
+            $this->sorvegliato, $this->anna, $this->bruno, giveCp: 1000,
         );
     });
 
     it('un DM estraneo sì', function () {
         expect($this->dm->can('approve', $this->pending))->toBeTrue();
     });
-// Chi è coinvolto nell'azione tramite un proprio personaggio non può anche esserne il revisore.
+    // Chi è coinvolto nell'azione tramite un proprio personaggio non può anche esserne il revisore.
     it('ma non un DM con un personaggio dentro lo scambio', function () {
         $dmInteressato = User::factory()->dm()->create();
         $this->bruno->forceFill(['user_id' => $dmInteressato->getKey()])->save();
@@ -260,7 +262,7 @@ describe('tolto il richiamo', function () {
         app(LiftWarning::class)->handle($warning, $this->dm, 'Si è comportato bene.');
 
         $result = app(Supervisor::class)->proposeTrade(
-            $this->sorvegliato->fresh(), $this->anna, $this->bruno, giveGp: 10,
+            $this->sorvegliato->fresh(), $this->anna, $this->bruno, giveCp: 1000,
         );
 
         expect($result)->toBeInstanceOf(Trade::class);

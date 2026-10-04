@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\Characters\ApprovePendingChange;
 use App\Actions\Characters\ProposeChange;
+use App\Domain\Dnd\Coins;
 use App\Enums\NotificationCategory;
 use App\Models\Character;
 use App\Models\User;
@@ -19,7 +20,7 @@ it('avvisa DM e admin quando arriva una modifica da approvare', function () {
     $dm = User::factory()->dm()->create();
     $admin = User::factory()->admin()->create();
 
-    app(ProposeChange::class)->loot($character, $player, gp: 50);
+    app(ProposeChange::class)->loot($character, $player, coins: new Coins(gp: 50));
 
     Notification::assertSentTo([$dm, $admin], ChangeAwaitingApproval::class);
     // Chi ha proposto non si avvisa: la richiesta è sua.
@@ -33,7 +34,7 @@ it('non avvisa il DM che ha proposto la modifica, ma gli altri sì', function ()
     $character = Character::factory()->ownedBy($dmProponente)->create();
     $altroDm = User::factory()->dm()->create();
 
-    app(ProposeChange::class)->loot($character, $dmProponente, gp: 10);
+    app(ProposeChange::class)->loot($character, $dmProponente, coins: new Coins(gp: 10));
 
     Notification::assertSentTo($altroDm, ChangeAwaitingApproval::class);
     Notification::assertNotSentTo($dmProponente, ChangeAwaitingApproval::class);
@@ -43,7 +44,7 @@ it('non avvisa il DM che ha proposto la modifica, ma gli altri sì', function ()
 it('porta un link completo alla richiesta, che funziona anche da email', function () {
     $player = User::factory()->player()->create();
     $character = Character::factory()->ownedBy($player)->create();
-    $change = app(ProposeChange::class)->loot($character, $player, gp: 10);
+    $change = app(ProposeChange::class)->loot($character, $player, coins: new Coins(gp: 10));
 
     $url = (new ChangeAwaitingApproval($change))->toArray(User::factory()->dm()->create())['url'];
 
@@ -54,7 +55,7 @@ it('porta un link completo alla richiesta, che funziona anche da email', functio
 it('dice al DM cosa chiede la richiesta, nella categoria «Da approvare»', function () {
     $player = User::factory()->player()->create();
     $character = Character::factory()->ownedBy($player)->create(['name' => 'Andrea']);
-    $change = app(ProposeChange::class)->loot($character, $player, gp: 200);
+    $change = app(ProposeChange::class)->loot($character, $player, coins: new Coins(gp: 200));
 
     $notifica = new ChangeAwaitingApproval($change);
 
@@ -66,7 +67,7 @@ it('dice al DM cosa chiede la richiesta, nella categoria «Da approvare»', func
 it('al giocatore tiene la nota del DM separata dal riassunto', function () {
     $player = User::factory()->player()->create();
     $character = Character::factory()->ownedBy($player)->create();
-    $change = app(ProposeChange::class)->loot($character, $player, gp: 10);
+    $change = app(ProposeChange::class)->loot($character, $player, coins: new Coins(gp: 10));
     app(ApprovePendingChange::class)->handle($change, User::factory()->dm()->create(), 'Goditelo.');
 
     $body = (new RequestDecided($change->fresh()))->toArray($player)['body'];
@@ -81,7 +82,7 @@ it('non avvisa i giocatori che non possono approvare', function () {
     $character = Character::factory()->ownedBy($player)->create();
     $altroGiocatore = User::factory()->player()->create();
 
-    app(ProposeChange::class)->loot($character, $player, gp: 10);
+    app(ProposeChange::class)->loot($character, $player, coins: new Coins(gp: 10));
 
     Notification::assertNotSentTo($altroGiocatore, ChangeAwaitingApproval::class);
 });

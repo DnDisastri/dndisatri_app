@@ -51,7 +51,7 @@ describe('le tre porte si aprono', function () {
 describe('comprare all\'emporio', function () {
     it('toglie l\'oro e mette l\'oggetto nello zaino', function () {
         $character = giocatoreCon(100);
-        $item = MarketItem::factory()->create(['name' => 'Corda di Seta', 'price' => 10]);
+        $item = MarketItem::factory()->create(['name' => 'Corda di Seta', 'price_cp' => 1000]);
 
         Livewire::actingAs($character->user)
             ->test(Shop::class)
@@ -63,7 +63,7 @@ describe('comprare all\'emporio', function () {
 
     it('e senza soldi lo dice, invece di far finta di niente', function () {
         $character = giocatoreCon(1);
-        $item = MarketItem::factory()->create(['price' => 500]);
+        $item = MarketItem::factory()->create(['price_cp' => 50000]);
 
         Livewire::actingAs($character->user)
             ->test(Shop::class)
@@ -73,7 +73,6 @@ describe('comprare all\'emporio', function () {
         expect($character->fresh()->gp)->toBe(1);
     });
 });
-
 
 describe('cercare nel mercato', function () {
     it('trova per nome, per categoria e per descrizione', function (string $parola) {
@@ -108,8 +107,8 @@ describe('cercare nel mercato', function () {
 
     it('anche fra gli annunci', function () {
         $venditore = giocatoreCon();
-        $venditore->addToInventory('Spada Lunga', value: 15);
-        app(CreateListing::class)->handle($venditore->fresh(), 'Spada Lunga', 1, 20);
+        $venditore->addToInventory('Spada Lunga', valueCp: 1500);
+        app(CreateListing::class)->handle($venditore->fresh(), 'Spada Lunga', 1, 2000);
 
         Livewire::actingAs(giocatoreCon()->user)
             ->test(Listings::class)
@@ -119,7 +118,6 @@ describe('cercare nel mercato', function () {
             ->assertDontSee('Spada Lunga');
     });
 });
-
 
 describe('il riquadro di dettaglio', function () {
     it('si apre su un articolo e si richiude', function () {
@@ -137,7 +135,7 @@ describe('il riquadro di dettaglio', function () {
 
     it('comprato, si toglie di mezzo', function () {
         $character = giocatoreCon(100);
-        $item = MarketItem::factory()->create(['price' => 10]);
+        $item = MarketItem::factory()->create(['price_cp' => 1000]);
 
         Livewire::actingAs($character->user)
             ->test(Shop::class)
@@ -148,7 +146,7 @@ describe('il riquadro di dettaglio', function () {
 
     it('ma se l\'acquisto non riesce resta aperto', function () {
         $character = giocatoreCon(1);
-        $item = MarketItem::factory()->create(['price' => 500]);
+        $item = MarketItem::factory()->create(['price_cp' => 50000]);
 
         Livewire::actingAs($character->user)
             ->test(Shop::class)
@@ -187,8 +185,8 @@ describe('il riquadro di dettaglio', function () {
 
     it('e negli annunci si apre allo stesso modo', function () {
         $venditore = giocatoreCon();
-        $venditore->addToInventory('Spada Lunga', value: 15);
-        $listing = app(CreateListing::class)->handle($venditore->fresh(), 'Spada Lunga', 1, 20);
+        $venditore->addToInventory('Spada Lunga', valueCp: 1500);
+        $listing = app(CreateListing::class)->handle($venditore->fresh(), 'Spada Lunga', 1, 2000);
 
         Livewire::actingAs(giocatoreCon(100)->user)
             ->test(Listings::class)
@@ -200,16 +198,15 @@ describe('il riquadro di dettaglio', function () {
     });
 });
 
-
 describe('la bacheca divide i miei dagli altri', function () {
     it('mette i propri in una sezione loro', function () {
         $io = giocatoreCon();
-        $io->addToInventory('Spada Lunga', value: 15);
-        app(CreateListing::class)->handle($io->fresh(), 'Spada Lunga', 1, 20);
+        $io->addToInventory('Spada Lunga', valueCp: 1500);
+        app(CreateListing::class)->handle($io->fresh(), 'Spada Lunga', 1, 2000);
 
         $altro = giocatoreCon();
-        $altro->addToInventory('Scudo', value: 10);
-        app(CreateListing::class)->handle($altro->fresh(), 'Scudo', 1, 15);
+        $altro->addToInventory('Scudo', valueCp: 1000);
+        app(CreateListing::class)->handle($altro->fresh(), 'Scudo', 1, 1500);
 
         $html = Livewire::actingAs($io->user)->test(Listings::class)
             ->assertSee('I miei oggetti')
@@ -222,8 +219,8 @@ describe('la bacheca divide i miei dagli altri', function () {
 
     it('e senza roba propria resta un elenco solo', function () {
         $altro = giocatoreCon();
-        $altro->addToInventory('Scudo', value: 10);
-        app(CreateListing::class)->handle($altro->fresh(), 'Scudo', 1, 15);
+        $altro->addToInventory('Scudo', valueCp: 1000);
+        app(CreateListing::class)->handle($altro->fresh(), 'Scudo', 1, 1500);
 
         Livewire::actingAs(giocatoreCon()->user)->test(Listings::class)
             ->assertSee('In vendita')
@@ -235,13 +232,13 @@ describe('la bacheca divide i miei dagli altri', function () {
 describe('gli annunci', function () {
     it('si pubblicano, e l\'oggetto esce dallo zaino', function () {
         $character = giocatoreCon();
-        $character->addToInventory('Spada Lunga', value: 15);
+        $character->addToInventory('Spada Lunga', valueCp: 1500);
 
         Livewire::actingAs($character->user)
             ->test(Listings::class)
             ->set('itemName', 'Spada Lunga')
             ->set('sellQty', 1)
-            ->set('price', 20)
+            ->set('price.gp', 20)
             ->call('sell')
             ->assertHasNoErrors();
 
@@ -250,8 +247,8 @@ describe('gli annunci', function () {
 
     it('si comprano, e la roba cambia mani', function () {
         $venditore = giocatoreCon();
-        $venditore->addToInventory('Spada Lunga', value: 15);
-        $listing = app(CreateListing::class)->handle($venditore->fresh(), 'Spada Lunga', 1, 20);
+        $venditore->addToInventory('Spada Lunga', valueCp: 1500);
+        $listing = app(CreateListing::class)->handle($venditore->fresh(), 'Spada Lunga', 1, 2000);
 
         $compratore = giocatoreCon(100);
 
@@ -267,8 +264,8 @@ describe('gli annunci', function () {
 
     it('e il proprio si ritira, con la roba che torna indietro', function () {
         $character = giocatoreCon();
-        $character->addToInventory('Spada Lunga', value: 15);
-        $listing = app(CreateListing::class)->handle($character->fresh(), 'Spada Lunga', 1, 20);
+        $character->addToInventory('Spada Lunga', valueCp: 1500);
+        $listing = app(CreateListing::class)->handle($character->fresh(), 'Spada Lunga', 1, 2000);
 
         Livewire::actingAs($character->user)
             ->test(Listings::class)
@@ -286,7 +283,7 @@ describe('gli scambi', function () {
         Livewire::actingAs($from->user)
             ->test(Trades::class)
             ->set('toCharacterId', $to->id)
-            ->set('giveGp', 10)
+            ->set('giveMonete.gp', 10)
             ->call('propose')
             ->assertHasNoErrors();
 
@@ -299,11 +296,10 @@ describe('gli scambi', function () {
 
         Livewire::actingAs($from->user)
             ->test(Trades::class)
-            ->set('giveGp', 10)
+            ->set('giveMonete.gp', 10)
             ->call('propose')
             ->assertHasErrors('scambio');
     });
-
 
     it('arrivando dalla vetrina di un altro, lo trova già scelto', function () {
         $from = giocatoreCon(100);
@@ -314,7 +310,7 @@ describe('gli scambi', function () {
             ->test(Trades::class)
             ->assertSet('toCharacterId', $to->id);
     });
-// Il destinatario precompilato arriva dalla query string e viene accettato solo se identifica un personaggio valido e disponibile.
+    // Il destinatario precompilato arriva dalla query string e viene accettato solo se identifica un personaggio valido e disponibile.
     it('ma un id inventato lo lascia vuoto', function () {
         $from = giocatoreCon(100);
         $morto = Character::factory()->fallen()->create();
@@ -340,7 +336,7 @@ describe('gli scambi', function () {
         $from = giocatoreCon(100);
         $to = giocatoreCon(0);
 
-        $trade = app(CreateTrade::class)->handle(from: $from, to: $to, giveGp: 30);
+        $trade = app(CreateTrade::class)->handle(from: $from, to: $to, giveCp: 3000);
 
         Livewire::actingAs($to->user)
             ->test(Trades::class)
@@ -356,7 +352,7 @@ describe('gli scambi', function () {
         $from = giocatoreCon(100);
         $to = giocatoreCon(0);
 
-        $trade = app(CreateTrade::class)->handle(from: $from, to: $to, giveGp: 30);
+        $trade = app(CreateTrade::class)->handle(from: $from, to: $to, giveCp: 3000);
 
         Livewire::actingAs($to->user)
             ->test(Trades::class)
@@ -388,7 +384,7 @@ describe('gli scambi', function () {
         $from = giocatoreCon(100);
         $to = giocatoreCon(100);
 
-        $trade = app(CreateTrade::class)->handle(from: $from, to: $to, giveGp: 30);
+        $trade = app(CreateTrade::class)->handle(from: $from, to: $to, giveCp: 3000);
 
         Livewire::actingAs($to->user)
             ->test(Trades::class)
@@ -399,7 +395,7 @@ describe('gli scambi', function () {
 describe('sotto richiamo, le pagine non scavalcano la vigilanza', function () {
     it('pubblicare un annuncio finisce in attesa invece che in bacheca', function () {
         $character = giocatoreCon();
-        $character->addToInventory('Spada Lunga', value: 15);
+        $character->addToInventory('Spada Lunga', valueCp: 1500);
 
         app(IssueWarning::class)->handle(
             $character->user, User::factory()->dm()->create(), 'Prova',
@@ -409,7 +405,7 @@ describe('sotto richiamo, le pagine non scavalcano la vigilanza', function () {
             ->test(Listings::class)
             ->set('itemName', 'Spada Lunga')
             ->set('sellQty', 1)
-            ->set('price', 20)
+            ->set('price.gp', 20)
             ->call('sell');
 
         expect(SupervisedAction::pending()->count())->toBe(1)
@@ -428,7 +424,7 @@ describe('sotto richiamo, le pagine non scavalcano la vigilanza', function () {
         Livewire::actingAs($from->user)
             ->test(Trades::class)
             ->set('toCharacterId', $to->id)
-            ->set('giveGp', 10)
+            ->set('giveMonete.gp', 10)
             ->call('propose');
 
         expect(SupervisedAction::pending()->count())->toBe(1)
@@ -437,7 +433,7 @@ describe('sotto richiamo, le pagine non scavalcano la vigilanza', function () {
 
     it('comprare all\'emporio invece passa: non c\'è nessuno da truffare', function () {
         $character = giocatoreCon(100);
-        $item = MarketItem::factory()->create(['price' => 10]);
+        $item = MarketItem::factory()->create(['price_cp' => 1000]);
 
         app(IssueWarning::class)->handle(
             $character->user, User::factory()->dm()->create(), 'Prova',
@@ -456,7 +452,7 @@ describe('sotto richiamo, le pagine non scavalcano la vigilanza', function () {
 describe('le sezioni sulla stessa pagina', function () {
     it('dopo un acquisto mostrano l\'esito e avvisano le altre', function () {
         $character = giocatoreCon(100);
-        $item = MarketItem::factory()->create(['name' => 'Corda di Seta', 'price' => 10]);
+        $item = MarketItem::factory()->create(['name' => 'Corda di Seta', 'price_cp' => 1000]);
 
         Livewire::actingAs($character->user)
             ->test(Shop::class)
@@ -477,7 +473,7 @@ describe('le sezioni sulla stessa pagina', function () {
             ->assertDispatched('mercato-personaggio', id: $secondo->id);
 
         Livewire::actingAs($user)
-            ->test(App\Livewire\Market\Trades::class)
+            ->test(Trades::class)
             ->dispatch('mercato-personaggio', id: $secondo->id)
             ->assertSet('characterId', $secondo->id);
     });
