@@ -10,10 +10,7 @@ use App\Models\User;
 use App\Notifications\RequestDecided;
 use RuntimeException;
 
-/**
- * Rifiuta una richiesta: non tocca il personaggio, ma resta a registro con
- * chi ha deciso e perché.
- */
+/** Non tocca il personaggio, ma fotografa com'era: la scheda può cambiare dopo. */
 final class RejectPendingChange
 {
     public function handle(PendingChange $change, User $reviewer, ?string $note = null): PendingChange
@@ -23,18 +20,16 @@ final class RejectPendingChange
         }
 
         $change->forceFill([
+            'before' => $change->character ? $change->snapshotOf($change->character) : null,
             'status' => PendingChangeStatus::Rejected,
             'reviewed_by' => $reviewer->getKey(),
             'reviewed_at' => now(),
             'review_note' => $note,
         ])->save();
 
-        // Una foto rifiutata non ha più nessuno che la aspetti: resterebbe sul
-        // disco per sempre, e nessun percorso porterebbe più a lei.
+        // Senza richiesta che la aspetti, la foto resterebbe sul disco per sempre.
         app(CharacterPhoto::class)->discard($change->diff['photo_path'] ?? null);
 
-        // Un rifiuto senza avviso è il caso peggiore: il giocatore resterebbe
-        // ad aspettare una cosa già decisa.
         $change->requestedBy()->first()?->notify(new RequestDecided($change));
 
         return $change;
