@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace App\Exceptions;
 
+use App\Domain\Dnd\Coins;
 use RuntimeException;
 
 class MarketException extends RuntimeException
 {
-    public static function notEnoughGold(int $needed, int $available): self
+    /** Valori in rame. */
+    public static function notEnoughCoins(int $needed, int $available): self
     {
-        return new self("Servono {$needed} mo, ma ne hai {$available}.");
+        return new self('Servono '.Coins::formatValue($needed).', ma la borsa vale '.Coins::formatValue($available).'.');
     }
 
     public static function outOfStock(string $item): self

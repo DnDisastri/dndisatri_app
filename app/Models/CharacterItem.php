@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['character_id', 'name', 'category', 'qty', 'value', 'details'])]
+#[Fillable(['character_id', 'name', 'category', 'qty', 'value_cp', 'details'])]
 class CharacterItem extends Model
 {
     use HasFactory;
@@ -24,12 +24,7 @@ class CharacterItem extends Model
         ];
     }
 
-    /**
-     * Quello che il proprietario ha messo in vetrina per gli scambi.
-     *
-     * Il resto dello zaino non si vede da fuori, ed è una decisione presa: di
-     * una scheda altrui non si vedono né inventario né oro.
-     */
+    /** La vetrina: il resto dello zaino non si vede da fuori. */
     public function scopeTradeable(Builder $query): void
     {
         $query->where('tradeable', true);
@@ -40,7 +35,6 @@ class CharacterItem extends Model
         return $this->belongsTo(Character::class);
     }
 
-    /** Gli effetti che questo oggetto porta con sé. */
     public function effects(): HasMany
     {
         return $this->hasMany(CharacterItemEffect::class);
@@ -61,9 +55,9 @@ class CharacterItem extends Model
         $query->where('equipped_slot', $slot);
     }
 
-    /** Valore complessivo della riga: unitario per quantità. */
+    /** In rame. */
     public function totalValue(): int
     {
-        return $this->value * $this->qty;
+        return $this->value_cp * $this->qty;
     }
 }

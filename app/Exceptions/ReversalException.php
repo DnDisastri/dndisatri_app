@@ -4,15 +4,10 @@ declare(strict_types=1);
 
 namespace App\Exceptions;
 
+use App\Domain\Dnd\Coins;
 use RuntimeException;
 
-/**
- * Un annullamento che non si può fare.
- *
- * Esiste come eccezione a sé perché il suo messaggio **è** la funzionalità: chi
- * annulla deve sapere esattamente cosa glielo impedisce, per poter rimediare a
- * mano con l'oro e il bottino (decisione D12).
- */
+/** Il messaggio dice cosa blocca l'annullamento, perché l'admin rimedi a mano. */
 final class ReversalException extends RuntimeException
 {
     public static function itemGone(string $who, string $item): self
@@ -23,11 +18,12 @@ final class ReversalException extends RuntimeException
         );
     }
 
-    public static function goldGone(string $who, int $needed, int $available): self
+    /** Valori in rame. */
+    public static function coinsGone(string $who, int $needed, int $available): self
     {
         return new self(
-            "{$who} ha {$available} mo e ne servirebbero {$needed}: l'annullamento "
-            .'manderebbe il saldo sotto zero. Rimedia a mano.'
+            "La borsa di {$who} vale ".Coins::formatValue($available).' e ne servirebbero '
+            .Coins::formatValue($needed).": l'annullamento la manderebbe sotto zero. Rimedia a mano."
         );
     }
 

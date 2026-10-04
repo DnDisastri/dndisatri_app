@@ -15,18 +15,19 @@ class MarketItemFactory extends Factory
         return [
             'name' => 'Pozione di Cura',
             'category' => 'Pozioni',
-            'price' => 50,
+            'price_cp' => 5000,
             'is_unlimited' => false,
             'stock' => 10,
             'details' => 'Recupera 2d4+2 punti ferita.',
         ];
     }
 
+    /** Il prezzo in mo. */
     public function named(string $name, ?int $price = null): static
     {
         return $this->state(fn () => array_filter([
             'name' => $name,
-            'price' => $price,
+            'price_cp' => $price === null ? null : $price * 100,
         ], fn ($v) => $v !== null));
     }
 

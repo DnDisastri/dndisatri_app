@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domain\Dnd\Coins;
 use App\Enums\TradeDirection;
 use App\Enums\TradeStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -12,25 +13,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 
-#[Fillable(['from_character_id', 'to_character_id', 'give_gp', 'want_gp', 'message'])]
+#[Fillable(['from_character_id', 'to_character_id', 'give_cp', 'want_cp', 'message'])]
 class Trade extends Model
 {
     use HasFactory;
 
-    /**
-     * Lo stato iniziale va dichiarato anche qui, non solo come default della
-     * colonna: un modello appena creato non rilegge la riga, quindi `status`
-     * resterebbe null e `isOpen()` fallirebbe.
-     */
+    /** Anche qui, non solo come default della colonna: un modello appena creato non rilegge la riga. */
     protected $attributes = ['status' => TradeStatus::Pending->value];
 
     protected function casts(): array
     {
         return [
             'status' => TradeStatus::class,
-            'give_gp' => 'integer',
+            'give_cp' => 'integer',
             'reversed_at' => 'datetime',
-            'want_gp' => 'integer',
+            'want_cp' => 'integer',
             'resolved_at' => 'datetime',
         ];
     }
@@ -75,11 +72,8 @@ class Trade extends Model
     }
 
     /**
-     * Perché questo scambio non si può eseguire adesso. Niente esce
-     * dall'inventario alla proposta: la disponibilità si verifica
-     * all'accettazione, per entrambe le parti (fra proposta e risposta il mondo
-     * si muove). È la stessa verifica di `AcceptTrade::assertCanDeliver` in sola
-     * lettura: le due vanno tenute allineate.
+     * La stessa verifica di `AcceptTrade::assertCanDeliver` in sola lettura:
+     * le due vanno tenute allineate.
      *
      * @return list<string>
      */
@@ -87,13 +81,14 @@ class Trade extends Model
     {
         $problemi = [];
 
-        $controlla = function (?Character $chi, Collection $oggetti, int $oro) use (&$problemi) {
+        $controlla = function (?Character $chi, Collection $oggetti, int $monete) use (&$problemi) {
             if ($chi === null) {
                 return;
             }
 
-            if ($chi->gp < $oro) {
-                $problemi[] = "{$chi->name} non ha abbastanza oro ({$chi->gp}/{$oro} mo)";
+            if ($chi->purseValue() < $monete) {
+                $problemi[] = "{$chi->name} non ha abbastanza monete (".Coins::formatValue($chi->purseValue())
+                    .' su '.Coins::formatValue($monete).')';
             }
 
             foreach ($oggetti as $item) {
@@ -103,8 +98,8 @@ class Trade extends Model
             }
         };
 
-        $controlla($this->from, $this->givenItems(), $this->give_gp);
-        $controlla($this->to, $this->wantedItems(), $this->want_gp);
+        $controlla($this->from, $this->givenItems(), $this->give_cp);
+        $controlla($this->to, $this->wantedItems(), $this->want_cp);
 
         return $problemi;
     }

@@ -22,23 +22,12 @@ use App\Models\Trade;
 use App\Models\User;
 use Database\Seeders\Support\Placeholder;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
- * Il database dimostrativo: **almeno un dato per ogni cosa che si vede**.
- *
- * Non serve a provare la logica — per quella ci sono i test — ma a guardare le
- * pagine piene. Una pagina vuota non si può giudicare: gli spazi sembrano
- * giusti, i titoli sembrano leggibili, e i problemi si scoprono il giorno in
- * cui arrivano i dati veri.
- *
- * Per questo i dati non sono casuali ma **scelti**: due tavoli la stessa sera
- * (la Home li deve mostrare entrambi), una quest al completo e una con posto,
- * una campagna conclusa in una season vecchia, un caduto morto in una serata
- * precisa. Ognuno di questi copre un caso che le pagine trattano a parte.
- *
- * Si lancia con `php artisan db:seed --class=DemoSeeder`, ed è **ripetibile**:
- * cancella i suoi dati e li rifà, invece di accumularne una copia a ogni giro.
+ * Dati dimostrativi scelti per coprire ogni caso che le pagine trattano a parte.
+ * `php artisan db:seed --class=DemoSeeder`: ripetibile, cancella e rifà i suoi dati.
  */
 class DemoSeeder extends Seeder
 {
@@ -75,12 +64,7 @@ class DemoSeeder extends Seeder
         $this->command?->line('  Entra con giocatore1@dndisastri.test, oppure con il tuo account.');
     }
 
-    /**
-     * Ripetibile: si cancella quello che questo seeder crea, e solo quello.
-     *
-     * L'ordine è quello delle dipendenze — le presenze prima delle serate, le
-     * serate prima delle campagne — perché le chiavi esterne non perdonano.
-     */
+    /** Solo quello che crea questo seeder, nell'ordine delle chiavi esterne. */
     private function svuota(): void
     {
         PendingChange::query()->delete();
@@ -103,7 +87,6 @@ class DemoSeeder extends Seeder
         Post::query()->delete();
     }
 
-    /** Sei giocatori: abbastanza perché la Gilda sembri una gilda. */
     private function giocatori()
     {
         $esistenti = User::role(User::ROLE_PLAYER)->orderBy('id')->get();
@@ -115,12 +98,7 @@ class DemoSeeder extends Seeder
         return User::role(User::ROLE_PLAYER)->orderBy('id')->get();
     }
 
-    /**
-     * I personaggi vivi.
-     *
-     * Chi ce l'ha già se lo tiene — la scheda può avere ore di lavoro dentro —
-     * e si riempie solo il vuoto.
-     */
+    /** Un personaggio già esistente non si tocca: si riempie solo il vuoto. */
     private function personaggi($giocatori)
     {
         $ritratti = [
@@ -147,8 +125,7 @@ class DemoSeeder extends Seeder
 
             [$nome, $classe, $sottoclasse, $specie, $livello, $storia] = $ritratto;
 
-            // Il nome è univoco nella Gilda: se c'è già si salta, invece di
-            // fare esplodere il seeder su un vincolo del database.
+            // Il nome è univoco: se c'è già si salta.
             if (Character::where('name', $nome)->exists()) {
                 continue;
             }
@@ -193,7 +170,7 @@ class DemoSeeder extends Seeder
         foreach ($definizioni as [$conduce, $season, $titolo, $conclusa, $descrizione, $capogilda, $chiEra]) {
             Campaign::create([
                 'title' => $titolo,
-                'slug' => \Illuminate\Support\Str::slug($titolo),
+                'slug' => Str::slug($titolo),
                 'description' => $descrizione,
                 'cover_path' => Placeholder::make('campagne', $titolo),
                 'season' => $season,
@@ -208,13 +185,7 @@ class DemoSeeder extends Seeder
         return Campaign::orderBy('id')->get();
     }
 
-    /**
-     * Le serate: passate col resoconto, e due future **la stessa sera**.
-     *
-     * Quel dettaglio non è decorativo: la Home dice «i prossimi tavoli» al
-     * plurale proprio per questo caso, e senza due tavoli contemporanei non si
-     * può vedere se funziona.
-     */
+    /** Due serate future la stessa sera: è il caso dei «prossimi tavoli» al plurale in Home. */
     private function sessioni($campagne, $personaggi)
     {
         $seraProssima = now()->addDays(6)->setTime(21, 0);
@@ -233,8 +204,7 @@ class DemoSeeder extends Seeder
                     'recap_written_at' => now()->subWeeks($settimaneFa)->addDay(),
                 ]);
 
-                // Le presenze, col personaggio: è la differenza fra «c'era
-                // Marco» e «c'era Grimm», e le pagine mostrano la seconda.
+                // Le presenze sono del personaggio, non del giocatore.
                 foreach ($personaggi->take(4) as $personaggio) {
                     $sessione->attendees()->attach($personaggio->user_id, [
                         'character_id' => $personaggio->getKey(),
@@ -243,14 +213,7 @@ class DemoSeeder extends Seeder
             }
 
             if ($campagna->isActive()) {
-                /*
-                 * **Senza titolo, ed è la verità.** Una serata che deve ancora
-                 * essere giocata di solito non ha un nome: il nome glielo dà
-                 * quello che succede. Prima qui c'era scritto «Da giocare», e
-                 * usciva «Sessione 4 — Da giocare», che sembrava uno stato e
-                 * invece era un titolo — per giunta le stesse parole della
-                 * pillola vera che dice se una serata è passata o no.
-                 */
+                // Senza titolo: una serata da giocare non ha ancora un nome.
                 GameSession::create([
                     'campaign_id' => $campagna->getKey(),
                     'number' => $numero,
@@ -297,8 +260,7 @@ class DemoSeeder extends Seeder
     {
         foreach ($campagne as $campagna) {
             if (! $campagna->isActive()) {
-                // Una campagna conclusa ha solo archivio: aperti non ne ha
-                // più, e mostrarne uno sarebbe una promessa che non mantiene.
+                // Una campagna conclusa non ha incarichi aperti.
                 Quest::factory()->inCampaign($campagna)->completed()->create([
                     'title' => 'Riportare i registri al comune',
                     'slug' => 'registri-al-comune',
@@ -316,8 +278,6 @@ class DemoSeeder extends Seeder
                 continue;
             }
 
-            // Prenotata ma non ancora confermata: è lo stato in cui una quest
-            // passa la maggior parte della sua vita, e va guardato pieno.
             $conPosto = Quest::factory()->inCampaign($campagna)->slots(5)->create([
                 'title' => 'Scortare la carovana fino al guado',
                 'slug' => 'carovana-guado-'.$campagna->getKey(),
@@ -328,8 +288,6 @@ class DemoSeeder extends Seeder
             ]);
             $this->prenota($conPosto, $giocatori->take(2), QuestSeatStatus::Booked);
 
-            // Piena, con la serata già confermata e due in lista d'attesa:
-            // serve a vedere il pescaggio senza doverlo costruire a mano.
             $pieno = Quest::factory()->inCampaign($campagna)->slots(2)->create([
                 'title' => 'Scendere di nuovo nel pozzo',
                 'slug' => 'di-nuovo-nel-pozzo-'.$campagna->getKey(),
@@ -340,11 +298,7 @@ class DemoSeeder extends Seeder
             $this->prenota($pieno, $giocatori->take(2), QuestSeatStatus::Confirmed);
             $this->prenota($pieno, $giocatori->slice(2, 2), QuestSeatStatus::Waiting);
 
-            // La serata dichiarata sta **sulla quest**, e va scritta anche qui:
-            // dei posti confermati senza la data la pagina dice «manca solo che
-            // il dungeon master lo dica» mentre i posti dicono di sì. Sono due
-            // fatti distinti di proposito — se si ritirassero tutti, la serata
-            // resterebbe dichiarata — e i dati di prova devono rispettarlo.
+            // La serata dichiarata sta sulla quest, indipendente dai posti confermati.
             $pieno->forceFill(['night_confirmed_at' => now()->subDay()])->save();
 
             Quest::factory()->inCampaign($campagna)->completed()->create([
@@ -352,8 +306,6 @@ class DemoSeeder extends Seeder
                 'slug' => 'lettera-sigillata-'.$campagna->getKey(),
                 'rewards' => '80 mo',
                 'difficulty' => QuestDifficulty::Facile,
-                // Un incarico concluso senza il racconto è mezza pagina vuota,
-                // ed è metà del motivo per cui P19 esiste anche dopo la fine.
                 'outcome_notes' => 'La lettera è arrivata, ma non al destinatario giusto. '
                     .'Il sigillo era già rotto quando l\'abbiamo presa.',
             ]);
@@ -366,8 +318,7 @@ class DemoSeeder extends Seeder
         foreach ($giocatori as $indice => $giocatore) {
             $quest->participants()->attach($giocatore, [
                 'status' => $stato->value,
-                // Sfalsati di un minuto: la lista d'attesa ha un ordine, e con
-                // lo stesso istante per tutti non si vedrebbe.
+                // Sfalsati di un minuto: la lista d'attesa ha un ordine.
                 'joined_at' => now()->subMinutes(10 - $indice),
                 'decided_at' => $stato === QuestSeatStatus::Confirmed ? now() : null,
             ]);
@@ -394,13 +345,7 @@ class DemoSeeder extends Seeder
         ]);
     }
 
-    /**
-     * Un caduto, morto in una serata precisa.
-     *
-     * Il collegamento alla serata è il punto: la Hall of Fallen Heroes esiste
-     * per raccontare come sono andate le cose, e senza la serata resterebbe
-     * una data.
-     */
+    /** Un caduto legato alla serata in cui è morto. */
     private function caduto(User $giocatore, ?GameSession $sessione): void
     {
         if (Character::where('name', 'Corvo')->exists()) {
@@ -438,7 +383,7 @@ class DemoSeeder extends Seeder
         foreach ($definizioni as [$titolo, $quando, $dove, $descrizione]) {
             Event::create([
                 'title' => $titolo,
-                'slug' => \Illuminate\Support\Str::slug($titolo),
+                'slug' => Str::slug($titolo),
                 'description' => $descrizione,
                 'cover_path' => Placeholder::make('eventi', $titolo),
                 'starts_at' => $quando,
@@ -459,8 +404,7 @@ class DemoSeeder extends Seeder
             'slug' => 'maratona-di-capodanno',
         ]);
 
-        // Programmato: scritto, ma non ancora visibile. Serve a controllare che
-        // resti invisibile — è il motivo per cui esiste la programmazione.
+        // Programmato: non deve ancora vedersi.
         Event::factory()->create([
             'title' => 'La sorpresa che non si deve vedere',
             'slug' => 'la-sorpresa',
@@ -527,7 +471,7 @@ class DemoSeeder extends Seeder
             Post::factory()->create([
                 'author_id' => $autore?->getKey(),
                 'title' => $titolo,
-                'slug' => \Illuminate\Support\Str::slug($titolo),
+                'slug' => Str::slug($titolo),
                 'excerpt' => $sommario,
                 'published_at' => now()->subDays($giorniFa),
             ]);
@@ -556,12 +500,12 @@ class DemoSeeder extends Seeder
 
         MarketListing::factory()->soldBy($secondo)->of('Corda di Seta', 1, 25)->create([
             'category' => 'Equipaggiamento',
-            'unit_value' => 20,
+            'unit_value_cp' => 2000,
         ]);
 
         MarketListing::factory()->soldBy($secondo)->of('Ascia Bipenne', 1, 40)->create([
             'category' => 'Armi',
-            'unit_value' => 30,
+            'unit_value_cp' => 3000,
             'status' => ListingStatus::Sold,
         ]);
 

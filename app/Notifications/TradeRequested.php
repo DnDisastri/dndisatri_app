@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Domain\Dnd\Coins;
 use App\Enums\NotificationCategory;
 use App\Models\TradeRequest;
 
@@ -24,7 +25,7 @@ final class TradeRequested extends InAppNotification
     {
         $offerto = array_filter([
             $this->request->offeredNames()->implode(', ') ?: null,
-            $this->request->offered_gp > 0 ? "{$this->request->offered_gp} mo" : null,
+            $this->request->offered_cp > 0 ? Coins::formatValue($this->request->offered_cp) : null,
         ]);
 
         return [

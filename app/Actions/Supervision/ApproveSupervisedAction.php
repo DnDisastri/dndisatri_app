@@ -20,17 +20,8 @@ use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**
- * Il via libera a un'azione controllata: qui l'intenzione diventa realtà.
- *
- * L'intenzione salvata viene **rigiocata attraverso l'azione vera**, non
- * riapplicata a mano. È la stessa ragione per cui l'approvazione di una
- * richiesta non riscrive la scheda da sé: le regole stanno in un posto solo, e
- * quel posto le fa rispettare anche adesso.
- *
- * Il che significa che un via libera può **fallire**. Fra la richiesta e la
- * decisione il mondo si muove: l'oggetto può essere stato venduto, l'oro speso,
- * l'annuncio ritirato. In quel caso l'azione si rifiuta come farebbe
- * normalmente, e chi decide legge il perché.
+ * L'intenzione salvata si rigioca attraverso l'azione vera, che rifà i suoi
+ * controlli: un via libera può quindi fallire se nel frattempo il mondo è cambiato.
  */
 final class ApproveSupervisedAction
 {
@@ -67,8 +58,8 @@ final class ApproveSupervisedAction
                 to: $this->character($payload['to_character_id']),
                 give: $payload['give'] ?? [],
                 want: $payload['want'] ?? [],
-                giveGp: (int) ($payload['give_gp'] ?? 0),
-                wantGp: (int) ($payload['want_gp'] ?? 0),
+                giveCp: (int) ($payload['give_cp'] ?? 0),
+                wantCp: (int) ($payload['want_cp'] ?? 0),
                 message: $payload['message'] ?? null,
             ),
 
@@ -80,7 +71,7 @@ final class ApproveSupervisedAction
                 seller: $this->character($payload['character_id']),
                 itemName: $payload['name'],
                 qty: (int) $payload['qty'],
-                price: (int) $payload['price'],
+                priceCp: (int) $payload['price_cp'],
             ),
 
             SupervisedActionType::ListingPurchase => app(BuyListing::class)->handle(

@@ -9,6 +9,7 @@ use App\Domain\Dnd\ArmorClass;
 use App\Domain\Dnd\CasterType;
 use App\Domain\Dnd\Checks;
 use App\Domain\Dnd\ClassRules;
+use App\Domain\Dnd\Coins;
 use App\Domain\Dnd\HitPoints;
 use App\Domain\Dnd\Multiclass;
 use App\Domain\Dnd\Progression;
@@ -36,7 +37,7 @@ use Spatie\Activitylog\Support\LogOptions;
 #[Fillable([
     'user_id', 'name', 'class', 'subclass', 'race', 'subrace', 'background', 'story',
     'level', 'hit_die', 'str', 'dex', 'con', 'int', 'wis', 'cha',
-    'speed', 'hp_max', 'hp_current', 'hp_temp', 'gp',
+    'speed', 'hp_max', 'hp_current', 'hp_temp', 'pp', 'gp', 'sp', 'cp',
     'death_save_successes', 'death_save_failures',
     'saving_throws', 'skills', 'spell_slots_used', 'spell_ability',
     'species_traits', 'class_features', 'subclass_features', 'background_feature', 'notes',
@@ -222,7 +223,7 @@ class Character extends Model
     // === Inventario ===
 
     /** Accorpa solo con le righe in zaino: quelle equipaggiate hanno l'indice univoco sullo slot. */
-    public function addToInventory(string $name, int $qty = 1, ?string $category = null, int $value = 0, ?string $details = null): CharacterItem
+    public function addToInventory(string $name, int $qty = 1, ?string $category = null, int $valueCp = 0, ?string $details = null): CharacterItem
     {
         $existing = $this->items()
             ->where('name', $name)
@@ -239,7 +240,7 @@ class Character extends Model
             'name' => $name,
             'category' => $category,
             'qty' => $qty,
-            'value' => $value,
+            'value_cp' => $valueCp,
             'details' => $details,
         ]);
     }
@@ -290,24 +291,33 @@ class Character extends Model
             : "{$this->race} {$this->subrace}";
     }
 
-    // === Registro ===
+    // === Borsa e Registro ===
 
-    /** Il massimo di `unsignedInteger` (`gp` e mercato): oltre, il database risponde con un 500. */
-    public const MAX_GP = 4_294_967_295;
+    public function coins(): Coins
+    {
+        return new Coins((int) $this->pp, (int) $this->gp, (int) $this->sp, (int) $this->cp);
+    }
 
-    /** Va chiamata DOPO aver aggiornato l'oro, o `gp_after` è sbagliato. */
+    /** Il valore della borsa, in rame. */
+    public function purseValue(): int
+    {
+        return $this->coins()->value();
+    }
+
+    /** Va chiamata DOPO aver mosso le monete, o `coins_after` è sbagliato. */
     public function recordInLedger(
         LedgerAction $action,
         string $message,
-        int $gpDelta = 0,
+        ?Coins $delta = null,
         ?User $actor = null,
         ?array $details = null,
     ): LedgerEntry {
         return $this->ledgerEntries()->create([
             'actor_id' => $actor?->getKey(),
             'action' => $action,
-            'gp_delta' => $gpDelta,
-            'gp_after' => $this->gp,
+            'cp_delta' => $delta?->value() ?? 0,
+            'coins_delta' => $delta === null || $delta->isEmpty() ? null : $delta->nonZero(),
+            'coins_after' => $this->coins()->nonZero(),
             // La colonna regge testi lunghi; il taglio tiene leggibile il Registro.
             'message' => Str::limit($message, 2000),
             // I dati per annullare il movimento, se non stanno già altrove.

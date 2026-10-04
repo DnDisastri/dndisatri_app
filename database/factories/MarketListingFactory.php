@@ -19,8 +19,8 @@ class MarketListingFactory extends Factory
             'name' => 'Pozione di Cura',
             'category' => 'Pozioni',
             'qty' => 1,
-            'price' => 60,
-            'unit_value' => 50,
+            'price_cp' => 6000,
+            'unit_value_cp' => 5000,
             'details' => null,
             'status' => ListingStatus::Active,
         ];
@@ -31,8 +31,9 @@ class MarketListingFactory extends Factory
         return $this->state(fn () => ['seller_character_id' => $seller->getKey()]);
     }
 
+    /** Il prezzo in mo. */
     public function of(string $name, int $qty = 1, int $price = 60): static
     {
-        return $this->state(fn () => ['name' => $name, 'qty' => $qty, 'price' => $price]);
+        return $this->state(fn () => ['name' => $name, 'qty' => $qty, 'price_cp' => $price * 100]);
     }
 }

@@ -6,6 +6,7 @@ namespace App\Actions\Characters;
 
 use App\Actions\Approvals\AnnounceForApproval;
 use App\Domain\Dnd\Ability;
+use App\Domain\Dnd\Coins;
 use App\Domain\Dnd\ItemEffectMode;
 use App\Enums\PendingChangeType;
 use App\Models\Character;
@@ -18,7 +19,7 @@ use InvalidArgumentException;
 final class ProposeChange
 {
     /** Tetti di una singola richiesta di bottino: oltre, se ne fa una seconda o si chiede al DM. */
-    public const LOOT_MAX_GP = 500;
+    public const LOOT_MAX_CP = 50_000;
 
     public const LOOT_MAX_ITEMS = 10;
 
@@ -45,16 +46,22 @@ final class ProposeChange
     /**
      * La nota resta fuori dal riassunto, che finisce anche nel Registro.
      *
-     * @param  list<array{name: string, qty?: int, category?: string, value?: int, details?: string}>  $items
+     * @param  list<array{name: string, qty?: int, category?: string, value_cp?: int, details?: string}>  $items
      */
-    public function loot(Character $character, User $requester, int $gp = 0, array $items = [], ?string $note = null): PendingChange
+    public function loot(Character $character, User $requester, ?Coins $coins = null, array $items = [], ?string $note = null): PendingChange
     {
-        if ($gp === 0 && $items === []) {
+        $coins ??= Coins::none();
+
+        if ($coins->hasNegative()) {
+            throw new InvalidArgumentException('Le monete non possono essere negative.');
+        }
+
+        if ($coins->isEmpty() && $items === []) {
             throw new InvalidArgumentException('Un bottino vuoto non si registra.');
         }
 
-        if ($gp > self::LOOT_MAX_GP) {
-            throw new InvalidArgumentException('Al massimo '.self::LOOT_MAX_GP.' mo per richiesta: per somme più alte chiedi al DM.');
+        if ($coins->value() > self::LOOT_MAX_CP) {
+            throw new InvalidArgumentException('Al massimo '.Coins::formatValue(self::LOOT_MAX_CP).' di monete per richiesta: per somme più alte chiedi al DM.');
         }
 
         if (count($items) > self::LOOT_MAX_ITEMS) {
@@ -62,12 +69,12 @@ final class ProposeChange
         }
 
         $parts = array_filter([
-            $gp !== 0 ? "{$gp} mo" : null,
+            $coins->isEmpty() ? null : $coins->format(),
             $items !== [] ? collect($items)->map(fn ($i) => ($i['qty'] ?? 1)."× {$i['name']}")->join(', ') : null,
         ]);
 
         return $this->create($character, $requester, PendingChangeType::Loot, [
-            'grant_gp' => $gp,
+            'grant_coins' => $coins->isEmpty() ? null : $coins->nonZero(),
             'grant_items' => $items,
             'summary' => 'Bottino: '.implode(' e ', $parts),
             'note' => filled($note) ? $note : null,

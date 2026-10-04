@@ -9,10 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
-/**
- * Un articolo del negozio della gilda.
- */
-#[Fillable(['name', 'category', 'price', 'is_unlimited', 'stock', 'details'])]
+/** `price_cp` è in rame. */
+#[Fillable(['name', 'category', 'price_cp', 'is_unlimited', 'stock', 'details'])]
 class MarketItem extends Model
 {
     use HasFactory, LogsActivity;
@@ -31,12 +29,11 @@ class MarketItem extends Model
     {
         return [
             'is_unlimited' => 'boolean',
-            'price' => 'integer',
+            'price_cp' => 'integer',
             'stock' => 'integer',
         ];
     }
 
-    /** Disponibile se le scorte sono infinite o se ce n'è ancora. */
     public function isAvailable(int $qty = 1): bool
     {
         return $this->is_unlimited || $this->stock >= $qty;
@@ -49,6 +46,6 @@ class MarketItem extends Model
 
     public function totalPrice(int $qty): int
     {
-        return $this->price * $qty;
+        return $this->price_cp * $qty;
     }
 }

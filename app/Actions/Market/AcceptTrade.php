@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Market;
 
+use App\Domain\Dnd\Coins;
 use App\Enums\LedgerAction;
 use App\Enums\TradeStatus;
 use App\Exceptions\MarketException;
@@ -16,17 +17,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Accettazione di uno scambio.
- *
- * A differenza degli annunci, negli scambi niente esce dall'inventario al
- * momento della proposta: la disponibilità si verifica **adesso**, e per
- * **entrambe** le parti (§4.8 del brief).
- *
- * Il che significa che una proposta può fallire qui perché nel frattempo chi
- * l'ha fatta ha venduto l'oggetto. È corretto, e il messaggio lo dice.
- *
- * L'ordine conta: prima si verifica tutto, poi si sposta tutto. Una verifica
- * fatta a metà strada lascerebbe uno dei due senza la sua parte.
+ * La disponibilità si verifica adesso, per entrambe le parti. Prima si verifica
+ * tutto, poi si sposta tutto: a metà strada uno dei due resterebbe senza la sua parte.
  */
 final class AcceptTrade
 {
@@ -39,29 +31,30 @@ final class AcceptTrade
                 throw new MarketException('Questa proposta di scambio è già stata chiusa.');
             }
 
-            // Si bloccano sempre nello stesso ordine (per chiave crescente):
-            // due scambi incrociati fra le stesse due persone, accettati nello
-            // stesso istante, si bloccherebbero a vicenda in un abbraccio
-            // mortale se l'ordine dipendesse dal ruolo.
+            // Sempre per chiave crescente: due scambi incrociati accettati insieme andrebbero in deadlock.
             [$from, $to] = $this->lockBothInStableOrder($locked);
 
             $given = $locked->givenItems();
             $wanted = $locked->wantedItems();
 
-            $this->assertCanDeliver($from, $given, $locked->give_gp);
-            $this->assertCanDeliver($to, $wanted, $locked->want_gp);
+            $this->assertCanDeliver($from, $given, $locked->give_cp);
+            $this->assertCanDeliver($to, $wanted, $locked->want_cp);
 
             $this->move($given, from: $from, to: $to);
             $this->move($wanted, from: $to, to: $from);
 
-            if ($locked->give_gp > 0) {
-                $from->decrement('gp', $locked->give_gp);
-                $to->increment('gp', $locked->give_gp);
+            $fromDelta = Coins::none();
+            $toDelta = Coins::none();
+            $purse = app(Purse::class);
+
+            if ($locked->give_cp > 0) {
+                $fromDelta = $fromDelta->plus($purse->pay($from, $locked->give_cp));
+                $toDelta = $toDelta->plus($purse->receiveValue($to, $locked->give_cp));
             }
 
-            if ($locked->want_gp > 0) {
-                $to->decrement('gp', $locked->want_gp);
-                $from->increment('gp', $locked->want_gp);
+            if ($locked->want_cp > 0) {
+                $toDelta = $toDelta->plus($purse->pay($to, $locked->want_cp));
+                $fromDelta = $fromDelta->plus($purse->receiveValue($from, $locked->want_cp));
             }
 
             $locked->forceFill([
@@ -69,23 +62,9 @@ final class AcceptTrade
                 'resolved_at' => now(),
             ])->save();
 
-            $fromDelta = $locked->want_gp - $locked->give_gp;
+            $from->recordInLedger(LedgerAction::Trade, "Scambio con {$to->name}", $fromDelta, $actor);
+            $to->recordInLedger(LedgerAction::Trade, "Scambio con {$from->name}", $toDelta, $actor);
 
-            $from->refresh()->recordInLedger(
-                LedgerAction::Trade,
-                "Scambio con {$to->name}",
-                $fromDelta,
-                $actor,
-            );
-
-            $to->refresh()->recordInLedger(
-                LedgerAction::Trade,
-                "Scambio con {$from->name}",
-                -$fromDelta,
-                $actor,
-            );
-
-            // Avvisa chi ha proposto: chi accetta sa già di aver accettato.
             $from->user()->first()?->notify(new TradeResolved($locked, $to->name));
 
             return $locked;
@@ -110,10 +89,10 @@ final class AcceptTrade
     }
 
     /** @param  Collection<int,TradeItem>  $items */
-    private function assertCanDeliver(Character $character, Collection $items, int $gp): void
+    private function assertCanDeliver(Character $character, Collection $items, int $cp): void
     {
-        if ($character->gp < $gp) {
-            throw MarketException::notEnoughGold($gp, $character->gp);
+        if ($character->purseValue() < $cp) {
+            throw MarketException::notEnoughCoins($cp, $character->purseValue());
         }
 
         foreach ($items as $item) {
@@ -135,7 +114,7 @@ final class AcceptTrade
                 name: $item->name,
                 qty: $item->qty,
                 category: $item->category,
-                value: $item->value,
+                valueCp: $item->value_cp,
                 details: $item->details,
             );
         }

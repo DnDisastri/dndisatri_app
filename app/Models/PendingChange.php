@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Domain\Dnd\Ability;
+use App\Domain\Dnd\Coins;
 use App\Enums\PendingChangeStatus;
 use App\Enums\PendingChangeType;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -17,7 +18,7 @@ use Spatie\Activitylog\Support\LogOptions;
 
 #[Fillable([
     'character_id', 'requested_by', 'type', 'diff', 'summary', 'note',
-    'grant_gp', 'grant_items', 'base_updated_at', 'archived_at',
+    'grant_coins', 'grant_items', 'base_updated_at', 'archived_at',
 ])]
 class PendingChange extends Model
 {
@@ -42,6 +43,7 @@ class PendingChange extends Model
             'type' => PendingChangeType::class,
             'status' => PendingChangeStatus::class,
             'diff' => 'array',
+            'grant_coins' => 'array',
             'grant_items' => 'array',
             'base_updated_at' => 'datetime',
             'reviewed_at' => 'datetime',
@@ -62,6 +64,11 @@ class PendingChange extends Model
     public function reviewedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function grantCoins(): Coins
+    {
+        return Coins::fromArray($this->grant_coins);
     }
 
     public function isPending(): bool

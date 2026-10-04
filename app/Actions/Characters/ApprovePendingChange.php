@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Actions\Characters;
 
+use App\Actions\Market\Purse;
 use App\Domain\Dnd\ClassRules;
+use App\Domain\Dnd\Coins;
 use App\Enums\LedgerAction;
 use App\Enums\PendingChangeStatus;
 use App\Enums\PendingChangeType;
+use App\Exceptions\MarketException;
 use App\Models\Character;
 use App\Models\PendingChange;
 use App\Models\User;
@@ -52,7 +55,7 @@ final class ApprovePendingChange
 
             $character = Character::whereKey($locked->character_id)->lockForUpdate()->firstOrFail();
 
-            $gpDelta = match ($locked->type) {
+            $delta = match ($locked->type) {
                 PendingChangeType::CharacterEdit => $this->applyEdit($character, $locked),
                 PendingChangeType::LevelUp => $this->applyLevelUp($character, $locked),
                 PendingChangeType::Loot => $this->applyLoot($character, $locked),
@@ -71,7 +74,7 @@ final class ApprovePendingChange
             $character->refresh()->recordInLedger(
                 LedgerAction::Approve,
                 $locked->note ? "{$message} ({$locked->note})" : $message,
-                $gpDelta,
+                $delta,
                 $reviewer,
             );
 
@@ -81,7 +84,7 @@ final class ApprovePendingChange
         });
     }
 
-    private function applyEdit(Character $character, PendingChange $change): int
+    private function applyEdit(Character $character, PendingChange $change): Coins
     {
         $fields = $this->allowed($change->diff, self::EDITABLE);
 
@@ -98,10 +101,10 @@ final class ApprovePendingChange
 
         $character->forceFill($fields)->save();
 
-        return 0;
+        return Coins::none();
     }
 
-    private function applyLevelUp(Character $character, PendingChange $change): int
+    private function applyLevelUp(Character $character, PendingChange $change): Coins
     {
         $character->forceFill($this->allowed($change->diff, self::LEVEL_UP))->save();
 
@@ -127,7 +130,7 @@ final class ApprovePendingChange
             );
         }
 
-        return 0;
+        return Coins::none();
     }
 
     /**
@@ -163,17 +166,16 @@ final class ApprovePendingChange
         }
     }
 
-    private function applyLoot(Character $character, PendingChange $change): int
+    private function applyLoot(Character $character, PendingChange $change): Coins
     {
-        $gp = (int) $change->grant_gp;
+        $coins = $change->grantCoins();
 
-        // Oltre il tetto della colonna il database rifiuterebbe la scrittura con un 500.
-        if ($character->gp + $gp > Character::MAX_GP) {
-            throw new RuntimeException('Con questo bottino l\'oro del personaggio supererebbe il massimo consentito.');
-        }
-
-        if ($gp !== 0) {
-            $character->increment('gp', $gp);
+        if (! $coins->isEmpty()) {
+            try {
+                app(Purse::class)->receive($character, $coins);
+            } catch (MarketException $e) {
+                throw new RuntimeException($e->getMessage());
+            }
         }
 
         foreach ($change->grant_items ?? [] as $item) {
@@ -181,19 +183,19 @@ final class ApprovePendingChange
                 name: $item['name'],
                 qty: (int) ($item['qty'] ?? 1),
                 category: $item['category'] ?? null,
-                value: (int) ($item['value'] ?? 0),
+                valueCp: (int) ($item['value_cp'] ?? 0),
                 details: $item['details'] ?? null,
             );
         }
 
-        return $gp;
+        return $coins;
     }
 
     /**
      * L'effetto si lega all'oggetto (creato o già posseduto): vale finché è in
      * sintonia e sparisce se lo si vende. La sintonia si dà solo se c'è posto.
      */
-    private function applyItemEffect(Character $character, PendingChange $change): int
+    private function applyItemEffect(Character $character, PendingChange $change): Coins
     {
         $effect = $change->diff ?? [];
         $name = $effect['name'] ?? 'Oggetto magico';
@@ -213,7 +215,7 @@ final class ApprovePendingChange
             $item->forceFill(['attuned' => true])->save();
         }
 
-        return 0;
+        return Coins::none();
     }
 
     /**
