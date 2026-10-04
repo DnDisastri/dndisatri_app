@@ -72,9 +72,17 @@
                     · {{ $oggetto->is_unlimited ? 'sempre disponibile' : 'ne restano '.$oggetto->stock }}
                 </p>
 
+                @if (($oggetto->base && $oggetto->base !== $oggetto->name) || $oggetto->magic_bonus)
+                    <p class="text-muted">
+                        Tipo: {{ trim(($oggetto->base ?? $oggetto->name).($oggetto->magic_bonus ? ' +'.$oggetto->magic_bonus : '')) }}
+                    </p>
+                @endif
+
                 @if ($oggetto->details)
                     <p class="text-fg">{{ $oggetto->details }}</p>
                 @endif
+
+                <x-effetti-oggetto :effetti="$oggetto->effects" />
 
                 <div class="space-y-2 border-t border-line pt-3">
                     <div class="flex items-baseline justify-between gap-3">
@@ -116,6 +124,34 @@
                         @error('mercato')
                             <x-note tone="danger">{{ $message }}</x-note>
                         @enderror
+
+                        <div class="space-y-2 border-t border-line pt-3">
+                            <p class="font-semibold text-fg">Oppure barattalo</p>
+
+                            @if ($offribili->isEmpty())
+                                <p class="text-xs text-muted">
+                                    Nel tuo zaino non c'è niente che valga almeno <x-monete :valore="$oggetto->price_cp" />
+                                </p>
+                            @else
+                                <p class="text-xs text-muted">
+                                    Dai un tuo oggetto che vale almeno il prezzo; non c'è resto. Lo approva un DM.
+                                </p>
+                                <select wire:model="offerta" aria-label="Oggetto da offrire"
+                                        class="w-full rounded-md border border-line bg-page px-2 py-2 text-fg">
+                                    <option value="">Scegli cosa offri</option>
+                                    @foreach ($offribili as $offribile)
+                                        <option value="{{ $offribile->id }}">
+                                            {{ $offribile->name }} ({{ \App\Domain\Dnd\Coins::formatValue($offribile->value_cp) }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <x-button full variant="quiet" type="button" wire:click="barter({{ $oggetto->id }})">Proponi il baratto</x-button>
+                            @endif
+
+                            @error('baratto')
+                                <x-note tone="danger">{{ $message }}</x-note>
+                            @enderror
+                        </div>
                     @endif
 
                     {{-- Bordo sul contenitore: su un `inline-flex` sarebbe lungo quanto il testo. --}}

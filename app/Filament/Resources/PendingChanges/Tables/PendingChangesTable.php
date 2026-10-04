@@ -26,6 +26,7 @@ class PendingChangesTable
                         PendingChangeType::LevelUp => 'info',
                         PendingChangeType::Loot => 'success',
                         PendingChangeType::ItemEffect => 'warning',
+                        PendingChangeType::Barter => 'primary',
                         PendingChangeType::CharacterEdit => 'gray',
                     }),
 

@@ -10,6 +10,7 @@ use App\Models\User;
  *
  * È un cambiamento rispetto al brief, dove era dei DM: con prezzi e scorte in
  * mano a due persone sole l'economia del gruppo resta coerente (decisione D1).
+ * Unica eccezione, `putOnSale`: il prezzo degli oggetti arrivati in baratto.
  */
 class MarketItemPolicy
 {
@@ -37,5 +38,11 @@ class MarketItemPolicy
     public function delete(User $user, MarketItem $item): bool
     {
         return $user->isAdmin();
+    }
+
+    /** Gli oggetti arrivati in baratto: il prezzo lo decide anche un DM, come concordato. */
+    public function putOnSale(User $user, MarketItem $item): bool
+    {
+        return $item->in_storage && ($user->isAdmin() || $user->isDm());
     }
 }

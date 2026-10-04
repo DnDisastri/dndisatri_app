@@ -10,6 +10,8 @@ use App\Domain\Dnd\Coins;
 use App\Domain\Dnd\ItemEffectMode;
 use App\Enums\PendingChangeType;
 use App\Models\Character;
+use App\Models\CharacterItem;
+use App\Models\MarketItem;
 use App\Models\PendingChange;
 use App\Models\User;
 use App\Notifications\ChangeAwaitingApproval;
@@ -99,6 +101,45 @@ final class ProposeChange
                 'value' => $value,
             ],
             'summary' => "{$name}: {$ability->label()} {$verb}{$value}",
+        ]);
+    }
+
+    /**
+     * Un oggetto in cambio di un articolo che costa al massimo quanto vale: niente resto.
+     * Qui si controlla solo che abbia senso chiedere; tutto si ricontrolla all'approvazione.
+     */
+    public function barter(Character $character, User $requester, CharacterItem $given, MarketItem $wanted): PendingChange
+    {
+        if ($given->character_id !== $character->getKey()) {
+            throw new InvalidArgumentException('Puoi barattare solo un oggetto del tuo zaino.');
+        }
+
+        if (! $wanted->isAvailable()) {
+            throw new InvalidArgumentException("«{$wanted->name}» non è disponibile.");
+        }
+
+        if ($given->value_cp < 1 || $wanted->price_cp > $given->value_cp) {
+            throw new InvalidArgumentException(
+                "«{$given->name}» vale ".Coins::formatValue((int) $given->value_cp)
+                .": non basta per «{$wanted->name}», che costa ".Coins::formatValue($wanted->price_cp).'.'
+            );
+        }
+
+        $giàOfferto = $character->pendingChanges()->pending()
+            ->where('type', PendingChangeType::Barter)
+            ->get()
+            ->contains(fn (PendingChange $c) => ($c->diff['give']['name'] ?? null) === $given->name);
+
+        if ($giàOfferto) {
+            throw new InvalidArgumentException("Hai già offerto «{$given->name}» in un baratto che aspetta una risposta.");
+        }
+
+        return $this->create($character, $requester, PendingChangeType::Barter, [
+            'diff' => [
+                'give' => [...Character::itemCopy($given)],
+                'take' => ['market_item_id' => $wanted->getKey(), 'name' => $wanted->name, 'price_cp' => $wanted->price_cp],
+            ],
+            'summary' => "Baratto: {$given->name} per {$wanted->name}",
         ]);
     }
 
