@@ -6,8 +6,7 @@
 
 @if (filled($character->story))
     <x-panel title="La storia">
-    {{-- Escape prima di `nl2br()` per mantenere gli a capo senza consentire HTML arbitrario. --}}
-        <p class="text-sm text-fg">{!! nl2br(e($character->story)) !!}</p>
+        {{-- Escape prima di `nl2br()` per mantenere gli a capo senza consentire HTML arbitrario. --}}
         <p class="text-sm text-fg">{!! nl2br(e($character->story)) !!}</p>
     </x-panel>
 @endif
