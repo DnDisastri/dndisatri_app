@@ -3,7 +3,9 @@
 @if ($tavolo->isEmpty())
     <x-empty>Nessuno si è ancora seduto a questo tavolo.</x-empty>
 @else
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    {{-- Colonne in base al contenitore: pagina intera in Regia, mezza colonna nella serata. --}}
+    <div class="@container">
+    <div class="grid grid-cols-1 gap-3 @md:grid-cols-2">
         @foreach ($tavolo as $pg)
             @php
                 $max = $pg->effectiveHpMax();
@@ -58,7 +60,7 @@
                 <div class="mt-3 flex items-center justify-between text-xs text-muted">
                     <span class="flex items-center gap-1.5">
                         <x-icona :is="\App\Enums\Icon::Gold" class="h-4 w-4" />
-                        <span class="font-semibold text-fg">{{ $pg->gp }}</span> mo
+                        <x-monete :borsa="$pg->coins()" class="font-semibold text-fg" />
                     </span>
                     <span class="flex items-center gap-1.5">
                         <x-icona :is="\App\Enums\Icon::ArmorClass" class="h-4 w-4" />
@@ -67,5 +69,6 @@
                 </div>
             </a>
         @endforeach
+    </div>
     </div>
 @endif

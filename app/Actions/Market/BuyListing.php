@@ -13,17 +13,7 @@ use App\Models\User;
 use App\Notifications\ListingSold;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Acquisto da un altro giocatore.
- *
- * L'oggetto è già in deposito presso l'annuncio, quindi qui si muovono l'oro
- * e la consegna. Tutto in una transazione con annuncio, compratore e venditore
- * bloccati: se salta un pezzo, non deve restare né oro sparito né oggetto
- * consegnato senza pagamento.
- *
- * Il Registro riceve due righe, una per parte: il bilancio dev'essere leggibile
- * da entrambi i lati.
- */
+/** L'oggetto è già in deposito presso l'annuncio: qui si muovono monete e consegna. */
 final class BuyListing
 {
     public function handle(MarketListing $listing, Character $buyer, ?User $actor = null): MarketListing
@@ -42,20 +32,11 @@ final class BuyListing
             $purchaser = Character::whereKey($buyer->getKey())->lockForUpdate()->firstOrFail();
             $seller = Character::whereKey($locked->seller_character_id)->lockForUpdate()->firstOrFail();
 
-            if ($purchaser->gp < $locked->price) {
-                throw MarketException::notEnoughGold($locked->price, $purchaser->gp);
-            }
+            $purse = app(Purse::class);
+            $paid = $purse->pay($purchaser, $locked->price_cp);
+            $received = $purse->receiveValue($seller, $locked->price_cp);
 
-            $purchaser->decrement('gp', $locked->price);
-            $seller->increment('gp', $locked->price);
-
-            $purchaser->refresh()->addToInventory(
-                name: $locked->name,
-                qty: $locked->qty,
-                category: $locked->category,
-                value: $locked->unit_value,
-                details: $locked->details,
-            );
+            $purchaser->addToInventory(...Character::itemCopy($locked), qty: $locked->qty);
 
             $locked->forceFill([
                 'status' => ListingStatus::Sold,
@@ -68,19 +49,17 @@ final class BuyListing
             $purchaser->recordInLedger(
                 LedgerAction::ListingBought,
                 "Comprato {$description} da {$seller->name}",
-                -$locked->price,
+                $paid,
                 $actor,
             );
 
-            $seller->refresh()->recordInLedger(
+            $seller->recordInLedger(
                 LedgerAction::ListingSold,
                 "Venduto {$description} a {$purchaser->name}",
-                $locked->price,
+                $received,
                 $actor,
             );
 
-            // Il venditore non è al computer quando qualcuno compra: senza
-            // avviso scoprirebbe l'oro solo per caso.
             $seller->user()->first()?->notify(new ListingSold($locked, $purchaser->name));
 
             return $locked;

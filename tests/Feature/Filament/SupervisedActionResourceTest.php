@@ -9,6 +9,7 @@ use App\Enums\PendingChangeStatus;
 use App\Filament\Resources\SupervisedActions\Pages\ViewSupervisedAction;
 use App\Filament\Resources\SupervisedActions\SupervisedActionResource;
 use App\Models\Character;
+use App\Models\MarketListing;
 use App\Models\SupervisedAction;
 use App\Models\User;
 use Livewire\Livewire;
@@ -26,10 +27,10 @@ beforeEach(function () {
 
 function inAttesa(): SupervisedAction
 {
-    test()->anna->addToInventory('Spada Lunga', value: 15);
+    test()->anna->addToInventory('Spada Lunga', valueCp: 1500);
 
     return app(Supervisor::class)->createListing(
-        test()->sorvegliato, test()->anna, 'Spada Lunga', 1, 40,
+        test()->sorvegliato, test()->anna, 'Spada Lunga', 1, 4000,
     );
 }
 
@@ -86,7 +87,7 @@ describe('il dettaglio', function () {
         $azione = app(Supervisor::class)->proposeTrade(
             $this->sorvegliato, $this->anna, $this->bruno,
             give: [['name' => 'Corda di Seta', 'qty' => 1]],
-            wantGp: 30,
+            wantCp: 3000,
         );
 
         $righe = collect($azione->details())->pluck('valore', 'voce');
@@ -124,9 +125,9 @@ describe('il via libera', function () {
             ->assertHasNoActionErrors();
 
         expect($azione->fresh()->status)->toBe(PendingChangeStatus::Approved)
-            ->and(App\Models\MarketListing::where('name', 'Spada Lunga')->exists())->toBeTrue();
+            ->and(MarketListing::where('name', 'Spada Lunga')->exists())->toBeTrue();
     });
-// L'approvazione riesegue l'azione sullo stato corrente e può quindi fallire senza chiudere la richiesta.
+    // L'approvazione riesegue l'azione sullo stato corrente e può quindi fallire senza chiudere la richiesta.
     it('ma se nel frattempo l\'oggetto non c\'è più, lo dice e non decide', function () {
         $azione = inAttesa();
         $this->anna->removeFromInventory('Spada Lunga');
@@ -164,7 +165,7 @@ describe('il blocco', function () {
         expect($deciso->status)->toBe(PendingChangeStatus::Rejected)
             ->and($deciso->review_note)->toBe('Quaranta monete per una spada da quindici.')
             // L'azione non era mai stata eseguita, quindi non c'è nulla da annullare.
-            ->and(App\Models\MarketListing::count())->toBe(0);
+            ->and(MarketListing::count())->toBe(0);
     });
 });
 // Il revisore non può essere coinvolto nell'azione tramite uno dei propri personaggi.

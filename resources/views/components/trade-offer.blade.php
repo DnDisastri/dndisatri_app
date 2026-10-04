@@ -1,14 +1,10 @@
 @props(['trade'])
 
 @php
-    /*
-     * Le due metà di uno scambio, sempre nello stesso ordine (offre / in cambio),
-     * anche per chi riceve: invertirlo farebbe leggere la stessa proposta in due
-     * modi e renderebbe impossibile discuterne al tavolo.
-     */
+    // Sempre offre / in cambio, anche per chi riceve: la stessa proposta si legge in un modo solo.
     $lati = [
-        ['titolo' => 'Offre', 'oggetti' => $trade->givenItems(), 'oro' => $trade->give_gp],
-        ['titolo' => 'In cambio di', 'oggetti' => $trade->wantedItems(), 'oro' => $trade->want_gp],
+        ['titolo' => 'Offre', 'oggetti' => $trade->givenItems(), 'oro' => $trade->give_cp],
+        ['titolo' => 'In cambio di', 'oggetti' => $trade->wantedItems(), 'oro' => $trade->want_cp],
     ];
 @endphp
 
@@ -28,7 +24,7 @@
                 @endforeach
 
                 @if ($lato['oro'] > 0)
-                    <li class="font-semibold">{{ number_format($lato['oro'], 0, ',', '.') }} mo</li>
+                    <li class="font-semibold"><x-monete :valore="$lato['oro']" /></li>
                 @endif
 
                 @if ($lato['oggetti']->isEmpty() && ! $lato['oro'])

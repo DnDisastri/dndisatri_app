@@ -2,6 +2,10 @@
 
 namespace App\Filament\Resources\MarketItems\Schemas;
 
+use App\Domain\Dnd\Coins;
+use App\Enums\EquipmentSlot;
+use App\Models\CharacterItem;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -36,13 +40,33 @@ class MarketItemForm
                             'Equipaggiamento',
                         ]),
 
-                    TextInput::make('price')
-                        ->label('Prezzo')
+                    Select::make('base')
+                        ->label('Tipo')
+                        ->options(EquipmentSlot::bases())
+                        ->placeholder('Nessuno')
+                        ->helperText('Per armi, armature e scudi con un nome loro: decide CA e attacchi.'),
+
+                    TextInput::make('magic_bonus')
+                        ->label('Bonus magico')
                         ->required()
                         ->numeric()
                         ->minValue(0)
+                        ->maxValue(CharacterItem::MAX_MAGIC_BONUS)
+                        ->default(0)
+                        ->prefix('+'),
+
+                    // Si scrive in mo con i decimali, si salva in rame.
+                    TextInput::make('price_cp')
+                        ->label('Prezzo')
+                        ->required()
+                        ->numeric()
+                        ->step(0.01)
+                        ->minValue(0)
+                        ->maxValue(Coins::MAX / 100)
                         ->suffix('mo')
-                        ->helperText("Prezzo in monete d'oro."),
+                        ->formatStateUsing(fn ($state) => $state === null ? null : $state / 100)
+                        ->dehydrateStateUsing(fn ($state) => (int) round((float) $state * 100))
+                        ->helperText('In monete d\'oro: 0,5 sono 5 ma, 0,01 è 1 mr.'),
 
                     Toggle::make('is_unlimited')
                         ->label('Scorte illimitate')

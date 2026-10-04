@@ -4,7 +4,7 @@
 @php use App\Enums\PendingChangeStatus; @endphp
 
 @section('content')
-<div class="mx-auto max-w-3xl px-4 py-6">
+<x-pagina larghezza="stretta">
 
     <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h2 class="flex items-center gap-2 text-2xl text-fg">
@@ -84,6 +84,10 @@
                     <p class="mt-2 text-sm text-muted">{{ $change->summary }}</p>
                 @endif
 
+                @if ($change->note)
+                    <p class="mt-1 text-sm text-muted">{{ $change->note }}</p>
+                @endif
+
                 <p class="mt-2 text-xs text-muted">
                     Mandata {{ $change->created_at->diffForHumans() }}
                     @if ($change->reviewed_at)
@@ -106,5 +110,9 @@
             </p>
         @endforelse
     </div>
-</div>
+
+    <x-paginazione :pagine="$changes" etichetta="Pagine delle richieste" />
+
+    <x-back :href="route('home')">Torna alla Home</x-back>
+</x-pagina>
 @endsection

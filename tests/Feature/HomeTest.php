@@ -211,3 +211,18 @@ describe('l\'invito al tutorial', function () {
             ->assertSee('Vai alle FAQs');
     });
 });
+
+// Tavoli e quest stanno affiancati: cinque tavoli e tre quest hanno all'incirca la stessa altezza.
+it('mostra al massimo cinque tavoli e tre quest', function () {
+    $campagna = Campaign::factory()->create();
+
+    foreach (range(1, 7) as $i) {
+        GameSession::factory()->inCampaign($campagna)->upcoming()->create(['played_at' => now()->addDays($i)]);
+        Quest::factory()->inCampaign($campagna)->create();
+    }
+
+    $html = $this->actingAs($this->giocatore)->get('/')->assertOk()->getContent();
+
+    expect(preg_match_all('#href="[^"]*/serate/\d+"#', $html))->toBe(5)
+        ->and(preg_match_all('#href="[^"]*/incarichi/[^"]+"#', $html))->toBe(3);
+});

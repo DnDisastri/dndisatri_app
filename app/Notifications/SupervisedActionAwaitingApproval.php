@@ -16,7 +16,7 @@ final class SupervisedActionAwaitingApproval extends InAppNotification
 
     public function category(): NotificationCategory
     {
-        return NotificationCategory::Requests;
+        return NotificationCategory::Approvals;
     }
 
     public function toArray(object $notifiable): array
@@ -24,7 +24,7 @@ final class SupervisedActionAwaitingApproval extends InAppNotification
         return [
             'title' => "Un'azione da approvare",
             'body' => "{$this->action->type->label()}: {$this->action->summary}. Aprila nel pannello per decidere.",
-            'url' => '/admin/supervised-actions',
+            'url' => route('filament.admin.resources.supervised-actions.view', $this->action),
         ];
     }
 }

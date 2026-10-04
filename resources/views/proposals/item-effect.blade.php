@@ -4,7 +4,7 @@
 @php use App\Domain\Dnd\Ability; @endphp
 
 @section('content')
-<div class="mx-auto max-w-2xl space-y-4 px-4 py-6">
+<x-pagina larghezza="stretta" class="space-y-4">
     <x-panel>
         <h2 class="text-xl text-fg">Oggetto magico</h2>
         <p class="mt-1 text-sm text-muted">
@@ -67,5 +67,5 @@
             <x-button size="lg" variant="quiet" :href="route('characters.show', $character)">Annulla</x-button>
         </div>
     </form>
-</div>
+</x-pagina>
 @endsection

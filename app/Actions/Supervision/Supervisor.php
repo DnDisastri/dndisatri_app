@@ -9,29 +9,20 @@ use App\Actions\Market\AcceptTrade;
 use App\Actions\Market\BuyListing;
 use App\Actions\Market\CreateListing;
 use App\Actions\Market\CreateTrade;
+use App\Domain\Dnd\Coins;
 use App\Enums\SupervisedActionType;
-use App\Notifications\SupervisedActionAwaitingApproval;
 use App\Models\Character;
 use App\Models\MarketListing;
 use App\Models\SupervisedAction;
 use App\Models\Trade;
 use App\Models\User;
+use App\Notifications\SupervisedActionAwaitingApproval;
 
 /**
- * Il posto da cui passano le quattro azioni di mercato controllabili (D13).
- *
- * **Le pagine chiamano sempre questo, mai le azioni dirette.** Qui si decide se
- * l'operazione avviene subito o se resta in attesa di un via libera, e la
- * decisione dipende da una cosa sola: se chi agisce è sotto richiamo.
- *
- * Chi non lo è non si accorge di niente — il metodo esegue e restituisce quello
- * che avrebbe restituito l'azione diretta. Chi lo è ottiene invece una
- * `SupervisedAction`, cioè una richiesta in attesa, e chi chiama distingue i
- * due casi guardando il tipo di ritorno.
- *
- * Le azioni dirette restano raggiungibili, e servono: è `ApproveSupervisedAction`
- * a chiamarle quando il via libera arriva. Passare di lì di nuovo creerebbe un
- * ciclo senza fine, perché il richiamo nel frattempo è ancora attivo.
+ * Le pagine chiamano sempre questo, mai le azioni dirette: sotto richiamo
+ * l'azione resta in attesa (`SupervisedAction`), altrimenti si esegue subito.
+ * `ApproveSupervisedAction` chiama invece le azioni dirette: ripassare di qui,
+ * col richiamo ancora attivo, girerebbe in tondo.
  */
 final class Supervisor
 {
@@ -42,12 +33,12 @@ final class Supervisor
         Character $to,
         array $give = [],
         array $want = [],
-        int $giveGp = 0,
-        int $wantGp = 0,
+        int $giveCp = 0,
+        int $wantCp = 0,
         ?string $message = null,
     ): Trade|SupervisedAction {
         if (! $actor->isUnderWarning()) {
-            return app(CreateTrade::class)->handle($from, $to, $give, $want, $giveGp, $wantGp, $message);
+            return app(CreateTrade::class)->handle($from, $to, $give, $want, $giveCp, $wantCp, $message);
         }
 
         return $this->hold($actor, SupervisedActionType::TradeProposal, [
@@ -55,8 +46,8 @@ final class Supervisor
             'to_character_id' => $to->getKey(),
             'give' => $give,
             'want' => $want,
-            'give_gp' => $giveGp,
-            'want_gp' => $wantGp,
+            'give_cp' => $giveCp,
+            'want_cp' => $wantCp,
             'message' => $message,
         ], "Vuole proporre uno scambio a {$to->name}");
     }
@@ -81,18 +72,18 @@ final class Supervisor
         Character $seller,
         string $itemName,
         int $qty,
-        int $price,
+        int $priceCp,
     ): MarketListing|SupervisedAction {
         if (! $actor->isUnderWarning()) {
-            return app(CreateListing::class)->handle($seller, $itemName, $qty, $price, $actor);
+            return app(CreateListing::class)->handle($seller, $itemName, $qty, $priceCp, $actor);
         }
 
         return $this->hold($actor, SupervisedActionType::ListingCreation, [
             'character_id' => $seller->getKey(),
             'name' => $itemName,
             'qty' => $qty,
-            'price' => $price,
-        ], "Vuole mettere in vendita {$qty}× {$itemName} per {$price} mo");
+            'price_cp' => $priceCp,
+        ], "Vuole mettere in vendita {$qty}× {$itemName} per ".Coins::formatValue($priceCp));
     }
 
     public function buyListing(User $actor, MarketListing $listing, Character $buyer): MarketListing|SupervisedAction
@@ -105,7 +96,7 @@ final class Supervisor
             'listing_id' => $listing->getKey(),
             'buyer_character_id' => $buyer->getKey(),
             'seller_character_id' => $listing->seller_character_id,
-        ], "Vuole comprare {$listing->qty}× {$listing->name} per {$listing->price} mo");
+        ], "Vuole comprare {$listing->qty}× {$listing->name} per ".Coins::formatValue($listing->price_cp));
     }
 
     /** @param array<string,mixed> $payload */

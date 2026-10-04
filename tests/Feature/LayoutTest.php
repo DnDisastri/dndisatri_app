@@ -116,3 +116,51 @@ it('offre i tre stati del tema nel menù', function () {
         $pagina->assertSee('data-tema="'.$scelta.'"', false);
     }
 });
+
+it('su desktop mette le voci della barra e il menù nella barra laterale', function () {
+    $html = $this->actingAs(User::factory()->player()->create())
+        ->get('/campagne')
+        ->assertOk()
+        ->getContent();
+
+    $laterale = Str::of($html)->after('aria-label="Menù laterale"')->before('</nav>')->toString();
+
+    foreach (['Eroi', 'Campagne', 'Libro Mastro', 'Mercato', 'Eventi'] as $voce) {
+        expect($laterale)->toContain($voce);
+    }
+
+    expect(substr_count($laterale, 'aria-current="page"'))->toBe(1)
+        ->and(Str::of($html)->after('<aside')->before('</aside>')->toString())
+        ->toContain('Il mio profilo')
+        ->toContain('data-tema="dark"');
+});
+
+// Il DM ha Gilda e Scrivania nella barra: il menù non le ripete.
+it('non ripete nel menù del DM le voci che ha già nella barra', function () {
+    $html = $this->actingAs(User::factory()->dm()->create())->get('/')->getContent();
+
+    $tendina = Str::of($html)->after('<details class="relative" data-tendina>')->before('</details>')->toString();
+
+    expect($tendina)->toContain('Il mio profilo')
+        ->not->toContain('Gilda')
+        ->not->toContain('Pannello');
+});
+
+it('nasconde intestazione e barra in basso da desktop, la barra laterale sotto', function () {
+    $html = $this->actingAs(User::factory()->player()->create())->get('/')->getContent();
+
+    expect($html)->toMatch('/<header class="[^"]*\blg:hidden\b/')
+        ->toMatch('/<nav class="[^"]*\blg:hidden\b[^"]*" aria-label="Navigazione principale"/')
+        ->toMatch('/<aside class="[^"]*\bhidden\b[^"]*\blg:flex\b/');
+});
+
+// Gli avvisi stanno dentro <x-pagina>: prendono la larghezza della pagina, non sporgono.
+it('mostra gli avvisi della sessione dentro il contenitore della pagina', function () {
+    $html = $this->actingAs(User::factory()->player()->create())
+        ->withSession(['status' => 'Tutto fatto', 'error' => 'Qualcosa è andato storto'])
+        ->get(route('notifications.index'))
+        ->assertOk()
+        ->getContent();
+
+    expect($html)->toMatch('/class="[^"]*\bmax-w-3xl\b[^"]*">\s*<div class="mb-4 space-y-2">.*Tutto fatto.*Qualcosa è andato storto/s');
+});

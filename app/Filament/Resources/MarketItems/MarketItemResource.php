@@ -42,14 +42,27 @@ class MarketItemResource extends Resource
     }
 
     /**
-     * Il pannello è un'altra cosa dal sito pubblico: l'elenco delle news lo
-     * legge tutto il gruppo (`viewAny` nella policy è aperto), ma la sezione
-     * di redazione è degli admin. Filament usa la stessa policy per entrambi,
-     * quindi la distinzione va fatta qui.
+     * Filament usa la stessa policy del sito, dove `viewAny` è aperto a tutti:
+     * qui entrano admin e DM. I DM non modificano il catalogo, mettono solo in
+     * vendita quello che arriva dai baratti.
      */
     public static function canViewAny(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        $user = auth()->user();
+
+        return $user !== null && ($user->isAdmin() || $user->isDm());
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        $inMagazzino = MarketItem::inStorage()->count();
+
+        return $inMagazzino > 0 ? (string) $inMagazzino : null;
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return 'Oggetti in magazzino da mettere in vendita';
     }
 
     public static function getPages(): array

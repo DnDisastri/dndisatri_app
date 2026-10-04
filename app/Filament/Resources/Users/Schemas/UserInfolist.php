@@ -45,6 +45,18 @@ class UserInfolist
                         ->label('Registrato il')
                         ->dateTime('d/m/Y H:i'),
                 ]),
+
+            Section::make('Iscrizione')
+                ->columns(2)
+                ->schema([
+                    TextEntry::make('played_before')
+                        ->label('Ha già fatto sessioni con noi')
+                        ->state(fn (User $record) => User::playedBeforeLabel($record->played_before)),
+
+                    TextEntry::make('discovery_source')
+                        ->label('Come ci ha conosciuti')
+                        ->placeholder('Non indicato'),
+                ]),
         ]);
     }
 }

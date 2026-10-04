@@ -34,7 +34,7 @@ final class TradeResolved extends InAppNotification
                 default => "{$this->otherName} ha ritirato la proposta di scambio",
             },
             'body' => $this->trade->status === TradeStatus::Accepted
-                ? 'Oggetti e oro sono già passati di mano.'
+                ? 'Oggetti e monete sono già passati di mano.'
                 : 'Non è cambiato niente nel tuo inventario.',
             'url' => null,
         ];

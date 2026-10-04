@@ -36,6 +36,9 @@ enum Icon: string implements Icona, ScalableIcon
     case Install = 'install';
     case Panel = 'panel';
     case Logout = 'logout';
+    case ThemeAuto = 'theme-auto';
+    case ThemeLight = 'theme-light';
+    case ThemeDark = 'theme-dark';
 
     // Pannello.
     case Builds = 'builds';
@@ -59,6 +62,7 @@ enum Icon: string implements Icona, ScalableIcon
     // Archivio personale, distinto da Archive del Pannello.
     case Stash = 'stash';
     case Unstash = 'unstash';
+    case Delete = 'delete';
     case Featured = 'featured';
     case NotFeatured = 'not-featured';
     case Favorite = 'favorite';
@@ -131,6 +135,9 @@ enum Icon: string implements Icona, ScalableIcon
             self::Install => Phosphor::DownloadSimple,
             self::Panel => Phosphor::SlidersHorizontal,
             self::Logout => Phosphor::SignOut,
+            self::ThemeAuto => Phosphor::CircleHalf,
+            self::ThemeLight => Phosphor::Sun,
+            self::ThemeDark => Phosphor::Moon,
 
             self::Builds => Phosphor::Sparkle,
             self::Users => Phosphor::Users,
@@ -151,6 +158,7 @@ enum Icon: string implements Icona, ScalableIcon
             self::Archive => Phosphor::Archive,
             self::Stash => Phosphor::BoxArrowDown,
             self::Unstash => Phosphor::BoxArrowUp,
+            self::Delete => Phosphor::Trash,
             self::Featured => Phosphor::Sparkle,
             self::NotFeatured => Phosphor::Minus,
             self::Favorite => Phosphor::StarFill,

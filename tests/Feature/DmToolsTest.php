@@ -10,7 +10,6 @@ use App\Models\GameSession;
 use App\Models\User;
 use Livewire\Livewire;
 
-
 beforeEach(function () {
     $this->dm = User::factory()->dm()->create();
     $this->giocatore = User::factory()->player()->create();
@@ -23,7 +22,7 @@ describe('chi li vede', function () {
             ->get(route('characters.show', $this->pg))
             ->assertOk()
             ->assertSee('Strumenti da DM')
-            ->assertSee('Assegna oro')
+            ->assertSee('Monete')
             ->assertSee('Dichiara caduto');
     });
 
@@ -44,11 +43,12 @@ describe('chi li vede', function () {
     });
 });
 
-describe('assegna oro', function () {
-    it('lo aggiunge e lascia una riga nel Registro, col motivo', function () {
+describe('monete', function () {
+    it('le aggiunge pila per pila e lascia una riga nel Registro, col motivo', function () {
         Livewire::actingAs($this->dm)
             ->test(DmTools::class, ['character' => $this->pg])
-            ->set('oroImporto', 50)
+            ->set('oroMonete.pp', 2)
+            ->set('oroMonete.gp', 50)
             ->set('oroMotivo', 'Premio di fine quest')
             ->call('assegnaOro')
             ->assertHasNoErrors();
@@ -56,27 +56,33 @@ describe('assegna oro', function () {
         $this->pg->refresh();
         $riga = $this->pg->ledgerEntries()->latest('id')->first();
 
-        expect($this->pg->gp)->toBe(150)
+        expect($this->pg->pp)->toBe(2)
+            ->and($this->pg->gp)->toBe(150)
             ->and($riga->action)->toBe(LedgerAction::DmGold)
-            ->and($riga->gp_delta)->toBe(50)
+            ->and($riga->cp_delta)->toBe(7000)
             ->and($riga->message)->toContain('Premio di fine quest');
     });
 
-    it('anche in negativo, ma mai sotto zero', function () {
-        Livewire::actingAs($this->dm)
+    it('le toglie, ma mai sotto zero', function () {
+        $componente = Livewire::actingAs($this->dm)
             ->test(DmTools::class, ['character' => $this->pg])
-            ->set('oroImporto', -1000)
-            ->set('oroMotivo', 'Una multa salatissima')
+            ->set('oroTogli', true)
+            ->set('oroMonete.gp', 30)
+            ->set('oroMotivo', 'Una multa')
             ->call('assegnaOro')
             ->assertHasNoErrors();
 
-        expect($this->pg->refresh()->gp)->toBe(0);
+        expect($this->pg->refresh()->gp)->toBe(70);
+
+        $componente->set('oroMonete.gp', 1000)->call('assegnaOro')->assertHasErrors('oroMonete');
+
+        expect($this->pg->refresh()->gp)->toBe(70);
     });
 
     it('il motivo è obbligatorio', function () {
         Livewire::actingAs($this->dm)
             ->test(DmTools::class, ['character' => $this->pg])
-            ->set('oroImporto', 50)
+            ->set('oroMonete.gp', 50)
             ->set('oroMotivo', '')
             ->call('assegnaOro')
             ->assertHasErrors('oroMotivo');
@@ -84,19 +90,18 @@ describe('assegna oro', function () {
         expect($this->pg->refresh()->gp)->toBe(100);
     });
 
-    it('e zero non assegna niente', function () {
+    it('e nessuna moneta non assegna niente', function () {
         Livewire::actingAs($this->dm)
             ->test(DmTools::class, ['character' => $this->pg])
-            ->set('oroImporto', 0)
             ->set('oroMotivo', 'Niente')
             ->call('assegnaOro')
-            ->assertHasErrors('oroImporto');
+            ->assertHasErrors('oroMonete');
     });
 
-    it('un giocatore non può assegnarsi oro', function () {
+    it('un giocatore non può assegnarsi monete', function () {
         Livewire::actingAs($this->giocatore)
             ->test(DmTools::class, ['character' => $this->pg])
-            ->set('oroImporto', 9999)
+            ->set('oroMonete.gp', 9999)
             ->set('oroMotivo', 'Vorrei')
             ->call('assegnaOro')
             ->assertForbidden();
@@ -125,7 +130,7 @@ describe('dichiara caduto', function () {
             ->and($this->pg->death_story)->toBe('Caduto dalla torre per salvare la bambina.')
             ->and($this->pg->died_in_session_id)->toBe($serata->id);
     });
-// Racconto e serata sono opzionali perché una morte può essere registrata anche fuori da una sessione.
+    // Racconto e serata sono opzionali perché una morte può essere registrata anche fuori da una sessione.
     it('e anche a mani vuote, purché confermato', function () {
         Livewire::actingAs($this->dm)
             ->test(DmTools::class, ['character' => $this->pg])

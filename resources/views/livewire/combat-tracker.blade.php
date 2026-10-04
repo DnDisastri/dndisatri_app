@@ -1,12 +1,5 @@
 <div>
-    {{--
-        Il tracker di combattimento. Ogni riga è un combattente: iniziativa
-        (modificabile), PF con barra, CA, danno/cura e condizioni. Gli eroi hanno
-        i PF veri della scheda; i mostri i loro, effimeri.
-
-        Danno in rosso, cura in navy: è la stessa coppia di colori della scheda,
-        dove «Danni» e «Cure» si distinguono così.
-    --}}
+    {{-- Gli eroi hanno i PF veri della scheda, i mostri i loro, effimeri. --}}
     @php use App\Enums\Icon; use App\Enums\Condition; @endphp
 
     {{-- 1. Round e turno. --}}
@@ -51,7 +44,6 @@
     {{-- Aggiungi mostro: dal bestiario (si pesca) o al volo (si scrive). --}}
     @if ($mostraAggiungiMostro)
         <div class="mt-3 rounded-card border border-active bg-surface p-3">
-            {{-- Dal bestiario. --}}
             <p class="mb-2 text-xs uppercase tracking-wide text-muted">Dal bestiario</p>
             <input type="search" wire:model.live.debounce.300ms="cercaMostro"
                    placeholder="Cerca un mostro…"
@@ -73,7 +65,6 @@
                 <p class="mt-2 text-xs text-muted">Nessuno. Scrivilo al volo qui sotto e spunta «salva nel bestiario».</p>
             @endif
 
-            {{-- Al volo. --}}
             <p class="mb-2 mt-4 border-t border-line pt-3 text-xs uppercase tracking-wide text-muted">Oppure al volo</p>
             <div class="flex flex-wrap items-end gap-2">
                 <label class="min-w-[8rem] flex-1">
@@ -124,9 +115,7 @@
 
                 $frazione = $hpMax > 0 ? min(1, $hp / $hpMax) : 0;
                 $aTerra = $hp <= 0;
-                // Niente verde nella palette: pieno navy, a metà crema, in rosso
-                // quando si mette male. Classi intere, non composte (lo scanner
-                // di Tailwind cerca stringhe letterali).
+                // Classi intere, non composte: lo scanner di Tailwind cerca stringhe letterali.
                 $barra = match (true) {
                     $aTerra, $frazione <= 0.33 => 'bg-active',
                     $frazione <= 0.66 => 'bg-accent',
@@ -145,7 +134,6 @@
                      'opacity-70' => $aTerra && $isPg,
                  ])>
 
-                {{-- Testa: iniziativa modificabile, nome, tipo, togli. --}}
                 <div class="flex items-center gap-3">
                     <input type="number" inputmode="numeric" aria-label="Iniziativa di {{ $c['nome'] }}"
                            wire:model.blur="combattenti.{{ $i }}.iniziativa"
@@ -192,7 +180,6 @@
                     </button>
                 </div>
 
-                {{-- PF + CA. --}}
                 <div class="mt-3 flex items-center gap-3">
                     <div class="min-w-0 flex-1">
                         <div class="mb-1 flex items-baseline justify-between text-xs">
@@ -217,8 +204,7 @@
                     @endif
                 </div>
 
-                {{-- I tiri contro morte dell'eroe a terra (tappa B): lo stesso
-                     dato che il giocatore segna sulla sua scheda. --}}
+                {{-- Tiri contro morte: lo stesso dato che il giocatore segna sulla scheda. --}}
                 @if ($isPg && $pg && $aTerra)
                     <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                         @foreach (['successo' => ['✓', 'death_save_successes', 'bg-primary border-primary'],
@@ -239,7 +225,6 @@
                     </div>
                 @endif
 
-                {{-- Condizioni addosso. --}}
                 @if (! empty($c['condizioni']))
                     <div class="mt-2 flex flex-wrap gap-1.5">
                         @foreach ($c['condizioni'] as $cond)
@@ -253,7 +238,6 @@
                     </div>
                 @endif
 
-                {{-- Danno / cura / condizione. --}}
                 <div class="mt-3 flex flex-wrap items-center gap-2">
                     <input type="number" inputmode="numeric" min="1" placeholder="PF"
                            aria-label="Quanti punti per {{ $c['nome'] }}"
@@ -276,7 +260,6 @@
                     </button>
                 </div>
 
-                {{-- Il selettore delle condizioni, dalla lista fissa del manuale. --}}
                 @if ($condizioniAperte === $c['id'])
                     <div class="mt-2 rounded-md border border-line bg-page p-2">
                         <div class="flex flex-wrap gap-1.5">
@@ -302,9 +285,8 @@
         @endforelse
     </div>
 
-    {{-- Lo statblock esteso del mostro, al clic sul nome. --}}
     @if ($statblock)
-        <x-modal :title="$statblock['nome']" close="chiudiStatblock">
+        <x-modal :title="$statblock['nome']" close="chiudiStatblock" class="lg:max-w-2xl">
             <div class="space-y-3 text-left text-sm">
                 <p class="text-muted">
                     PF <span class="font-semibold text-fg">{{ $statblock['hpMax'] }}</span>

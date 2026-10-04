@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domain\Dnd\Coins;
 use App\Enums\QuestDifficulty;
 use App\Enums\QuestOutcome;
 use App\Enums\QuestSeatStatus;
@@ -18,7 +19,7 @@ use Spatie\Activitylog\Support\LogOptions;
 
 #[Fillable([
     'campaign_id', 'title', 'slug', 'description',
-    'setting', 'rewards', 'reward_gold', 'reward_items', 'difficulty', 'type',
+    'setting', 'rewards', 'reward_coins', 'reward_items', 'difficulty', 'type',
     'min_participants', 'max_participants', 'created_by',
 ])]
 class Quest extends Model
@@ -40,7 +41,7 @@ class Quest extends Model
         return [
             'difficulty' => QuestDifficulty::class,
             'type' => QuestType::class,
-            'reward_gold' => 'integer',
+            'reward_coins' => 'array',
             'reward_items' => 'array',
             'completed_at' => 'datetime',
             'closed_at' => 'datetime',
@@ -69,15 +70,19 @@ class Quest extends Model
         return $this->campaign?->quest_giver;
     }
 
-    /** Ha una ricompensa (oro, oggetti o campo libero)? Le quest devono averne una. */
+    public function rewardCoins(): Coins
+    {
+        return Coins::fromArray($this->reward_coins);
+    }
+
+    /** Le quest devono avere una ricompensa: monete, oggetti o testo libero. */
     public function hasReward(): bool
     {
-        return (int) $this->reward_gold > 0
+        return ! $this->rewardCoins()->isEmpty()
             || filled($this->reward_items)
             || filled($this->rewards);
     }
 
-    /** Legata a una campagna e a una storia: l'unico tipo che esiste per ora. */
     public function isCampaign(): bool
     {
         return $this->type === QuestType::Campaign;
@@ -91,7 +96,6 @@ class Quest extends Model
             ->withTimestamps();
     }
 
-    /** Chi occupa un posto: prenotati e confermati. */
     public function seatHolders(): BelongsToMany
     {
         return $this->participants()->wherePivotIn('status', [
@@ -141,7 +145,6 @@ class Quest extends Model
 
     // === Posti ===
 
-    /** Quanti posti sono occupati: prenotati più confermati. */
     public function participantCount(): int
     {
         return $this->seatHolders()->count();

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Domain\Dnd\Ability;
+use App\Domain\Dnd\Coins;
 use App\Enums\PendingChangeStatus;
 use App\Enums\PendingChangeType;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,8 +17,8 @@ use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
 #[Fillable([
-    'character_id', 'requested_by', 'type', 'diff', 'summary',
-    'grant_gp', 'grant_items', 'base_updated_at', 'archived_at',
+    'character_id', 'requested_by', 'type', 'diff', 'summary', 'note',
+    'grant_coins', 'grant_items', 'base_updated_at', 'archived_at',
 ])]
 class PendingChange extends Model
 {
@@ -26,7 +27,6 @@ class PendingChange extends Model
     /** Vedi la nota in Trade: il predefinito del database non basta. */
     protected $attributes = ['status' => PendingChangeStatus::Pending->value];
 
-    /** Chi decide è tracciato due volte: su `reviewed_by` (per la bacheca) e nel log attività (per la sequenza). */
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
@@ -43,6 +43,8 @@ class PendingChange extends Model
             'type' => PendingChangeType::class,
             'status' => PendingChangeStatus::class,
             'diff' => 'array',
+            'before' => 'array',
+            'grant_coins' => 'array',
             'grant_items' => 'array',
             'base_updated_at' => 'datetime',
             'reviewed_at' => 'datetime',
@@ -60,10 +62,14 @@ class PendingChange extends Model
         return $this->belongsTo(User::class, 'requested_by');
     }
 
-    /** Chi ha approvato o rifiutato: la bacheca è condivisa, la traccia no. */
     public function reviewedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function grantCoins(): Coins
+    {
+        return Coins::fromArray($this->grant_coins);
     }
 
     public function isPending(): bool
@@ -76,59 +82,82 @@ class PendingChange extends Model
         return $this->archived_at !== null;
     }
 
-    /** Si archivia solo una richiesta decisa: una in attesa è viva, nasconderla la perderebbe di vista. */
+    /** Una richiesta in attesa non si archivia: sparirebbe dalla bacheca. */
     public function isArchivable(): bool
     {
         return ! $this->isArchived() && ! $this->isPending();
     }
 
     /**
-     * Il personaggio è cambiato fra la proposta e adesso. Non blocca
-     * l'approvazione: avvisa chi decide invece di sovrascrivere in silenzio. I
-     * bottini non sono mai obsoleti (si applicano come somma, non sostituzione).
+     * Avvisa senza bloccare. Vale solo in attesa: decisa, la scheda è cambiata
+     * proprio per la decisione. I bottini non sono mai obsoleti: si sommano.
      */
     public function isStale(): bool
     {
-        if ($this->type->appliesAsDelta() || $this->base_updated_at === null) {
+        if (! $this->isPending() || $this->type->appliesAsDelta() || $this->base_updated_at === null) {
             return false;
         }
 
         return $this->character->updated_at?->gt($this->base_updated_at) ?? false;
     }
 
-    /**
-     * Chiavi del diff che non sono colonne della scheda, e che quindi non
-     * hanno un «prima» da confrontare.
-     *
-     * La foto è un file e si guarda, non si legge in una colonna. Le altre
-     * tre sono istruzioni per l'approvazione: una classe da far salire, un
-     * talento e degli incantesimi, che diventano righe a parte. Il riepilogo
-     * le racconta già tutte, e `class_up` porta dentro un array annidato che
-     * qui non si saprebbe scrivere.
-     */
-    private const NON_COLONNE = ['photo_path', 'class_up', 'feat', 'spells'];
+    /** Chiavi del diff che non sono colonne della scheda: senza un «prima» da confrontare. */
+    private const NON_COLONNE = ['photo_path', 'class_up', 'feat', 'spells', 'give', 'take'];
+
+    /** @return list<string> i campi del diff che sono colonne della scheda */
+    public function columnFields(): array
+    {
+        return array_values(array_diff(array_keys($this->diff ?? []), self::NON_COLONNE));
+    }
 
     /**
-     * Il confronto campo per campo fra la scheda adesso e come diventerebbe. Il
-     * «prima» si legge dal personaggio ora: in archivio c'è solo il diff.
+     * I valori attuali della scheda per i campi del diff: va scritta nella
+     * decisione, prima di applicarla.
      *
-     * @return Collection<int, array{label: string, before: string, after: string}>
+     * @return array<string,mixed>|null
+     */
+    public function snapshotOf(Character $character): ?array
+    {
+        $fields = $this->columnFields();
+
+        return $fields === [] ? null : collect($fields)->mapWithKeys(fn (string $f) => [$f => $character->getAttribute($f)])->all();
+    }
+
+    /** Decisa senza copia (richieste di prima della copia): il «prima» non si sa più. */
+    public function lacksBefore(): bool
+    {
+        return ! $this->isPending() && $this->before === null && $this->columnFields() !== [];
+    }
+
+    /**
+     * In attesa il «prima» è la scheda adesso; decisa, la copia salvata allora.
+     *
+     * @return Collection<int, array{label: string, before: ?string, after: string, changed: bool}>
      */
     public function diffRows(): Collection
     {
         $character = $this->character;
+        $copia = $this->isPending() ? null : $this->before;
 
         return collect($this->diff ?? [])
             ->reject(fn ($after, $field) => in_array($field, self::NON_COLONNE, true))
-            ->map(fn ($after, $field) => [
-                'label' => self::fieldLabel($field),
-                'before' => self::readable($character?->getAttribute($field)),
-                'after' => self::readable($after),
-            ])
+            ->map(function ($after, $field) use ($character, $copia) {
+                $before = match (true) {
+                    $this->isPending() => self::readable($character?->getAttribute($field)),
+                    is_array($copia) && array_key_exists($field, $copia) => self::readable($copia[$field]),
+                    default => null,
+                };
+
+                return [
+                    'label' => self::fieldLabel($field),
+                    'before' => $before,
+                    'after' => self::readable($after),
+                    'changed' => $before !== self::readable($after),
+                ];
+            })
             ->values();
     }
 
-    /** Il percorso (disco privato) della foto proposta, se la richiesta ne ha una. */
     public function proposedPhotoPath(): ?string
     {
         $path = $this->diff['photo_path'] ?? null;
@@ -165,12 +194,7 @@ class PendingChange extends Model
         };
     }
 
-    /**
-     * Un valore del diff scritto per essere letto.
-     *
-     * Ricorsiva di proposito: un array annidato qui dentro deve diventare
-     * testo, non far saltare la pagina di chi sta approvando.
-     */
+    /** Ricorsiva: un array annidato diventa testo invece di rompere la pagina. */
     private static function readable(mixed $value): string
     {
         return match (true) {
@@ -184,7 +208,7 @@ class PendingChange extends Model
     /** @param  array<array-key,mixed>  $value */
     private static function readableArray(array $value): string
     {
-        // Una lista è un elenco di cose: gli indici 0, 1, 2 non vanno letti.
+        // In una lista gli indici 0, 1, 2 non si scrivono.
         $lista = array_is_list($value);
 
         return collect($value)
@@ -217,7 +241,6 @@ class PendingChange extends Model
         $query->whereNull('archived_at');
     }
 
-    /** Le richieste che questo utente può vedere in bacheca. */
     public function scopeVisibleTo(Builder $query, User $user): void
     {
         if ($user->isDm() || $user->isAdmin()) {

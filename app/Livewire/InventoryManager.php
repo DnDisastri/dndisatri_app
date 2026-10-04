@@ -4,38 +4,165 @@ namespace App\Livewire;
 
 use App\Actions\Characters\AttuneItem;
 use App\Actions\Characters\EquipItem;
+use App\Actions\Market\Purse;
+use App\Domain\Dnd\Coin;
+use App\Domain\Dnd\Coins;
+use App\Enums\EquipmentSlot;
+use App\Exceptions\MarketException;
 use App\Models\Character;
 use App\Models\CharacterItem;
+use Illuminate\Validation\Rule;
+use InvalidArgumentException;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
-/**
- * L'inventario con i comandi: indossare, riporre, andare in sintonia.
- *
- * Fino a qui l'inventario era un elenco da guardare. L'equipaggiamento veniva
- * assegnato una volta sola alla creazione, quindi comprare un'armatura migliore
- * non serviva a niente.
- */
+/** Borsa e inventario con i comandi: cambiare monete, indossare, riporre, andare in sintonia. */
 class InventoryManager extends Component
 {
     /** L'id non deve essere manomettibile dal browser: qui vive il permesso. */
     #[Locked]
     public int $characterId;
 
+    public bool $modaleCambio = false;
+
+    public string $cambioDa = 'gp';
+
+    public string $cambioA = 'pp';
+
+    public ?int $cambioQuante = null;
+
+    public ?int $modificaId = null;
+
+    /** @var array{name: string, category: ?string, base: ?string, magic_bonus: int|string, details: ?string} */
+    public array $modifica = ['name' => '', 'category' => null, 'base' => null, 'magic_bonus' => 0, 'details' => null];
+
     public function mount(Character $character): void
     {
         $this->characterId = $character->getKey();
     }
 
-    /**
-     * L'oro in cima si aggiorna quando un DM lo assegna dagli strumenti in
-     * intestazione (M18): basta ridisegnarsi, il valore lo rilegge dal modello.
-     */
+    /** La borsa si aggiorna quando un DM la tocca dagli strumenti in intestazione. */
     #[On('oro-cambiato')]
     public function rinfresca(): void
     {
         //
+    }
+
+    public function apriCambio(): void
+    {
+        $this->authorize('manageEquipment', Character::findOrFail($this->characterId));
+        $this->reset('cambioDa', 'cambioA', 'cambioQuante');
+        $this->resetErrorBag();
+        $this->modaleCambio = true;
+    }
+
+    public function chiudiCambio(): void
+    {
+        $this->modaleCambio = false;
+    }
+
+    public function cambia(): void
+    {
+        $character = Character::findOrFail($this->characterId);
+        $this->authorize('manageEquipment', $character);
+
+        $this->validate([
+            'cambioDa' => ['required', Rule::enum(Coin::class)],
+            'cambioA' => ['required', Rule::enum(Coin::class), 'different:cambioDa'],
+            'cambioQuante' => ['required', 'integer', 'min:1'],
+        ], [
+            'cambioA.different' => 'Scegli due monete diverse.',
+            'cambioQuante.required' => 'Quante monete vuoi cambiare?',
+        ]);
+
+        try {
+            app(Purse::class)->convert(
+                $character, Coin::from($this->cambioDa), Coin::from($this->cambioA), $this->cambioQuante, auth()->user(),
+            );
+        } catch (MarketException $e) {
+            $this->addError('cambioQuante', $e->getMessage());
+
+            return;
+        }
+
+        $this->modaleCambio = false;
+    }
+
+    /** L'anteprima del cambio, o null finché non è un cambio valido. */
+    private function anteprimaCambio(Character $character): ?Coins
+    {
+        $da = Coin::tryFrom($this->cambioDa);
+        $a = Coin::tryFrom($this->cambioA);
+
+        if ($da === null || $a === null || ! $this->cambioQuante) {
+            return null;
+        }
+
+        try {
+            return $character->coins()->plus($character->coins()->conversion($da, $a, $this->cambioQuante));
+        } catch (InvalidArgumentException) {
+            return null;
+        }
+    }
+
+    /** Solo DM e admin: è qui che un oggetto dal nome suo riceve tipo e bonus. */
+    public function apriModifica(int $itemId): void
+    {
+        $character = Character::findOrFail($this->characterId);
+        $this->authorize('update', $character);
+
+        $item = $character->items()->whereKey($itemId)->firstOrFail();
+
+        $this->modificaId = $item->getKey();
+        $this->modifica = [
+            'name' => $item->name,
+            'category' => $item->category,
+            'base' => $item->base,
+            'magic_bonus' => (int) $item->magic_bonus,
+            'details' => $item->details,
+        ];
+        $this->resetErrorBag();
+    }
+
+    public function chiudiModifica(): void
+    {
+        $this->modificaId = null;
+    }
+
+    public function salvaModifica(): void
+    {
+        $character = Character::findOrFail($this->characterId);
+        $this->authorize('update', $character);
+
+        $item = $character->items()->whereKey($this->modificaId)->firstOrFail();
+
+        $dati = $this->validate([
+            'modifica.name' => ['required', 'string', 'max:100'],
+            'modifica.category' => ['nullable', Rule::in(CharacterItem::CATEGORIES)],
+            'modifica.base' => ['nullable', Rule::in(collect(EquipmentSlot::bases())->flatten()->all())],
+            'modifica.magic_bonus' => ['required', 'integer', 'min:0', 'max:'.CharacterItem::MAX_MAGIC_BONUS],
+            'modifica.details' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'modifica.name.max' => 'Il nome può avere al massimo :max caratteri: la descrizione va nei dettagli.',
+        ])['modifica'];
+
+        $nuovoSlot = EquipmentSlot::naturalFor($dati['base'] ?? $dati['name']);
+
+        // Un oggetto indossato che smette di esserlo, o cambia slot, torna nello zaino.
+        if ($item->isEquipped() && $item->equipped_slot !== $nuovoSlot) {
+            $item = app(EquipItem::class)->unequip($item);
+        }
+
+        $item->fill([
+            'name' => $dati['name'],
+            'category' => $dati['category'] ?: null,
+            'base' => $dati['base'] ?: null,
+            'magic_bonus' => (int) $dati['magic_bonus'],
+            'details' => $dati['details'] ?: null,
+        ])->save();
+
+        $this->modificaId = null;
     }
 
     public function equip(int $itemId): void
@@ -114,6 +241,8 @@ class InventoryManager extends Component
             'canManage' => auth()->user()?->can('manageEquipment', $character) ?? false,
             // Due permessi e non uno: la vetrina la decide solo il proprietario.
             'canShowcase' => auth()->user()?->can('manageTradeable', $character) ?? false,
+            'canEdit' => auth()->user()?->can('update', $character) ?? false,
+            'anteprima' => $this->modaleCambio ? $this->anteprimaCambio($character) : null,
         ]);
     }
 }

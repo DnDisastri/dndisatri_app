@@ -4,7 +4,7 @@
 @php use App\Domain\Dnd\Ability; @endphp
 
 @section('content')
-<div class="mx-auto max-w-2xl space-y-4 px-4 py-6">
+<x-pagina larghezza="stretta" class="space-y-4">
 {{-- La classe viene selezionata tramite route perché sottoclasse, requisiti e competenze dipendono dalla scelta. --}}
     <x-panel class="text-center">
         <h2 class="text-xl text-fg">{{ $character->name }}</h2>
@@ -100,7 +100,7 @@
         @if ($canPickSubclass)
             <x-panel title="Sottoclasse">
                 <p class="mb-2 text-sm text-muted">
-                    È il livello in cui un {{ $pickedClass }} sceglie la sottoclasse — il
+                    È il livello in cui un {{ $pickedClass }} sceglie la sottoclasse: il
                     {{ $classLevel }}° di quella classe, non del personaggio. Si sceglie una volta sola.
                 </p>
                 <select name="subclass"
@@ -177,5 +177,5 @@
             <x-button size="lg" variant="quiet" :href="route('characters.show', $character)">Annulla</x-button>
         </div>
     </form>
-</div>
+</x-pagina>
 @endsection

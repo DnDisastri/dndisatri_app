@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Actions\Market\CreateTradeRequest;
 use App\Actions\Users\IssueWarning;
 use App\Enums\TradeStatus;
+use App\Exceptions\MarketException;
 use App\Livewire\InventoryManager;
 use App\Livewire\Market\Trades;
 use App\Models\Character;
@@ -16,7 +17,6 @@ use App\Notifications\TradeRequested;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 
-
 beforeEach(function () {
     $this->io = Character::factory()->for(User::factory()->player())->create(['name' => 'Grimm', 'gp' => 100]);
     $this->altro = Character::factory()->for(User::factory()->player())->create(['name' => 'Vex', 'gp' => 100]);
@@ -24,7 +24,7 @@ beforeEach(function () {
 // La vetrina espone solo gli oggetti dichiarati scambiabili; il resto può essere richiesto a parole.
 describe('la vetrina', function () {
     it('di suo non mostra niente', function () {
-        $this->altro->addToInventory('Amuleto di Salute', value: 500);
+        $this->altro->addToInventory('Amuleto di Salute', valueCp: 50000);
 
         Livewire::actingAs($this->io->user)
             ->test(Trades::class)
@@ -34,8 +34,8 @@ describe('la vetrina', function () {
     });
 
     it('mostra solo quello che il proprietario ci ha messo', function () {
-        $this->altro->addToInventory('Amuleto di Salute', value: 500);
-        $corda = $this->altro->addToInventory('Corda di Seta', value: 10);
+        $this->altro->addToInventory('Amuleto di Salute', valueCp: 50000);
+        $corda = $this->altro->addToInventory('Corda di Seta', valueCp: 1000);
         $corda->forceFill(['tradeable' => true])->save();
 
         Livewire::actingAs($this->io->user)
@@ -46,7 +46,7 @@ describe('la vetrina', function () {
     });
 
     it('l\'interruttore la mette e la toglie', function () {
-        $item = $this->io->addToInventory('Corda di Seta', value: 10);
+        $item = $this->io->addToInventory('Corda di Seta', valueCp: 1000);
 
         Livewire::actingAs($this->io->user)
             ->test(InventoryManager::class, ['character' => $this->io])
@@ -60,9 +60,9 @@ describe('la vetrina', function () {
 
         expect($item->fresh()->tradeable)->toBeFalse();
     });
-// La disponibilità in vetrina esprime la volontà del proprietario e non può essere impostata dal DM per conto suo.
+    // La disponibilità in vetrina esprime la volontà del proprietario e non può essere impostata dal DM per conto suo.
     it('e un DM non la decide al posto del giocatore', function () {
-        $item = $this->io->addToInventory('Corda di Seta', value: 10);
+        $item = $this->io->addToInventory('Corda di Seta', valueCp: 1000);
         $dm = User::factory()->dm()->create();
 
         Livewire::actingAs($dm)
@@ -76,7 +76,7 @@ describe('la vetrina', function () {
 
 describe('chiedere a parole', function () {
     it('parte una richiesta, e non uno scambio', function () {
-        $this->io->addToInventory('Corda di Seta', value: 10);
+        $this->io->addToInventory('Corda di Seta', valueCp: 1000);
 
         Livewire::actingAs($this->io->user)
             ->test(Trades::class)
@@ -98,7 +98,7 @@ describe('chiedere a parole', function () {
 
     it('e chi la riceve lo viene a sapere', function () {
         Notification::fake();
-        $this->io->addToInventory('Corda di Seta', value: 10);
+        $this->io->addToInventory('Corda di Seta', valueCp: 1000);
 
         app(CreateTradeRequest::class)->handle(
             $this->io->fresh(), $this->altro, 'Amuleto di Salute', ['Corda di Seta'],
@@ -107,11 +107,10 @@ describe('chiedere a parole', function () {
         Notification::assertSentTo($this->altro->user, TradeRequested::class);
     });
 
-
     it('ma non insieme a una spunta dalla vetrina', function () {
-        $corda = $this->altro->addToInventory('Corda di Seta', value: 10);
+        $corda = $this->altro->addToInventory('Corda di Seta', valueCp: 1000);
         $corda->forceFill(['tradeable' => true])->save();
-        $this->io->addToInventory('Scudo', value: 10);
+        $this->io->addToInventory('Scudo', valueCp: 1000);
 
         Livewire::actingAs($this->io->user)
             ->test(Trades::class)
@@ -140,21 +139,21 @@ describe('chiedere a parole', function () {
     it('e non si offre quello che non si ha', function () {
         expect(fn () => app(CreateTradeRequest::class)->handle(
             $this->io, $this->altro, 'Amuleto', ['Spada che non ho'],
-        ))->toThrow(App\Exceptions\MarketException::class);
+        ))->toThrow(MarketException::class);
     });
 });
 
 describe('rispondere a una richiesta', function () {
     beforeEach(function () {
-        $this->io->addToInventory('Corda di Seta', value: 10);
-        $this->altro->addToInventory('Amuleto di Salute', value: 500);
+        $this->io->addToInventory('Corda di Seta', valueCp: 1000);
+        $this->altro->addToInventory('Amuleto di Salute', valueCp: 50000);
 
         $this->richiesta = app(CreateTradeRequest::class)->handle(
             $this->io->fresh(), $this->altro, 'Amuleto di Salute', ['Corda di Seta'],
         );
     });
 
-// Rispondere "ce l'ho" crea una proposta inversa: lo scambio si conclude solo dopo la conferma dell'altro giocatore.
+    // Rispondere "ce l'ho" crea una proposta inversa: lo scambio si conclude solo dopo la conferma dell'altro giocatore.
     it('«ce l\'ho» fa nascere una proposta a parti invertite', function () {
         Livewire::actingAs($this->altro->user)
             ->test(Trades::class)
@@ -227,7 +226,7 @@ describe('rispondere a una richiesta', function () {
             ->call('rifiutaRichiesta', $this->richiesta->id)
             ->assertForbidden();
     });
-// La richiesta non muove beni; se genera una proposta sotto richiamo, è la proposta a passare dalla supervisione.
+    // La richiesta non muove beni; se genera una proposta sotto richiamo, è la proposta a passare dalla supervisione.
     it('sotto richiamo, la proposta che ne nasce resta in attesa', function () {
         app(IssueWarning::class)->handle(
             $this->altro->user, User::factory()->dm()->create(), 'Prova',

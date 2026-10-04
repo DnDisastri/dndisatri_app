@@ -2,11 +2,13 @@
 @section('title', $character->name)
 
 @section('content')
-    <div class="mx-auto max-w-5xl space-y-4 px-4 py-6">
+    <x-pagina class="space-y-4">
 
         @php $mio = auth()->id() === $character->user_id; @endphp
 
-        <x-panel>
+        {{-- `min-w-0`: senza, il carosello delle sezioni allargherebbe la colonna. --}}
+        <div class="space-y-4 xl:grid xl:grid-cols-[20rem_minmax(0,1fr)] xl:items-start xl:gap-6 xl:space-y-0">
+        <x-panel class="xl:sticky xl:top-8 xl:max-h-[calc(100dvh-4rem)] xl:overflow-y-auto">
             <div class="flex flex-row justify-between items-center gap-1 mb-1">
                 <h2 class="text-xl text-fg  ">{{ $character->name }}</h2>
 
@@ -59,8 +61,8 @@
             @endif
         </x-panel>
 
-        {{-- Sezioni a swipe (app.js), senza reload; l'indirizzo segue la
-             sezione, così un refresh riapre lì. --}}
+        <div class="min-w-0 space-y-4">
+        {{-- Sezioni a swipe (app.js): l'indirizzo segue la sezione. --}}
         @if (count($sezioni) > 1)
             <nav class="flex overflow-x-auto rounded-full border border-line bg-surface text-sm"
                 aria-label="Sezioni della scheda">
@@ -75,7 +77,7 @@
             </nav>
 
             <div id="sheet-slider"
-                class="flex snap-x snap-mandatory overflow-x-auto transition-[height] duration-200
+                class="flex gap-6 snap-x snap-mandatory overflow-x-auto transition-[height] duration-200
                        [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 @foreach ($sezioni as $voce)
                     <div class="w-full shrink-0 snap-center snap-always self-start space-y-4">
@@ -86,9 +88,11 @@
         @else
             @include('characters.sezioni.' . $sezione->value)
         @endif
+        </div>
+        </div>
 
         <x-back dove="sotto" :href="$mio ? route('characters.index') : route('guild.index')">
             {{ $mio ? 'Torna ai miei eroi' : 'Torna alla Gilda' }}
         </x-back>
-    </div>
+    </x-pagina>
 @endsection

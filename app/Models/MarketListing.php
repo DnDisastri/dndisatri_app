@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
-    'seller_character_id', 'name', 'category', 'qty', 'price', 'unit_value', 'details',
+    'seller_character_id', 'name', 'base', 'magic_bonus', 'effects', 'category', 'qty', 'price_cp', 'unit_value_cp', 'details',
 ])]
 class MarketListing extends Model
 {
@@ -24,8 +24,9 @@ class MarketListing extends Model
         return [
             'status' => ListingStatus::class,
             'qty' => 'integer',
-            'price' => 'integer',
-            'unit_value' => 'integer',
+            'price_cp' => 'integer',
+            'unit_value_cp' => 'integer',
+            'effects' => 'array',
             'resolved_at' => 'datetime',
             'reversed_at' => 'datetime',
         ];

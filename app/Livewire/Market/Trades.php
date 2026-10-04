@@ -7,6 +7,7 @@ use App\Actions\Market\CreateTradeRequest;
 use App\Actions\Market\ResolveTrade;
 use App\Actions\Market\ResolveTradeRequest;
 use App\Actions\Supervision\Supervisor;
+use App\Domain\Dnd\Coins;
 use App\Enums\TradeStatus;
 use App\Exceptions\MarketException;
 use App\Livewire\Concerns\ActsAsCharacter;
@@ -16,13 +17,7 @@ use App\Models\Trade;
 use App\Models\TradeRequest;
 use Livewire\Component;
 
-/**
- * Gli scambi diretti fra giocatori.
- *
- * Proporre e accettare passano dal **Supervisor** (vedi la nota in `Listings`).
- * Rifiutare e ritirare no: chiudere una proposta senza eseguirla non muove
- * niente, e non c'è niente da vigilare.
- */
+/** Proporre e accettare passano dal Supervisor (vedi `Listings`); rifiutare e ritirare no, non muovono niente. */
 class Trades extends Component
 {
     use ActsAsCharacter;
@@ -35,27 +30,24 @@ class Trades extends Component
     /** @var list<string> nomi degli oggetti chiesti */
     public array $want = [];
 
-    public int $giveGp = 0;
+    /** @var array<string,int|string|null> */
+    public array $giveMonete = [];
 
-    public int $wantGp = 0;
+    /** @var array<string,int|string|null> */
+    public array $wantMonete = [];
 
     public string $message = '';
 
-    /**
-     * Quello che si chiede **a parole**, quando non è in vetrina.
-     *
-     * Non è un oggetto scelto da un elenco: è una diceria, e quindi una
-     * stringa. Se questo campo è pieno non parte uno scambio ma una richiesta.
-     */
+    /** Se pieno non parte uno scambio ma una richiesta a parole. */
     public string $chiedo = '';
 
-    /** La richiesta ricevuta a cui si sta rispondendo, nel riquadro. */
     public ?int $richiestaAperta = null;
 
     /** @var list<string> quello che si dà rispondendo a una richiesta */
     public array $offro = [];
 
-    public int $offroGp = 0;
+    /** @var array<string,int|string|null> */
+    public array $offroMonete = [];
 
     public function mount(): void
     {
@@ -63,17 +55,7 @@ class Trades extends Component
         $this->preselezionaDestinatario();
     }
 
-    /**
-     * Arrivando dalla vetrina di un altro (P14), il destinatario è già scelto.
-     *
-     * La scheda passa `?a={id}`, così si atterra sul modulo con «A chi» già
-     * riempito e la sua vetrina già mostrata, invece di dover ricominciare da
-     * capo scegliendo la persona che si stava già guardando.
-     *
-     * L'id arriva dal browser e non ci si fida: si prende solo se è un
-     * personaggio **vivo** e **non è quello** con cui si sta usando il mercato.
-     * Uno inventato o già morto lascia il modulo com'era, vuoto.
-     */
+    /** `?a={id}` dalla vetrina di un altro: valido solo se è vivo e non è il personaggio in uso. */
     private function preselezionaDestinatario(): void
     {
         $a = request()->integer('a');
@@ -108,20 +90,14 @@ class Trades extends Component
             return;
         }
 
-        /*
-         * Due strade e un modulo solo. Quello che si spunta dalla vetrina è un
-         * oggetto che esiste, e allora è una proposta; quello che si scrive a
-         * parole non lo è, e allora è una richiesta. Insieme non hanno senso —
-         * sarebbe mezza proposta eseguibile e mezza no — e invece di scegliere
-         * al posto di chi scrive, glielo si dice.
-         */
+        // Spuntare dalla vetrina è una proposta, scrivere a parole è una richiesta: insieme non si può.
         if ($this->chiedo !== '' && $this->want !== []) {
             $this->addError('scambio', 'Scegli: o spunti qualcosa dalla sua vetrina, o chiedi a parole.');
 
             return;
         }
 
-        $this->validaOro(['giveGp', 'wantGp']);
+        $this->validaMonete(['giveMonete', 'wantMonete']);
 
         if ($this->chiedo !== '') {
             $this->request($character, $to);
@@ -136,14 +112,14 @@ class Trades extends Component
                 to: $to,
                 give: $this->asItems($this->give),
                 want: $this->asItems($this->want),
-                giveGp: $this->giveGp,
-                wantGp: $this->wantGp,
+                giveCp: Coins::fromArray($this->giveMonete)->value(),
+                wantCp: Coins::fromArray($this->wantMonete)->value(),
                 message: $this->message ?: null,
             );
 
-            $this->reset('give', 'want', 'giveGp', 'wantGp', 'message');
+            $this->reset('give', 'want', 'giveMonete', 'wantMonete', 'message');
 
-            session()->flash('mercato', $result instanceof SupervisedAction
+            $this->esito($result instanceof SupervisedAction
                 ? 'Sei sotto richiamo: la proposta è in attesa che un DM la approvi.'
                 : 'Proposta inviata.');
         } catch (MarketException $e) {
@@ -160,13 +136,13 @@ class Trades extends Component
                 to: $to,
                 wanted: $this->chiedo,
                 offered: array_values(array_filter($this->give)),
-                offeredGp: $this->giveGp,
+                offeredCp: Coins::fromArray($this->giveMonete)->value(),
                 message: $this->message ?: null,
             );
 
-            $this->reset('give', 'want', 'giveGp', 'wantGp', 'message', 'chiedo');
+            $this->reset('give', 'want', 'giveMonete', 'wantMonete', 'message', 'chiedo');
 
-            session()->flash('mercato', 'Richiesta inviata: adesso tocca a lui.');
+            $this->esito('Richiesta inviata: adesso tocca a lui.');
         } catch (MarketException $e) {
             $this->addError('scambio', $e->getMessage());
         }
@@ -174,7 +150,6 @@ class Trades extends Component
 
     // === Le richieste ricevute ===
 
-    /** Apre il riquadro per rispondere: si sceglie dal proprio zaino. */
     public function apriRichiesta(int $requestId): void
     {
         $request = TradeRequest::findOrFail($requestId);
@@ -182,7 +157,7 @@ class Trades extends Component
 
         $this->richiestaAperta = $request->getKey();
         $this->offro = [];
-        $this->offroGp = 0;
+        $this->offroMonete = [];
         $this->resetErrorBag('scambio');
     }
 
@@ -191,28 +166,25 @@ class Trades extends Component
         $this->richiestaAperta = null;
     }
 
-    /**
-     * «Sì, ce l'ho»: dalla richiesta nasce una proposta di scambio, che
-     * l'altro dovrà confermare.
-     */
+    /** Dalla richiesta nasce una proposta, che l'altro deve confermare. */
     public function accettaRichiesta(): void
     {
         $request = TradeRequest::findOrFail($this->richiestaAperta);
         $this->authorize('accept', $request);
 
-        $this->validaOro(['offroGp']);
+        $this->validaMonete(['offroMonete']);
 
         try {
             $result = app(AcceptTradeRequest::class)->handle(
                 $request,
                 auth()->user(),
                 $this->asItems($this->offro),
-                $this->offroGp,
+                Coins::fromArray($this->offroMonete)->value(),
             );
 
             $this->chiudiRichiesta();
 
-            session()->flash('mercato', $result instanceof SupervisedAction
+            $this->esito($result instanceof SupervisedAction
                 ? 'Sei sotto richiamo: la proposta è in attesa che un DM la approvi.'
                 : 'Proposta mandata: ora tocca a lui confermare.');
         } catch (MarketException $e) {
@@ -239,7 +211,7 @@ class Trades extends Component
             app(ResolveTradeRequest::class)->handle($request, $status);
 
             $this->chiudiRichiesta();
-            session()->flash('mercato', $done);
+            $this->esito($done);
         } catch (MarketException $e) {
             $this->addError('scambio', $e->getMessage());
         }
@@ -253,7 +225,7 @@ class Trades extends Component
         try {
             $result = app(Supervisor::class)->acceptTrade(auth()->user(), $trade);
 
-            session()->flash('mercato', $result instanceof SupervisedAction
+            $this->esito($result instanceof SupervisedAction
                 ? 'Sei sotto richiamo: l\'accettazione è in attesa che un DM la approvi.'
                 : 'Scambio concluso.');
         } catch (MarketException $e) {
@@ -278,18 +250,14 @@ class Trades extends Component
 
         try {
             app(ResolveTrade::class)->handle($trade, $status);
-            session()->flash('mercato', $done);
+            $this->esito($done);
         } catch (MarketException $e) {
             $this->addError('scambio', $e->getMessage());
         }
     }
 
     /**
-     * I nomi scelti a spunta diventano la forma che l'azione si aspetta.
-     *
-     * La quantità è sempre 1: il modulo non la chiede ancora, e per gli oggetti
-     * che si scambiano davvero — armi, armature, oggetti magici — è quasi
-     * sempre giusta.
+     * Quantità sempre 1: il modulo non la chiede ancora.
      *
      * @param  list<string>  $names
      * @return list<array{name: string, qty: int}>
@@ -305,22 +273,20 @@ class Trades extends Component
     }
 
     /**
-     * Le cifre in oro stanno in colonne `unsignedInteger`: fuori da quel
-     * campo la scrittura fallisce e la pagina muore. Il `min="0"` nel modulo
-     * è solo lato client, quindi il controllo va rifatto qui.
+     * Il `min="0"` del modulo vale solo nel browser.
      *
      * @param  list<string>  $campi
      */
-    private function validaOro(array $campi): void
+    private function validaMonete(array $campi): void
     {
-        $regole = ['integer', 'min:0', 'max:'.Character::MAX_GP];
+        $regole = ['nullable', 'integer', 'min:0', 'max:'.Coins::MAX];
 
         $this->validate(
-            array_fill_keys($campi, $regole),
+            array_fill_keys(array_map(fn (string $campo) => "{$campo}.*", $campi), $regole),
             array_merge(...array_map(fn (string $campo) => [
-                "{$campo}.integer" => 'Le monete si contano a numeri interi.',
-                "{$campo}.min" => 'Non puoi mettere una cifra negativa.',
-                "{$campo}.max" => 'Cifra troppo alta: tanto oro non esiste.',
+                "{$campo}.*.integer" => 'Le monete si contano a numeri interi.',
+                "{$campo}.*.min" => 'Non puoi mettere una cifra negativa.',
+                "{$campo}.*.max" => 'Cifra troppo alta: tante monete non esistono.',
             ], $campi)),
         );
     }
@@ -339,17 +305,9 @@ class Trades extends Component
                 ->orderBy('name')
                 ->get(),
             'mine' => $character?->items->sortBy('name') ?? collect(),
-            /*
-             * **Solo la vetrina, non lo zaino.** Di una scheda altrui non si
-             * vedono né inventario né oro (P14), e questa pagina lo scavalcava:
-             * bastava sceglierlo dalla tendina per vedergli tutto. Adesso si
-             * vede quello che lui ha deciso di mostrare, e per il resto si
-             * chiede a parole.
-             */
+            // Solo la vetrina: inventario e oro altrui non si vedono.
             'theirs' => $to?->items->where('tradeable', true)->sortBy('name')->values() ?? collect(),
-            // `to` serve a `deliveryProblems()` (P28): la card dice prima del
-            // clic se lo scambio non è più eseguibile, e per saperlo guarda
-            // anche cosa può dare chi riceve — cioè io.
+            // `to` serve a `deliveryProblems()`, che controlla anche cosa può dare chi riceve.
             'received' => $key
                 ? Trade::awaiting(Character::find($key))->with(['from', 'to', 'items'])->get()
                 : collect(),
@@ -365,6 +323,6 @@ class Trades extends Component
             'richiesta' => $this->richiestaAperta
                 ? TradeRequest::with('from')->find($this->richiestaAperta)
                 : null,
-        ])->title('Scambi');
+        ]);
     }
 }

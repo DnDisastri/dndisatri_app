@@ -18,8 +18,8 @@ class TradeFactory extends Factory
         return [
             'from_character_id' => Character::factory(),
             'to_character_id' => Character::factory(),
-            'give_gp' => 0,
-            'want_gp' => 0,
+            'give_cp' => 0,
+            'want_cp' => 0,
             'status' => TradeStatus::Pending,
             'message' => null,
         ];
@@ -33,9 +33,10 @@ class TradeFactory extends Factory
         ]);
     }
 
+    /** Importi in mo. */
     public function gold(int $give = 0, int $want = 0): static
     {
-        return $this->state(fn () => ['give_gp' => $give, 'want_gp' => $want]);
+        return $this->state(fn () => ['give_cp' => $give * 100, 'want_cp' => $want * 100]);
     }
 
     /** Aggiunge un oggetto offerto da chi propone. */
@@ -45,7 +46,7 @@ class TradeFactory extends Factory
             'direction' => TradeDirection::Give,
             'name' => $name,
             'qty' => $qty,
-            'value' => $value,
+            'value_cp' => $value * 100,
         ]);
     }
 
@@ -56,7 +57,7 @@ class TradeFactory extends Factory
             'direction' => TradeDirection::Want,
             'name' => $name,
             'qty' => $qty,
-            'value' => $value,
+            'value_cp' => $value * 100,
         ]);
     }
 }

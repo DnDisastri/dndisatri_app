@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use App\Actions\Characters\ApprovePendingChange;
+use App\Actions\Characters\ProposeChange;
 use App\Actions\Characters\RejectPendingChange;
 use App\Domain\Dnd\Ability;
+use App\Domain\Dnd\Coins;
 use App\Enums\LedgerAction;
 use App\Enums\PendingChangeStatus;
 use App\Enums\PendingChangeType;
@@ -84,7 +86,7 @@ describe('passaggio di livello approvato', function () {
         $character = Character::factory()->create([
             'level' => 7, 'con' => 15, 'hp_max' => 52, 'hp_current' => 52, 'hit_die' => 10,
         ]);
-// Il calcolo del passaggio di livello avviene alla proposta; qui si applicano soltanto i valori già calcolati.
+        // Il calcolo del passaggio di livello avviene alla proposta; qui si applicano soltanto i valori già calcolati.
         $change = PendingChange::factory()->forCharacter($character)->levelUp(8)->create([
             'diff' => ['level' => 8, 'con' => 16, 'hp_max' => 68, 'hp_current' => 68],
         ]);
@@ -104,7 +106,7 @@ describe('bottino approvato', function () {
     it('somma l\'oro invece di sostituirlo', function () {
         $character = Character::factory()->create(['gp' => 100]);
         $change = PendingChange::factory()->forCharacter($character)->loot(250)->create();
-// Il bottino viene sommato allo stato corrente, che può essere cambiato mentre la richiesta era pendente.
+        // Il bottino viene sommato allo stato corrente, che può essere cambiato mentre la richiesta era pendente.
         $character->decrement('gp', 40);
 
         app(ApprovePendingChange::class)->handle($change, User::factory()->dm()->create());
@@ -131,9 +133,51 @@ describe('bottino approvato', function () {
         $entry = LedgerEntry::forCharacter($character)->latestFirst()->first();
 
         expect($entry->action)->toBe(LedgerAction::Approve)
-            ->and($entry->gp_delta)->toBe(250)
-            ->and($entry->gp_after)->toBe(250)
+            ->and($entry->cp_delta)->toBe(25000)
+            ->and($entry->coins_after)->toBe(['gp' => 250])
             ->and($entry->actor_id)->toBe($dm->id);
+    });
+
+    // Il caso più lungo che il modulo accetta: il messaggio supera i 255 caratteri.
+    it('si approva anche con nomi lunghi e una nota', function () {
+        $player = User::factory()->player()->create();
+        $character = Character::factory()->ownedBy($player)->create(['gp' => 10]);
+        $items = array_map(
+            fn ($i) => ['name' => "Oggetto {$i} ".str_repeat('x', 85), 'qty' => 1],
+            range(1, ProposeChange::LOOT_MAX_ITEMS),
+        );
+
+        $change = app(ProposeChange::class)->loot($character, $player, new Coins(gp: 200), $items, str_repeat('n', 255));
+
+        app(ApprovePendingChange::class)->handle($change, User::factory()->dm()->create());
+
+        $entry = LedgerEntry::forCharacter($character)->latestFirst()->first();
+
+        expect($character->fresh()->gp)->toBe(210)
+            ->and($character->items()->count())->toBe(ProposeChange::LOOT_MAX_ITEMS)
+            ->and(mb_strlen($entry->message))->toBeGreaterThan(255)
+            ->and($entry->message)->toContain(str_repeat('n', 255));
+    });
+
+    it('si ferma se una pila supererebbe il massimo, senza applicare niente', function () {
+        $character = Character::factory()->create(['gp' => Coins::MAX - 10]);
+        $change = PendingChange::factory()->forCharacter($character)->loot(100)->create();
+
+        expect(fn () => app(ApprovePendingChange::class)->handle($change, User::factory()->dm()->create()))
+            ->toThrow(RuntimeException::class);
+
+        expect($character->fresh()->gp)->toBe(Coins::MAX - 10)
+            ->and($change->fresh()->isPending())->toBeTrue();
+    });
+});
+
+describe('il Registro', function () {
+    it('accorcia un messaggio troppo lungo invece di rifiutarlo', function () {
+        $character = Character::factory()->create();
+
+        $entry = $character->recordInLedger(LedgerAction::Approve, str_repeat('a', 5000));
+
+        expect(mb_strlen($entry->fresh()->message))->toBeLessThanOrEqual(2003);
     });
 });
 

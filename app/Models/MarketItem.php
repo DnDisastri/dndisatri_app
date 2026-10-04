@@ -9,13 +9,13 @@ use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
-/**
- * Un articolo del negozio della gilda.
- */
-#[Fillable(['name', 'category', 'price', 'is_unlimited', 'stock', 'details'])]
+/** `price_cp` è in rame. */
+#[Fillable(['name', 'base', 'magic_bonus', 'effects', 'category', 'price_cp', 'is_unlimited', 'stock', 'details'])]
 class MarketItem extends Model
 {
     use HasFactory, LogsActivity;
+
+    protected $attributes = ['magic_bonus' => 0, 'in_storage' => false];
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -31,24 +31,38 @@ class MarketItem extends Model
     {
         return [
             'is_unlimited' => 'boolean',
-            'price' => 'integer',
+            'in_storage' => 'boolean',
+            'price_cp' => 'integer',
             'stock' => 'integer',
+            'magic_bonus' => 'integer',
+            'effects' => 'array',
         ];
     }
 
-    /** Disponibile se le scorte sono infinite o se ce n'è ancora. */
+    /** In magazzino non si compra: aspetta che un DM o un admin gli dia un prezzo. */
     public function isAvailable(int $qty = 1): bool
     {
-        return $this->is_unlimited || $this->stock >= $qty;
+        return ! $this->in_storage && ($this->is_unlimited || $this->stock >= $qty);
     }
 
     public function scopeAvailable(Builder $query): void
     {
-        $query->where(fn (Builder $q) => $q->where('is_unlimited', true)->orWhere('stock', '>', 0));
+        $query->where('in_storage', false)
+            ->where(fn (Builder $q) => $q->where('is_unlimited', true)->orWhere('stock', '>', 0));
+    }
+
+    public function scopeOnSale(Builder $query): void
+    {
+        $query->where('in_storage', false);
+    }
+
+    public function scopeInStorage(Builder $query): void
+    {
+        $query->where('in_storage', true);
     }
 
     public function totalPrice(int $qty): int
     {
-        return $this->price * $qty;
+        return $this->price_cp * $qty;
     }
 }

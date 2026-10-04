@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Market;
 
+use App\Domain\Dnd\Coins;
 use App\Enums\LedgerAction;
 use App\Enums\TradeStatus;
 use App\Exceptions\ReversalException;
@@ -19,26 +20,16 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * L'annullamento di una transazione già conclusa (decisione D12).
+ * L'annullamento di una transazione conclusa, per gli scambi in malafede.
  *
- * Non è uno strumento di uso corrente: serve quando due giocatori costruiscono
- * uno scambio in malafede e bisogna rendere il maltolto.
- *
- * **Se la roba non c'è più, l'annullamento si rifiuta e dice cosa manca.**
- * Quando l'oggetto è stato rivenduto o l'oro speso, il sistema non inventa:
- * spiega cosa lo blocca, e l'admin rimedia a mano con l'oro e il bottino.
- * L'alternativa — forzare mandando un saldo sotto zero — romperebbe la regola
- * per cui l'oro non scende mai sotto zero e lascerebbe uno stato che nessuna
- * schermata sa raccontare.
- *
- * Per la stessa ragione **si verifica tutto prima di muovere qualsiasi cosa**:
- * un annullamento fatto a metà sarebbe peggio del torto che voleva riparare.
- *
- * Il Registro non viene riscritto. L'annullamento **aggiunge** i suoi movimenti
- * in fondo, e segna sulla transazione che c'è stato un seguito.
+ * Se la roba non c'è più si rifiuta e dice cosa manca: niente borse sotto zero.
+ * Si verifica tutto prima di muovere qualsiasi cosa, e il Registro non si
+ * riscrive: l'annullamento aggiunge le sue righe in fondo.
  */
 final class ReverseTransaction
 {
+    public function __construct(private readonly Purse $purse) {}
+
     /** Uno scambio già accettato: tutto torna da dove era partito. */
     public function trade(Trade $trade, User $admin, string $reason): Trade
     {
@@ -61,37 +52,30 @@ final class ReverseTransaction
             $given = $locked->givenItems();
             $wanted = $locked->wantedItems();
 
-            // Prima si verifica tutto, in entrambe le direzioni: un
-            // annullamento fatto a metà sarebbe peggio del torto da riparare.
             $this->assertCanReturn($to, $given);
             $this->assertCanReturn($from, $wanted);
-            $this->assertHasGold($to, $locked->give_gp);
-            $this->assertHasGold($from, $locked->want_gp);
+            $this->assertHasCoins($to, $locked->give_cp);
+            $this->assertHasCoins($from, $locked->want_cp);
 
-            // Poi si muove, all'indietro rispetto a com'era andata.
             $this->moveItems($given, from: $to, to: $from);
             $this->moveItems($wanted, from: $from, to: $to);
 
-            $this->moveGold($to, $from, $locked->give_gp);
-            $this->moveGold($from, $to, $locked->want_gp);
+            [$toDelta, $fromDelta] = $this->moveCoins($to, $from, $locked->give_cp);
+            [$fromBack, $toBack] = $this->moveCoins($from, $to, $locked->want_cp);
 
             $locked->forceFill([
                 'reversed_at' => now(),
                 'reversed_by' => $admin->getKey(),
             ])->save();
 
-            // All'accettazione il proponente aveva guadagnato (want − give):
-            // annullare significa restituirgli l'opposto.
-            $undoForProposer = $locked->give_gp - $locked->want_gp;
-
-            $this->record($from->refresh(), "Scambio con {$to->name} annullato", $undoForProposer, $admin, $reason);
-            $this->record($to->refresh(), "Scambio con {$from->name} annullato", -$undoForProposer, $admin, $reason);
+            $this->record($from, "Scambio con {$to->name} annullato", $fromDelta->plus($fromBack), $admin, $reason);
+            $this->record($to, "Scambio con {$from->name} annullato", $toDelta->plus($toBack), $admin, $reason);
 
             return $locked;
         });
     }
 
-    /** Una vendita fra giocatori: l'oggetto al venditore, l'oro al compratore. */
+    /** Una vendita fra giocatori: l'oggetto al venditore, le monete al compratore. */
     public function listingSale(MarketListing $listing, User $admin, string $reason): MarketListing
     {
         return DB::transaction(function () use ($listing, $admin, $reason) {
@@ -112,32 +96,26 @@ final class ReverseTransaction
                 throw ReversalException::itemGone($buyer->name, $locked->name);
             }
 
-            $this->assertHasGold($seller, $locked->price);
+            $this->assertHasCoins($seller, $locked->price_cp);
 
             $buyer->removeFromInventory($locked->name, $locked->qty);
-            $seller->addToInventory(
-                name: $locked->name,
-                qty: $locked->qty,
-                category: $locked->category,
-                value: $locked->unit_value,
-                details: $locked->details,
-            );
+            $seller->addToInventory(...Character::itemCopy($locked), qty: $locked->qty);
 
-            $this->moveGold($seller, $buyer, $locked->price);
+            [$sellerDelta, $buyerDelta] = $this->moveCoins($seller, $buyer, $locked->price_cp);
 
             $locked->forceFill([
                 'reversed_at' => now(),
                 'reversed_by' => $admin->getKey(),
             ])->save();
 
-            $this->record($seller->refresh(), "Vendita di {$locked->name} annullata", -$locked->price, $admin, $reason);
-            $this->record($buyer->refresh(), "Acquisto di {$locked->name} annullato", $locked->price, $admin, $reason);
+            $this->record($seller, "Vendita di {$locked->name} annullata", $sellerDelta, $admin, $reason);
+            $this->record($buyer, "Acquisto di {$locked->name} annullato", $buyerDelta, $admin, $reason);
 
             return $locked;
         });
     }
 
-    /** Un acquisto dal negozio: oro indietro, oggetto via, scorte ripristinate. */
+    /** Un acquisto dal negozio: monete indietro, oggetto via, scorte ripristinate. */
     public function shopPurchase(LedgerEntry $entry, User $admin, string $reason): LedgerEntry
     {
         return DB::transaction(function () use ($entry, $admin, $reason) {
@@ -163,8 +141,7 @@ final class ReverseTransaction
             }
 
             $character->removeFromInventory($name, $qty);
-            // `gp_delta` era negativo: rimetterlo indietro è sottrarlo.
-            $character->increment('gp', -$locked->gp_delta);
+            $delta = $this->purse->revert($character, $locked->coinsDelta());
 
             if ($item = MarketItem::find($details['market_item_id'] ?? null)) {
                 if (! $item->is_unlimited) {
@@ -173,13 +150,13 @@ final class ReverseTransaction
             }
 
             $this->close($locked, $admin);
-            $this->record($character->refresh(), "Acquisto di {$qty}× {$name} annullato", -$locked->gp_delta, $admin, $reason);
+            $this->record($character, "Acquisto di {$qty}× {$name} annullato", $delta, $admin, $reason);
 
             return $locked;
         });
     }
 
-    /** L'oro assegnato o tolto da un DM, rimesso com'era. */
+    /** Le monete date o tolte da un DM, rimesse com'erano. */
     public function goldGrant(LedgerEntry $entry, User $admin, string $reason): LedgerEntry
     {
         return DB::transaction(function () use ($entry, $admin, $reason) {
@@ -188,16 +165,12 @@ final class ReverseTransaction
             $this->assertReversableEntry($locked, LedgerAction::DmGold);
 
             $character = Character::whereKey($locked->character_id)->lockForUpdate()->firstOrFail();
-            $undo = -$locked->gp_delta;
+            $this->assertHasCoins($character, $locked->cp_delta);
 
-            if ($undo < 0 && $character->gp < abs($undo)) {
-                throw ReversalException::goldGone($character->name, abs($undo), $character->gp);
-            }
-
-            $character->increment('gp', $undo);
+            $delta = $this->purse->revert($character, $locked->coinsDelta());
 
             $this->close($locked, $admin);
-            $this->record($character->refresh(), 'Assegnazione di oro annullata', $undo, $admin, $reason);
+            $this->record($character, 'Assegnazione di monete annullata', $delta, $admin, $reason);
 
             return $locked;
         });
@@ -228,10 +201,10 @@ final class ReverseTransaction
         }
     }
 
-    private function assertHasGold(Character $character, int $amount): void
+    private function assertHasCoins(Character $character, int $cp): void
     {
-        if ($amount > 0 && $character->gp < $amount) {
-            throw ReversalException::goldGone($character->name, $amount, $character->gp);
+        if ($cp > 0 && $character->purseValue() < $cp) {
+            throw ReversalException::coinsGone($character->name, $cp, $character->purseValue());
         }
     }
 
@@ -240,22 +213,18 @@ final class ReverseTransaction
     {
         foreach ($items as $item) {
             $from->removeFromInventory($item->name, $item->qty);
-            $to->addToInventory(
-                name: $item->name,
-                qty: $item->qty,
-                category: $item->category,
-                value: $item->value,
-                details: $item->details,
-            );
+            $to->addToInventory(...Character::itemCopy($item), qty: $item->qty);
         }
     }
 
-    private function moveGold(Character $from, Character $to, int $amount): void
+    /** @return array{0: Coins, 1: Coins} i movimenti di chi paga e di chi riceve */
+    private function moveCoins(Character $from, Character $to, int $cp): array
     {
-        if ($amount > 0) {
-            $from->decrement('gp', $amount);
-            $to->increment('gp', $amount);
+        if ($cp <= 0) {
+            return [Coins::none(), Coins::none()];
         }
+
+        return [$this->purse->pay($from, $cp), $this->purse->receiveValue($to, $cp)];
     }
 
     private function close(LedgerEntry $entry, User $admin): void
@@ -266,12 +235,12 @@ final class ReverseTransaction
         ])->save();
     }
 
-    private function record(Character $character, string $what, int $gpDelta, User $admin, string $reason): void
+    private function record(Character $character, string $what, Coins $delta, User $admin, string $reason): void
     {
         $character->recordInLedger(
             LedgerAction::Reversal,
-            "{$what} — {$reason}",
-            $gpDelta,
+            "{$what} ({$reason})",
+            $delta,
             $admin,
         );
 

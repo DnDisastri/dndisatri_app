@@ -1,9 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Registro di '.$character->name)
-{{-- Il registro è append-only: `gp_after` conserva il saldo dopo ogni movimento.
-     Gli annullamenti aggiungono un nuovo movimento senza modificare lo storico. --}}
 @section('content')
-<div class="mx-auto max-w-3xl px-4 py-6">
+<x-pagina larghezza="stretta">
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="\App\Enums\Icon::CharacterLedger" class="h-7 w-7" /> Registro
     </h2>
@@ -11,13 +9,13 @@
     @if ($filtrabile && $tutti)
         <p class="mb-6 text-sm text-muted">
             Ogni movimento di tutti i personaggi: bottini, acquisti, vendite,
-            scambi e l'oro assegnato dai dungeon master. È da qui che si capisce
-            dove è finito qualcosa.
+            scambi, cambi di monete e le monete date dai dungeon master. È da qui
+            che si capisce dove è finito qualcosa.
         </p>
     @else
         <p class="mb-6 text-sm text-muted">
             Ogni movimento di {{ $character->name }}: bottini, acquisti, vendite,
-            scambi e l'oro assegnato dai dungeon master.
+            scambi, cambi di monete e le monete date dai dungeon master.
         </p>
     @endif
 
@@ -74,9 +72,10 @@
 
     @unless ($filtrabile && $tutti)
         <x-panel class="mb-6 flex items-center justify-between gap-3">
-            <span class="text-sm uppercase tracking-wide text-muted">Oro in tasca</span>
-            <span class="flex items-center gap-2 text-2xl font-bold text-fg">
-                <x-icona :is="\App\Enums\Icon::Gold" class="h-6 w-6" /> {{ $character->gp }}
+            <span class="text-sm uppercase tracking-wide text-muted">In borsa</span>
+            <span class="flex items-center gap-2 text-right text-2xl font-bold text-fg">
+                <x-icona :is="\App\Enums\Icon::Gold" class="h-6 w-6 shrink-0" />
+                <x-monete :borsa="$character->coins()" class="whitespace-normal" />
             </span>
         </x-panel>
     @endunless
@@ -94,14 +93,17 @@
                         @endif
                     </span>
 
-                    @if ($entry->gp_delta !== 0)
+                    {{-- Un cambio vale zero: si mostrano le pile che si sono mosse. --}}
+                    @if ($entry->cp_delta !== 0)
                         <span @class([
                             'font-bold',
-                            'text-primary' => $entry->gp_delta > 0,
-                            'text-on-danger-soft' => $entry->gp_delta < 0,
+                            'text-primary' => $entry->cp_delta > 0,
+                            'text-on-danger-soft' => $entry->cp_delta < 0,
                         ])>
-                            {{ $entry->gp_delta > 0 ? '+' : '−' }}{{ abs($entry->gp_delta) }} mo
+                            {{ $entry->cp_delta > 0 ? '+' : '' }}<x-monete :valore="$entry->cp_delta" />
                         </span>
+                    @elseif (! $entry->coinsDelta()->isEmpty())
+                        <span class="font-bold text-muted">{{ $entry->coinsDelta()->format() }}</span>
                     @endif
                 </div>
 
@@ -114,8 +116,8 @@
                         <span>· {{ $entry->actor->name }}</span>
                     @endif
 
-                    @if ($entry->gp_after !== null)
-                        <span>· saldo dopo: {{ $entry->gp_after }} mo</span>
+                    @if ($dopo = $entry->coinsAfter())
+                        <span>· in borsa dopo: {{ $dopo->format() }}</span>
                     @endif
                 </p>
 
@@ -132,12 +134,12 @@
                     periodo, o torna a tutti i personaggi.
                 @else
                     Nessun movimento. Il registro si riempie da solo: al primo
-                    acquisto, al primo bottino, al primo oro assegnato.
+                    acquisto, al primo bottino, alle prime monete assegnate.
                 @endif
             </x-empty>
         @endforelse
     </div>
 
     <x-back :href="route('characters.show', $character)">Torna alla scheda</x-back>
-</div>
+</x-pagina>
 @endsection

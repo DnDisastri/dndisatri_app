@@ -1,12 +1,10 @@
 <div>
-    {{-- I due comandi da tavolo. Navy e non rosso: sono azioni pari, e nessuna
-         è «l'azione» della schermata — quella resta del giocatore. Stanno su
-         una riga sola, e su schermo stretto vanno in colonna. --}}
+    {{-- Navy e non rosso: l'azione principale della scheda resta del giocatore. --}}
     <p class="mb-2 text-xs uppercase tracking-wide text-muted">Strumenti da DM</p>
 
     <div class="flex flex-wrap gap-2">
         <x-button variant="secondary" size="sm" type="button" wire:click="apriOro">
-            <x-icona :is="\App\Enums\Icon::Gold" class="h-4 w-4" /> Assegna oro
+            <x-icona :is="\App\Enums\Icon::Gold" class="h-4 w-4" /> Monete
         </x-button>
 
         <x-button variant="quiet" size="sm" type="button" wire:click="apriMorte">
@@ -18,26 +16,36 @@
         <p class="mt-2 text-sm text-primary">{{ $esitoOro }}</p>
     @endif
 
-    {{-- ASSEGNA ORO (M18).
-
-         Quanto e perché. Il motivo è obbligatorio perché finisce nel Registro,
-         ed è lì che mesi dopo si capisce da dove è arrivato l'oro. Anche in
-         negativo — una multa, un furto raccontato — ma mai sotto zero: a quello
-         pensa `GrantGold`, che non fa scendere il saldo sotto lo zero. --}}
     @if ($modaleOro)
-        <x-modal title="Assegna oro" close="annullaOro">
+        <x-modal title="Monete" close="annullaOro">
             <div class="space-y-3 text-left text-sm">
                 <p class="text-muted">
-                    A <span class="font-semibold text-fg">{{ $character->name }}</span>,
-                    che adesso ha <span class="font-semibold text-fg">{{ $character->gp }} mo</span>.
+                    <span class="font-semibold text-fg">{{ $character->name }}</span>
+                    ha adesso <x-monete :borsa="$character->coins()" class="font-semibold text-fg" />.
                 </p>
 
+                <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Dare o togliere">
+                    <label @class([
+                        'flex cursor-pointer items-center justify-center rounded-full border px-3 py-2 font-semibold',
+                        'border-active bg-active text-on-active' => ! $oroTogli,
+                        'border-line text-fg' => $oroTogli,
+                    ])>
+                        <input type="radio" wire:model.live="oroTogli" value="0" class="sr-only"> Dai
+                    </label>
+                    <label @class([
+                        'flex cursor-pointer items-center justify-center rounded-full border px-3 py-2 font-semibold',
+                        'border-active bg-active text-on-active' => $oroTogli,
+                        'border-line text-fg' => ! $oroTogli,
+                    ])>
+                        <input type="radio" wire:model.live="oroTogli" value="1" class="sr-only"> Togli
+                    </label>
+                </div>
+
                 <div>
-                    <label for="oro-importo" class="block text-muted">Quanto oro</label>
-                    <input id="oro-importo" type="number" wire:model="oroImporto" autofocus
-                           class="mt-1 w-full rounded-md border border-line bg-page px-2 py-2 text-lg text-fg">
-                    <p class="mt-1 text-xs text-muted">Negativo per toglierne: una multa, un furto. Mai sotto zero.</p>
-                    @error('oroImporto') <p class="mt-1 text-on-danger-soft">{{ $message }}</p> @enderror
+                    <x-campo-monete model="oroMonete" label="Quante monete" />
+                    <p class="mt-1 text-xs text-muted">
+                        Togliendo si usano le monete esatte se ci sono, altrimenti il loro valore col resto. Mai sotto zero.
+                    </p>
                 </div>
 
                 <div>
@@ -49,18 +57,12 @@
                     @error('oroMotivo') <p class="mt-1 text-on-danger-soft">{{ $message }}</p> @enderror
                 </div>
 
-                <x-button full type="button" wire:click="assegnaOro">Assegna</x-button>
+                <x-button full type="button" wire:click="assegnaOro">{{ $oroTogli ? 'Togli' : 'Dai' }}</x-button>
             </div>
         </x-modal>
     @endif
 
-    {{-- DICHIARA CADUTO (M19).
-
-         Irreversibile, e trattato come tale: la spunta di conferma non è una
-         formalità, è il gesto che dice «so cosa sto facendo». Il racconto e la
-         serata sono facoltativi — qualcuno muore fra una sessione e l'altra, e
-         il racconto si può scrivere dopo. La serata, quando c'è, diventa il
-         link al resoconto nella Hall of Fallen Heroes (P15b). --}}
+    {{-- Irreversibile: serve la spunta. Racconto e serata sono facoltativi. --}}
     @if ($modaleMorte)
         <x-modal title="Dichiara caduto" close="annullaMorte">
             <div class="space-y-3 text-left text-sm">

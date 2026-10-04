@@ -10,7 +10,7 @@
 @endphp
 
 @section('content')
-<div class="mx-auto max-w-2xl space-y-4 px-4 py-6">
+<x-pagina larghezza="stretta" class="space-y-4">
 
     <x-back dove="sopra" :href="route('guild.index').'#caduti'" class="-mb-1">
         Torna alla Gilda
@@ -76,5 +76,5 @@
               :href="route('characters.show', $character)">
         La sua scheda
     </x-button>
-</div>
+</x-pagina>
 @endsection

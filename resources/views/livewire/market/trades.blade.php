@@ -1,14 +1,11 @@
-<div class="mx-auto max-w-2xl px-4 py-6">
-    <h2 class="mb-4 flex items-center gap-2 text-2xl text-fg">
-        <x-icona :is="\App\Enums\Icon::Trades" class="h-7 w-7" /> Scambi
-    </h2>
+<div>
     <p class="mb-4 text-sm text-muted">
         Gestisci le tue richieste di scambio, controlla le offerte ricevute e segui gli scambi in corso.
     </p>
-    <x-market-nav attiva="market.trades" :character="$character" :characters="$this->myCharacters()" />
+    <x-market-nav :character="$character" :characters="$this->myCharacters()" :esito="$esito" />
 
-    {{-- Quelle arrivate stanno in cima: sono le uniche che aspettano qualcosa
-         da te, e sono il motivo per cui uno apre questa pagina. --}}
+    <div class="xl:grid xl:grid-cols-2 xl:items-start xl:gap-8">
+    <div>
     <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-muted">
         Arrivate @if ($received->isNotEmpty()) <span class="text-fg">({{ $received->count() }})</span> @endif
     </h3>
@@ -28,13 +25,8 @@
                     <x-inset padding="sm" class="mt-3 text-sm text-muted">«{{ $trade->message }}»</x-inset>
                 @endif
 
-                {{-- Se nel frattempo qualcosa non torna più — l'oggetto venduto,
-                     l'oro speso — lo si dice **prima** del clic. La verifica è la
-                     stessa che farebbe l'accettazione (`Trade::deliveryProblems`),
-                     e «Accetto» è spento: premere per sentirsi dire di no è il
-                     modo peggiore di scoprirlo. Rifiutare invece resta acceso —
-                     una proposta che non si può più fare è proprio quella che
-                     conviene chiudere. --}}
+                {{-- Avvisa prima del clic con la stessa verifica dell'accettazione (`Trade::deliveryProblems`):
+                     «Accetto» spento, «Rifiuta» resta acceso. --}}
                 @if ($problemi !== [])
                     <x-note tone="danger" class="mt-3">
                         <span class="font-semibold">Non si può più fare:</span>
@@ -53,10 +45,7 @@
         @endforelse
     </div>
 
-    {{-- Le richieste stanno sotto le proposte e non insieme: una proposta si
-         accetta e la roba passa, una richiesta è una domanda a cui bisogna
-         rispondere scegliendo cosa dare. Mescolarle vorrebbe dire due pulsanti
-         «Accetto» che fanno due cose diverse. --}}
+    {{-- Separate dalle proposte: «Accetto» farebbe due cose diverse. --}}
     @if ($richiesteArrivate->isNotEmpty())
         <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-muted">
             Ti hanno chiesto <span class="text-fg">({{ $richiesteArrivate->count() }})</span>
@@ -76,7 +65,7 @@
                         <span class="text-fg">
                             {{ collect([
                                 $richiesta->offeredNames()->implode(', ') ?: null,
-                                $richiesta->offered_gp > 0 ? $richiesta->offered_gp.' mo' : null,
+                                $richiesta->offered_cp > 0 ? \App\Domain\Dnd\Coins::formatValue($richiesta->offered_cp) : null,
                             ])->filter()->implode(' e ') ?: 'niente' }}
                         </span>
                     </p>
@@ -141,8 +130,10 @@
         </div>
     @endif
 
+    </div>
+
     @if ($character)
-        <x-card>
+        <x-card class="xl:sticky xl:top-8">
             <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-muted">Proponi uno scambio</h3>
 
             <div class="mb-4">
@@ -156,9 +147,6 @@
                 </select>
             </div>
 
-            {{-- Le due offerte affiancate: è l'unico modo di vedere a colpo
-                 d'occhio se lo scambio è equo. Su telefono vanno in colonna,
-                 ma restano nell'ordine «do» → «chiedo». --}}
             <div class="grid gap-4 sm:grid-cols-2">
                 <x-inset>
                     <p class="mb-2 text-sm font-semibold text-fg">Do</p>
@@ -175,17 +163,13 @@
                         @endforelse
                     </div>
 
-                    <label class="block text-xs text-muted">Monete d'oro</label>
-                    <input type="number" min="0" wire:model="giveGp"
-                           class="w-full rounded-md border border-line bg-surface px-2 py-1 text-sm text-fg">
+                    <x-campo-monete model="giveMonete" label="Monete" />
                 </x-inset>
 
                 <x-inset>
                     <p class="mb-2 text-sm font-semibold text-fg">Chiedo</p>
 
-                    {{-- Quello che si vede è la **sua vetrina**, non il suo
-                         zaino: lo zaino di un altro non è pubblico, e quello
-                         che c'è qui ce l'ha messo lui. --}}
+                    {{-- La sua vetrina, non lo zaino: lo zaino altrui non è pubblico. --}}
                     <div class="mb-2 space-y-1">
                         @forelse ($theirs as $item)
                             <label class="flex items-center gap-2 text-sm text-fg">
@@ -202,21 +186,11 @@
                         @endforelse
                     </div>
 
-                    <label class="mb-1 block text-xs text-muted">Monete d'oro</label>
-                    <input type="number" min="0" wire:model="wantGp"
-                           class="mb-3 w-full rounded-md border border-line bg-surface px-2 py-1 text-sm text-fg">
+                    <x-campo-monete model="wantMonete" label="Monete" class="mb-3" />
 
-                    {{-- La via per quello che in vetrina non c'è. Il nome si
-                         scrive a mano perché è una diceria: «mi han detto che
-                         hai un amuleto». Può essere sbagliato, e va bene — a
-                         dire se ce l'ha è lui. --}}
                     <label for="chiedo" class="mb-1 block border-t border-line pt-3 text-xs text-muted">
                         Oppure chiedigli qualcosa che non vedi
                     </label>
-                    {{-- Il segnaposto non è il nome di un oggetto vero: qui
-                         dentro finisce quello che si è sentito dire, e un
-                         esempio troppo concreto lo si copia invece di
-                         scriverci il proprio. --}}
                     <input id="chiedo" type="text" maxlength="120" wire:model.live="chiedo"
                            placeholder="Che cosa hai sentito dire?"
                            class="w-full rounded-md border border-line bg-surface px-2 py-1 text-sm text-fg placeholder:text-muted">
@@ -229,9 +203,7 @@
                        class="w-full rounded-md border border-line bg-page px-3 py-2 text-fg">
             </div>
 
-            {{-- Il pulsante dice quale delle due cose sta per partire: sono due
-                 strade diverse — una si accetta e basta, l'altra torna
-                 indietro come proposta — e chi preme deve saperlo prima. --}}
+            {{-- Il pulsante dice se parte una proposta o una richiesta. --}}
             @if ($chiedo !== '')
                 <p class="mt-4 text-center text-xs text-muted">
                     Se ce l'ha, ti manderà lui la proposta da confermare.
@@ -243,9 +215,8 @@
             </x-button>
         </x-card>
     @endif
+    </div>
 
-    {{-- Rispondere a una richiesta: si sceglie dal proprio zaino cosa dare,
-         perché quello che è arrivato erano solo parole. --}}
     @if ($richiesta)
         <x-modal title="Ce l'ho" close="chiudiRichiesta">
             <div class="space-y-3 text-sm">
@@ -255,7 +226,7 @@
                     <span class="text-fg">
                         {{ collect([
                             $richiesta->offeredNames()->implode(', ') ?: null,
-                            $richiesta->offered_gp > 0 ? $richiesta->offered_gp.' mo' : null,
+                            $richiesta->offered_cp > 0 ? \App\Domain\Dnd\Coins::formatValue($richiesta->offered_cp) : null,
                         ])->filter()->implode(' e ') ?: 'niente' }}.
                     </span>
                 </p>
@@ -275,9 +246,7 @@
                         @endforelse
                     </div>
 
-                    <label for="offroGp" class="mb-1 block text-xs text-muted">Monete d'oro</label>
-                    <input id="offroGp" type="number" min="0" wire:model="offroGp"
-                           class="w-full rounded-md border border-line bg-page px-2 py-1 text-fg">
+                    <x-campo-monete model="offroMonete" label="Monete" />
                 </div>
 
                 @error('scambio')

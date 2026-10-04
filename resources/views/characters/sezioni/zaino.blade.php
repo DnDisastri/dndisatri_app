@@ -50,18 +50,18 @@
                             <span class="flex items-baseline gap-2">
                                 <span class="font-medium text-fg">{{ $indossato->name }}</span>
                                 <span class="rounded bg-accent-soft px-1.5 py-0.5 text-xs text-primary">
-                                    equipaggiato
+                                    {{ $slot->equippedLabel() }}
                                 </span>
                             </span>
                         @else
-                            <span class="text-muted">niente</span>
+                            <span class="text-muted">{{ $slot->emptyLabel() }}</span>
                         @endif
                     </li>
                 @endforeach
             </ul>
 
             <p class="mt-2 border-t border-line pt-2 text-xs text-muted">
-                Si indossa e si toglie dall'inventario qui accanto.
+                Si cambia dai pulsanti dell'inventario.
             </p>
         </x-panel>
 

@@ -225,14 +225,16 @@
     }
 }
 
-/* Tutorial: solo ciò che il <dialog> nativo non copre. */
+/* Tutorial e conferma: solo ciò che il <dialog> nativo non copre. */
 
 /* Preflight azzera i margini del <dialog>: senza questo non si centra. */
-#tutorial {
+#tutorial,
+#conferma {
     margin: auto;
 }
 
-#tutorial::backdrop {
+#tutorial::backdrop,
+#conferma::backdrop {
     background: rgba(0, 0, 0, 0.6);
 }
 

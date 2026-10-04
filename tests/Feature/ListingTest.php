@@ -18,21 +18,21 @@ describe('mettere in vendita', function () {
     it('toglie subito l\'oggetto dall\'inventario', function () {
 
         $seller = Character::factory()->create();
-        $seller->addToInventory('Pozione di Cura', 2, 'Pozioni', 50);
+        $seller->addToInventory('Pozione di Cura', 2, 'Pozioni', 5000);
 
-        app(CreateListing::class)->handle($seller, 'Pozione di Cura', 2, 120);
+        app(CreateListing::class)->handle($seller, 'Pozione di Cura', 2, 12000);
 
         expect($seller->fresh()->ownsItem('Pozione di Cura'))->toBeFalse();
     });
 
     it('copia nell\'annuncio i dati dell\'oggetto', function () {
         $seller = Character::factory()->create();
-        $seller->addToInventory('Spada Lunga', 1, 'Armi', 15, 'Affilata di recente.');
+        $seller->addToInventory('Spada Lunga', 1, 'Armi', 1500, 'Affilata di recente.');
 
-        $listing = app(CreateListing::class)->handle($seller, 'Spada Lunga', 1, 40);
+        $listing = app(CreateListing::class)->handle($seller, 'Spada Lunga', 1, 4000);
 
         expect($listing->category)->toBe('Armi')
-            ->and($listing->unit_value)->toBe(15)
+            ->and($listing->unit_value_cp)->toBe(1500)
             ->and($listing->details)->toBe('Affilata di recente.');
     });
 
@@ -40,7 +40,7 @@ describe('mettere in vendita', function () {
         $seller = Character::factory()->create();
         $seller->addToInventory('Corda', 1);
 
-        expect(fn () => app(CreateListing::class)->handle($seller, 'Corda', 5, 10))
+        expect(fn () => app(CreateListing::class)->handle($seller, 'Corda', 5, 1000))
             ->toThrow(MarketException::class);
 
         expect($seller->fresh()->ownsItem('Corda'))->toBeTrue();
@@ -50,12 +50,12 @@ describe('mettere in vendita', function () {
         $seller = Character::factory()->create(['gp' => 100]);
         $seller->addToInventory('Pozione di Cura', 1);
 
-        app(CreateListing::class)->handle($seller, 'Pozione di Cura', 1, 60);
+        app(CreateListing::class)->handle($seller, 'Pozione di Cura', 1, 6000);
 
         $entry = LedgerEntry::forCharacter($seller)->latestFirst()->first();
 
         expect($entry->action)->toBe(LedgerAction::SellList)
-            ->and($entry->gp_delta)->toBe(0)
+            ->and($entry->cp_delta)->toBe(0)
             ->and($seller->fresh()->gp)->toBe(100);
     });
 });
@@ -63,8 +63,8 @@ describe('mettere in vendita', function () {
 describe('ritirare un annuncio', function () {
     it('restituisce l\'oggetto al venditore', function () {
         $seller = Character::factory()->create();
-        $seller->addToInventory('Pozione di Cura', 3, 'Pozioni', 50);
-        $listing = app(CreateListing::class)->handle($seller, 'Pozione di Cura', 3, 150);
+        $seller->addToInventory('Pozione di Cura', 3, 'Pozioni', 5000);
+        $listing = app(CreateListing::class)->handle($seller, 'Pozione di Cura', 3, 15000);
 
         app(CancelListing::class)->handle($listing);
 
@@ -75,7 +75,7 @@ describe('ritirare un annuncio', function () {
     it('non si ritira due volte', function () {
         $seller = Character::factory()->create();
         $seller->addToInventory('Corda', 1);
-        $listing = app(CreateListing::class)->handle($seller, 'Corda', 1, 10);
+        $listing = app(CreateListing::class)->handle($seller, 'Corda', 1, 1000);
 
         app(CancelListing::class)->handle($listing);
 
@@ -90,8 +90,8 @@ describe('comprare da un giocatore', function () {
     it('sposta oro e oggetto fra i due', function () {
         $seller = Character::factory()->create(['gp' => 10]);
         $buyer = Character::factory()->create(['gp' => 200]);
-        $seller->addToInventory('Pozione di Cura', 1, 'Pozioni', 50);
-        $listing = app(CreateListing::class)->handle($seller, 'Pozione di Cura', 1, 80);
+        $seller->addToInventory('Pozione di Cura', 1, 'Pozioni', 5000);
+        $listing = app(CreateListing::class)->handle($seller, 'Pozione di Cura', 1, 8000);
 
         app(BuyListing::class)->handle($listing, $buyer);
 
@@ -106,19 +106,19 @@ describe('comprare da un giocatore', function () {
         $seller = Character::factory()->create(['gp' => 0]);
         $buyer = Character::factory()->create(['gp' => 100]);
         $seller->addToInventory('Corda', 1);
-        $listing = app(CreateListing::class)->handle($seller, 'Corda', 1, 30);
+        $listing = app(CreateListing::class)->handle($seller, 'Corda', 1, 3000);
 
         app(BuyListing::class)->handle($listing, $buyer);
 
-        expect(LedgerEntry::forCharacter($buyer)->latestFirst()->first()->gp_delta)->toBe(-30)
-            ->and(LedgerEntry::forCharacter($seller)->latestFirst()->first()->gp_delta)->toBe(30);
+        expect(LedgerEntry::forCharacter($buyer)->latestFirst()->first()->cp_delta)->toBe(-3000)
+            ->and(LedgerEntry::forCharacter($seller)->latestFirst()->first()->cp_delta)->toBe(3000);
     });
-// Un acquisto fallito deve lasciare annuncio, oro e inventario invariati.
+    // Un acquisto fallito deve lasciare annuncio, oro e inventario invariati.
     it('rifiuta se il compratore non ha abbastanza oro', function () {
         $seller = Character::factory()->create();
         $buyer = Character::factory()->create(['gp' => 10]);
         $seller->addToInventory('Spadone', 1);
-        $listing = app(CreateListing::class)->handle($seller, 'Spadone', 1, 100);
+        $listing = app(CreateListing::class)->handle($seller, 'Spadone', 1, 10000);
 
         expect(fn () => app(BuyListing::class)->handle($listing, $buyer))
             ->toThrow(MarketException::class);
@@ -133,7 +133,7 @@ describe('comprare da un giocatore', function () {
         $first = Character::factory()->create(['gp' => 500]);
         $second = Character::factory()->create(['gp' => 500]);
         $seller->addToInventory('Corda', 1);
-        $listing = app(CreateListing::class)->handle($seller, 'Corda', 1, 30);
+        $listing = app(CreateListing::class)->handle($seller, 'Corda', 1, 3000);
 
         app(BuyListing::class)->handle($listing, $first);
 
@@ -146,7 +146,7 @@ describe('comprare da un giocatore', function () {
     it('non si compra il proprio annuncio', function () {
         $seller = Character::factory()->create(['gp' => 500]);
         $seller->addToInventory('Corda', 1);
-        $listing = app(CreateListing::class)->handle($seller, 'Corda', 1, 30);
+        $listing = app(CreateListing::class)->handle($seller, 'Corda', 1, 3000);
 
         expect(fn () => app(BuyListing::class)->handle($listing, $seller))
             ->toThrow(MarketException::class);
@@ -156,7 +156,7 @@ describe('comprare da un giocatore', function () {
         $seller = Character::factory()->create();
         $buyer = Character::factory()->create(['gp' => 500]);
         $seller->addToInventory('Corda', 1);
-        $listing = app(CreateListing::class)->handle($seller, 'Corda', 1, 30);
+        $listing = app(CreateListing::class)->handle($seller, 'Corda', 1, 3000);
         app(CancelListing::class)->handle($listing);
 
         expect(fn () => app(BuyListing::class)->handle($listing->fresh(), $buyer))

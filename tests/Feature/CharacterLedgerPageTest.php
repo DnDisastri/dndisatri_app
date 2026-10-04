@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Actions\Market\GrantGold;
+use App\Actions\Market\GrantCoins;
+use App\Actions\Market\Purse;
+use App\Domain\Dnd\Coin;
+use App\Domain\Dnd\Coins;
 use App\Enums\LedgerAction;
 use App\Models\Character;
 use App\Models\LedgerEntry;
@@ -13,22 +16,34 @@ beforeEach(function () {
     $this->pg = Character::factory()->ownedBy($this->giocatore)->create(['name' => 'Grimm', 'gp' => 100]);
 });
 
-it('elenca i movimenti con la variazione e il saldo', function () {
-    app(GrantGold::class)->handle($this->pg, 50, User::factory()->dm()->create(), 'Bottino della serata');
+it('elenca i movimenti con la variazione e la borsa dopo', function () {
+    app(GrantCoins::class)->give($this->pg, new Coins(pp: 1, sp: 5), User::factory()->dm()->create(), 'Bottino della serata');
 
     $this->actingAs($this->giocatore)
         ->get(route('characters.ledger', $this->pg))
         ->assertOk()
         ->assertSee('Bottino della serata')
-        ->assertSee('Oro dal DM')
-        ->assertSee('+50 mo')
-        ->assertSee('saldo dopo: 150 mo');
+        ->assertSeeText('Monete dal DM')
+        ->assertSeeText('+10 mo 5 ma')
+        ->assertSeeText('in borsa dopo: 1 mp 100 mo 5 ma');
+});
+
+it('mostra un cambio di monete con le pile mosse', function () {
+    $this->pg->forceFill(['gp' => 700])->save();
+    app(Purse::class)->convert($this->pg, Coin::Gold, Coin::Platinum, 700);
+
+    $this->actingAs($this->giocatore)
+        ->get(route('characters.ledger', $this->pg))
+        ->assertOk()
+        ->assertSeeText('Cambio monete')
+        ->assertSeeText('70 mp −700 mo')
+        ->assertSeeText('in borsa dopo: 70 mp');
 });
 
 it('mette il movimento più recente per primo', function () {
     $dm = User::factory()->dm()->create();
-    app(GrantGold::class)->handle($this->pg, 10, $dm, 'Il primo');
-    app(GrantGold::class)->handle($this->pg, 10, $dm, 'Il secondo');
+    app(GrantCoins::class)->give($this->pg, new Coins(gp: 10), $dm, 'Il primo');
+    app(GrantCoins::class)->give($this->pg, new Coins(gp: 10), $dm, 'Il secondo');
 
     $html = $this->actingAs($this->giocatore)
         ->get(route('characters.ledger', $this->pg))
@@ -47,7 +62,7 @@ it('spiega la pagina vuota invece di mostrarla vuota', function () {
 
 // Il registro è append-only: un annullamento resta visibile invece di cancellare il movimento originale.
 it('segna i movimenti annullati senza toglierli', function () {
-    app(GrantGold::class)->handle($this->pg, 50, User::factory()->dm()->create(), 'Oro di troppo');
+    app(GrantCoins::class)->give($this->pg, new Coins(gp: 50), User::factory()->dm()->create(), 'Oro di troppo');
 
     LedgerEntry::forCharacter($this->pg)->latestFirst()->first()
         ->forceFill(['reversed_at' => now()])->save();
@@ -74,7 +89,6 @@ describe('chi lo può leggere', function () {
     })->with(['dm', 'admin']);
 });
 
-
 it('si raggiunge dai miei eroi', function () {
     $this->actingAs($this->giocatore)
         ->get(route('characters.index'))
@@ -82,8 +96,7 @@ it('si raggiunge dai miei eroi', function () {
         ->assertSee(route('characters.ledger', $this->pg));
 });
 
-
-describe('il registro di tutti (M20)', function () {
+describe('il registro di tutti', function () {
     it('dà a chi conduce la barra dei filtri, e al giocatore no', function () {
 
         $this->actingAs($this->giocatore)
@@ -102,8 +115,8 @@ describe('il registro di tutti (M20)', function () {
     it('su «tutti» mostra i movimenti di ogni personaggio, con il nome di chi', function () {
         $dm = User::factory()->dm()->create();
         $vex = Character::factory()->create(['name' => 'Vex']);
-        app(GrantGold::class)->handle($this->pg, 50, $dm, 'Oro a Grimm');
-        app(GrantGold::class)->handle($vex, 30, $dm, 'Oro a Vex');
+        app(GrantCoins::class)->give($this->pg, new Coins(gp: 50), $dm, 'Oro a Grimm');
+        app(GrantCoins::class)->give($vex, new Coins(gp: 30), $dm, 'Oro a Vex');
 
         $this->actingAs($dm)
             ->get(route('characters.ledger', [$this->pg, 'pg' => 'tutti']))
@@ -117,8 +130,8 @@ describe('il registro di tutti (M20)', function () {
     it('senza «tutti» resta a questo personaggio soltanto', function () {
         $dm = User::factory()->dm()->create();
         $vex = Character::factory()->create(['name' => 'Vex']);
-        app(GrantGold::class)->handle($this->pg, 50, $dm, 'Oro a Grimm');
-        app(GrantGold::class)->handle($vex, 30, $dm, 'Oro a Vex');
+        app(GrantCoins::class)->give($this->pg, new Coins(gp: 50), $dm, 'Oro a Grimm');
+        app(GrantCoins::class)->give($vex, new Coins(gp: 30), $dm, 'Oro a Vex');
 
         $this->actingAs($dm)
             ->get(route('characters.ledger', $this->pg))
@@ -129,9 +142,9 @@ describe('il registro di tutti (M20)', function () {
 
     it('filtra per tipo di movimento', function () {
         $dm = User::factory()->dm()->create();
-        app(GrantGold::class)->handle($this->pg, 50, $dm, 'Oro assegnato');
+        app(GrantCoins::class)->give($this->pg, new Coins(gp: 50), $dm, 'Oro assegnato');
         $this->pg->ledgerEntries()->create([
-            'action' => LedgerAction::Buy, 'gp_delta' => -20, 'gp_after' => 30,
+            'action' => LedgerAction::Buy, 'cp_delta' => -2000, 'coins_after' => ['gp' => 30],
             'message' => 'Comprata una corda',
         ]);
 
@@ -144,10 +157,10 @@ describe('il registro di tutti (M20)', function () {
 
     it('filtra per periodo, e lascia fuori il vecchio', function () {
         $dm = User::factory()->dm()->create();
-        app(GrantGold::class)->handle($this->pg, 50, $dm, 'Bottino di ieri');
+        app(GrantCoins::class)->give($this->pg, new Coins(gp: 50), $dm, 'Bottino di ieri');
 
         $this->pg->ledgerEntries()->create([
-            'action' => LedgerAction::DmGold, 'gp_delta' => 10, 'gp_after' => 110,
+            'action' => LedgerAction::DmGold, 'cp_delta' => 1000, 'coins_after' => ['gp' => 110],
             'message' => 'Bottino di tre mesi fa',
         ])->forceFill(['created_at' => now()->subDays(100)])->save();
 
@@ -157,10 +170,10 @@ describe('il registro di tutti (M20)', function () {
             ->assertSee('Bottino di ieri')
             ->assertDontSee('Bottino di tre mesi fa');
     });
-// I filtri non sono autorizzazione: forzare `?pg=tutti` non deve esporre i registri altrui.
+    // I filtri non sono autorizzazione: forzare `?pg=tutti` non deve esporre i registri altrui.
     it('non si apre a un giocatore che forza «tutti» nell\'indirizzo', function () {
         $vex = Character::factory()->create(['name' => 'Vex']);
-        app(GrantGold::class)->handle($vex, 30, User::factory()->dm()->create(), 'Oro a Vex');
+        app(GrantCoins::class)->give($vex, new Coins(gp: 30), User::factory()->dm()->create(), 'Oro a Vex');
 
         $this->actingAs($this->giocatore)
             ->get(route('characters.ledger', [$this->pg, 'pg' => 'tutti']))

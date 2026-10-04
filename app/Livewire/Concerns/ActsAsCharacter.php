@@ -2,23 +2,63 @@
 
 namespace App\Livewire\Concerns;
 
+use App\Livewire\Market\Listings;
+use App\Livewire\Market\Shop;
+use App\Livewire\Market\Trades;
 use App\Models\Character;
 use Illuminate\Support\Collection;
+use Livewire\Attributes\On;
 
 /**
- * Il personaggio con cui si sta usando il mercato.
+ * Il personaggio con cui si usa il mercato. L'id arriva dal browser: è innocuo
+ * perché il personaggio si cerca sempre fra i propri.
  *
- * Serve perché un DM gioca anche lui e può avere più personaggi vivi: al
- * mercato ci va con uno alla volta, e deve poter scegliere quale.
- *
- * **La sicurezza non sta nel non poter cambiare l'id.** L'id arriva dal browser
- * e può essere manomesso: quello che lo rende innocuo è che il personaggio si
- * cerca sempre **fra i propri**, quindi un id altrui semplicemente non viene
- * trovato.
+ * Le tre sezioni stanno sulla stessa pagina e si avvisano a vicenda quando
+ * cambia il personaggio o un'azione ne cambia oro e zaino.
  */
 trait ActsAsCharacter
 {
     public ?int $characterId = null;
+
+    /** Solo nella sezione che ha agito, e solo nella risposta a quell'azione. */
+    public ?string $esito = null;
+
+    public function hydrateActsAsCharacter(): void
+    {
+        $this->esito = null;
+    }
+
+    public function updatedActsAsCharacter(string $proprieta): void
+    {
+        if ($proprieta === 'characterId') {
+            $this->avvisaLeAltre('mercato-personaggio', ['id' => $this->characterId]);
+        }
+    }
+
+    #[On('mercato-personaggio')]
+    public function seguiPersonaggio(?int $id): void
+    {
+        $this->characterId = $id;
+    }
+
+    #[On('mercato-cambiato')]
+    public function ridisegna(): void {}
+
+    protected function esito(string $messaggio): void
+    {
+        $this->esito = $messaggio;
+        $this->avvisaLeAltre('mercato-cambiato');
+    }
+
+    /** Non a sé stessa: si ridisegnerebbe e l'esito appena mostrato sparirebbe. */
+    private function avvisaLeAltre(string $evento, array $dati = []): void
+    {
+        foreach ([Shop::class, Listings::class, Trades::class] as $sezione) {
+            if ($sezione !== static::class) {
+                $this->dispatch($evento, ...$dati)->to($sezione);
+            }
+        }
+    }
 
     /** @return Collection<int,Character> */
     public function myCharacters(): Collection
@@ -31,7 +71,6 @@ trait ActsAsCharacter
         $this->characterId ??= $this->myCharacters()->first()?->getKey();
     }
 
-    /** Il personaggio attivo, o null se chi guarda non ne ha (un admin). */
     protected function character(): ?Character
     {
         if ($this->characterId === null) {
@@ -46,7 +85,6 @@ trait ActsAsCharacter
             ->first();
     }
 
-    /** Il personaggio attivo, o un errore se non ce n'è: per le azioni. */
     protected function requireCharacter(): Character
     {
         return $this->character()

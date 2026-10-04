@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Domain\Dnd\Coins;
 use App\Enums\NotificationCategory;
 use App\Models\Trade;
 
@@ -27,19 +28,19 @@ final class TradeProposed extends InAppNotification
 
         return [
             'title' => "{$this->fromName} ti propone uno scambio",
-            'body' => $this->describe($offered, $this->trade->give_gp)
+            'body' => $this->describe($offered, $this->trade->give_cp)
                 .' in cambio di '
-                .$this->describe($wanted, $this->trade->want_gp).'.',
+                .$this->describe($wanted, $this->trade->want_cp).'.',
             'url' => null,
         ];
     }
 
     /** @param list<string> $items */
-    private function describe(array $items, int $gp): string
+    private function describe(array $items, int $cp): string
     {
         $parts = array_filter([
             $items === [] ? null : implode(', ', $items),
-            $gp > 0 ? "{$gp} mo" : null,
+            $cp > 0 ? Coins::formatValue($cp) : null,
         ]);
 
         return $parts === [] ? 'niente' : implode(' e ', $parts);

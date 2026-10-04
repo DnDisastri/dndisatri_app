@@ -3,7 +3,7 @@
 
 @section('content')
 
-<div class="mx-auto max-w-3xl space-y-6 px-4 py-6">
+<x-pagina class="space-y-6">
 
     <x-back dove="sopra" :href="route('sessions.show', ['session' => $session, 'da' => 'regia'])">
         Torna alla serata
@@ -22,10 +22,14 @@
         <p class="mt-1 text-sm text-muted">{{ $session->played_at->translatedFormat('l j F Y, H:i') }}</p>
     </div>
 
-    <livewire:session-prep :session="$session" />
+    <div class="space-y-6 xl:grid xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] xl:items-start xl:gap-6 xl:space-y-0">
+        <div class="xl:sticky xl:top-8">
+            <livewire:session-prep :session="$session" />
+        </div>
 
-    <x-panel title="Combattimento">
-        <livewire:combat-tracker :session="$session" />
-    </x-panel>
-</div>
+        <x-panel title="Combattimento">
+            <livewire:combat-tracker :session="$session" />
+        </x-panel>
+    </div>
+</x-pagina>
 @endsection

@@ -194,7 +194,8 @@ if (tutorial) {
 document.addEventListener('focusin', (evento) => {
     const campo = evento.target.closest('[data-cerca]');
 
-    if (!campo) return;
+    // Col mouse non c'è tastiera a schermo: scorrere sarebbe solo uno scatto.
+    if (!campo || !window.matchMedia('(pointer: coarse)').matches) return;
 
     // Ritardo: lascia aprire la tastiera prima di misurare dove scorrere.
     setTimeout(() => campo.scrollIntoView({ block: 'start', behavior: 'smooth' }), 300);
@@ -208,18 +209,34 @@ document.addEventListener('keydown', (evento) => {
     }
 });
 
-// Scheda del personaggio: sezioni a swipe
+// `<details data-tendina>`: si chiudono al clic fuori e con Esc.
+const tendineAperte = () => document.querySelectorAll('details[data-tendina][open]');
 
-// Le sezioni stanno una accanto all'altra e si sfogliano scorrendo, senza
-// ricaricare. L'altezza segue la sezione a vista, così sotto non resta il
-// vuoto delle sezioni più lunghe.
-const scheda = document.getElementById('sheet-slider');
+document.addEventListener('click', (evento) => {
+    tendineAperte().forEach((tendina) => {
+        if (!tendina.contains(evento.target)) tendina.open = false;
+    });
+});
 
-if (scheda) {
+document.addEventListener('keydown', (evento) => {
+    if (evento.key !== 'Escape') return;
+
+    tendineAperte().forEach((tendina) => {
+        tendina.open = false;
+        tendina.querySelector('summary')?.focus();
+    });
+});
+
+// Sezioni a swipe: scheda del personaggio e mercato
+
+// L'altezza segue la sezione a vista, o sotto resterebbe il vuoto delle più lunghe.
+const sfogliabile = (scheda, tab) => {
     const sezioni = Array.from(scheda.children);
-    const tab = Array.from(document.querySelectorAll('[data-sheet-tab]'));
 
-    const indice = () => Math.round(scheda.scrollLeft / scheda.clientWidth);
+    // Il passo include il `gap` fra le sezioni.
+    const passo = () => scheda.clientWidth + (parseFloat(getComputedStyle(scheda).columnGap) || 0);
+
+    const indice = () => Math.round(scheda.scrollLeft / passo());
 
     const adattaAltezza = () => {
         const corrente = sezioni[Math.max(0, Math.min(sezioni.length - 1, indice()))];
@@ -239,6 +256,10 @@ if (scheda) {
             window.history.replaceState({}, '', tab[i].dataset.url);
         }
 
+        if (tab[i]?.dataset.titolo) {
+            document.title = tab[i].dataset.titolo;
+        }
+
         adattaAltezza();
     };
 
@@ -252,27 +273,174 @@ if (scheda) {
         });
     }, { passive: true });
 
-    tab.forEach((t, j) => t.addEventListener('click', () => {
-        scheda.scrollTo({ left: j * scheda.clientWidth, behavior: 'smooth' });
+    const vaiA = (j) => scheda.scrollTo({ left: j * passo(), behavior: 'smooth' });
+
+    tab.forEach((t, j) => t.addEventListener('click', () => vaiA(j)));
+
+    // Su PC non c'è lo swipe: le frecce sfogliano le sezioni dalla barra.
+    tab.forEach((t, j) => t.addEventListener('keydown', (evento) => {
+        const verso = { ArrowRight: 1, ArrowLeft: -1 }[evento.key];
+        if (!verso) return;
+
+        evento.preventDefault();
+        const prossima = (j + verso + tab.length) % tab.length;
+        tab[prossima].focus();
+        vaiA(prossima);
     }));
 
-    // I componenti Livewire dentro le sezioni cambiano altezza da soli: la si
-    // rimisura quando succede.
+    // I componenti Livewire cambiano altezza da soli: si rimisura.
     const osserva = new ResizeObserver(() => adattaAltezza());
     sezioni.forEach((s) => osserva.observe(s));
 
-    // Si parte dalla sezione già attiva (quella con aria-current dal server),
-    // senza animare l'altezza al primo colpo.
+    // Parte dalla sezione con aria-current dal server, senza animare l'altezza.
     const partenza = Math.max(0, tab.findIndex((t) => t.hasAttribute('aria-current')));
     scheda.style.transitionProperty = 'none';
-    scheda.scrollLeft = partenza * scheda.clientWidth;
+    scheda.scrollLeft = partenza * passo();
     adattaAltezza();
     requestAnimationFrame(() => { scheda.style.transitionProperty = ''; });
 
     // Cambiando larghezza, la posizione in pixel non vale più: si riallinea.
     window.addEventListener('resize', () => {
-        scheda.scrollLeft = indice() * scheda.clientWidth;
+        scheda.scrollLeft = indice() * passo();
         adattaAltezza();
+    });
+};
+
+[['sheet-slider', '[data-sheet-tab]'], ['market-slider', '[data-market-tab]']].forEach(([id, linguette]) => {
+    const scheda = document.getElementById(id);
+
+    if (scheda) {
+        sfogliabile(scheda, Array.from(document.querySelectorAll(linguette)));
+    }
+});
+
+// Righe del bottino: si aprono una alla volta fino al limite.
+
+const righeBottino = document.querySelector('[data-righe-bottino]');
+
+if (righeBottino) {
+    const aggiungi = document.querySelector('[data-aggiungi-oggetto]');
+    const limite = document.querySelector('[data-limite-oggetti]');
+
+    aggiungi?.addEventListener('click', () => {
+        const chiuse = righeBottino.querySelectorAll('[data-riga-bottino][hidden]');
+
+        if (chiuse.length === 0) return;
+
+        chiuse[0].hidden = false;
+        chiuse[0].querySelector('input')?.focus();
+
+        if (chiuse.length === 1) {
+            aggiungi.hidden = true;
+            limite.hidden = false;
+        }
+    });
+
+    const fonte = document.querySelector('[data-suggerimenti-bottino]');
+    const suggerimenti = fonte ? JSON.parse(fonte.textContent) : [];
+    const MOSTRATI = 8;
+
+    // Senza accenti e maiuscole: «armatura a piastre» trova «Armatura a Piastre».
+    const normalizza = (testo) => testo.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    suggerimenti.forEach((voce) => { voce.chiave = normalizza(voce.name); });
+
+    righeBottino.querySelectorAll('[data-riga-bottino]').forEach((riga) => {
+        const box = riga.querySelector('[data-cerca-oggetto]');
+        const nome = box.querySelector('input');
+        const elenco = box.querySelector('[data-elenco]');
+        const campo = (chiave) => riga.querySelector(`[data-campo="${chiave}"]`);
+        let trovati = [];
+        let attivo = -1;
+
+        const chiudi = () => {
+            elenco.hidden = true;
+            nome.setAttribute('aria-expanded', 'false');
+            attivo = -1;
+        };
+
+        const evidenzia = () => {
+            elenco.querySelectorAll('li').forEach((li, i) => li.classList.toggle('bg-page', i === attivo));
+        };
+
+        const scegli = (voce) => {
+            nome.value = voce.name;
+            campo('category').value = voce.category ?? '';
+            campo('base').value = voce.base ?? '';
+            campo('value').value = voce.value_cp ? voce.value_cp / 100 : '';
+            campo('details').value = voce.details ?? '';
+            chiudi();
+        };
+
+        const mostra = () => {
+            const cerca = normalizza(nome.value.trim());
+            trovati = cerca.length < 2 ? [] : suggerimenti.filter((v) => v.chiave.includes(cerca)).slice(0, MOSTRATI);
+            elenco.replaceChildren(...trovati.map((voce) => {
+                const li = document.createElement('li');
+                li.setAttribute('role', 'option');
+                li.className = 'flex cursor-pointer items-baseline justify-between gap-2 px-3 py-1.5 text-sm text-fg hover:bg-page';
+                const etichetta = document.createElement('span');
+                etichetta.textContent = voce.name;
+                const origine = document.createElement('span');
+                origine.className = 'text-xs text-muted';
+                origine.textContent = voce.source;
+                li.append(etichetta, origine);
+                // `mousedown` precede il `blur` del campo, che chiuderebbe l'elenco prima del clic.
+                li.addEventListener('mousedown', (evento) => { evento.preventDefault(); scegli(voce); });
+                return li;
+            }));
+            attivo = -1;
+            elenco.hidden = trovati.length === 0;
+            nome.setAttribute('aria-expanded', String(!elenco.hidden));
+        };
+
+        nome.addEventListener('input', mostra);
+        nome.addEventListener('blur', chiudi);
+        nome.addEventListener('keydown', (evento) => {
+            if (elenco.hidden) return;
+
+            if (evento.key === 'ArrowDown' || evento.key === 'ArrowUp') {
+                evento.preventDefault();
+                const passo = evento.key === 'ArrowDown' ? 1 : -1;
+                attivo = (attivo + passo + trovati.length) % trovati.length;
+                evidenzia();
+            } else if (evento.key === 'Enter' && attivo >= 0) {
+                evento.preventDefault();
+                scegli(trovati[attivo]);
+            } else if (evento.key === 'Escape') {
+                chiudi();
+            }
+        });
+    });
+}
+
+// Conferma prima dei moduli `data-conferma`
+
+const conferma = document.getElementById('conferma');
+
+if (conferma) {
+    let modulo = null;
+
+    document.addEventListener('submit', (evento) => {
+        const form = evento.target.closest('form[data-conferma]');
+        if (!form) return;
+
+        evento.preventDefault();
+        modulo = form;
+        conferma.querySelector('[data-conferma-testo]').textContent = form.dataset.conferma;
+        conferma.showModal();
+    });
+
+    // `submit()` non rilancia l'evento: il modulo parte senza ripassare di qui.
+    conferma.querySelector('[data-conferma-si]').addEventListener('click', () => {
+        conferma.close();
+        modulo?.submit();
+    });
+
+    conferma.querySelector('[data-conferma-no]').addEventListener('click', () => conferma.close());
+
+    // Il fondo scuro chiude: un click sul <dialog> stesso cade fuori dal riquadro.
+    conferma.addEventListener('click', (evento) => {
+        if (evento.target === conferma) conferma.close();
     });
 }
 
@@ -302,9 +470,7 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-// Il pulsante «Installa» compare solo quando il browser dice che si può, e
-// scatena la sua richiesta nativa. iOS non manda questo evento: lì si installa
-// dal menù «Condividi → Aggiungi a schermata Home».
+// «Installa» compare solo dopo `beforeinstallprompt`, che iOS non manda.
 let promptInstalla = null;
 
 const pulsantiInstalla = () => document.querySelectorAll('[data-installa]');
@@ -330,8 +496,7 @@ window.addEventListener('appinstalled', () => {
     pulsantiInstalla().forEach((b) => (b.hidden = true));
 });
 
-// iOS non manda beforeinstallprompt: se non è già installata, si mostra
-// l'istruzione manuale (Condividi → Aggiungi a Home).
+// Su iOS, se non è già installata, si mostra l'istruzione manuale.
 const iOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
     || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const giaInstallata = window.navigator.standalone === true

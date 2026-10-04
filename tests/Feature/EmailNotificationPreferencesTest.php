@@ -170,9 +170,37 @@ describe('la pagina del profilo', function () {
 
         $aggiornato = $this->giocatore->fresh();
 
-        foreach (NotificationCategory::cases() as $categoria) {
+        foreach (NotificationCategory::forUser($aggiornato) as $categoria) {
             expect($aggiornato->wantsEmailFor($categoria))->toBeFalse();
         }
+    });
+
+    it('mostra «Da approvare» solo a DM e admin', function () {
+        $this->actingAs($this->giocatore)
+            ->get(route('profile.edit'))
+            ->assertDontSee(NotificationCategory::Approvals->label());
+
+        $this->actingAs(User::factory()->dm()->create())
+            ->get(route('profile.edit'))
+            ->assertSee(NotificationCategory::Approvals->label());
+    });
+
+    it('non spegne «Da approvare» a un giocatore che salva: gli servirà da DM', function () {
+        $this->actingAs($this->giocatore)
+            ->put(route('profile.notifications'))
+            ->assertRedirect();
+
+        expect($this->giocatore->fresh()->wantsEmailFor(NotificationCategory::Approvals))->toBeTrue();
+    });
+
+    it('lascia a un DM la scelta su «Da approvare»', function () {
+        $dm = User::factory()->dm()->create();
+
+        $this->actingAs($dm)
+            ->put(route('profile.notifications'), ['categorie' => [NotificationCategory::Table->value]])
+            ->assertRedirect();
+
+        expect($dm->fresh()->wantsEmailFor(NotificationCategory::Approvals))->toBeFalse();
     });
 
     it('rifiuta una categoria inventata', function () {

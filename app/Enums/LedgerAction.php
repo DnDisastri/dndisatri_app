@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-/**
- * I movimenti tracciati nel Registro. I valori riprendono quelli della vecchia
- * applicazione dove esistevano, così la migrazione dei dati è diretta.
- */
+/** I valori stanno nel database: non si rinominano. */
 enum LedgerAction: string
 {
     /** Acquisto dal negozio della gilda. */
@@ -28,7 +25,7 @@ enum LedgerAction: string
     /** Scambio diretto fra due giocatori. */
     case Trade = 'trade';
 
-    /** Oro assegnato da un DM. */
+    /** Monete assegnate o tolte da un DM. */
     case DmGold = 'dm-gold';
 
     /** Richiesta approvata dalla bacheca. */
@@ -36,6 +33,9 @@ enum LedgerAction: string
 
     /** Transazione annullata da un admin: il movimento che rimette a posto. */
     case Reversal = 'reversal';
+
+    /** Monete cambiate dalla scheda: valore zero, cambiano solo le pile. */
+    case Exchange = 'exchange';
 
     public function label(): string
     {
@@ -46,9 +46,10 @@ enum LedgerAction: string
             self::ListingSold => 'Venduto',
             self::ListingBought => 'Comprato da un giocatore',
             self::Trade => 'Scambio',
-            self::DmGold => 'Oro dal DM',
+            self::DmGold => 'Monete dal DM',
             self::Approve => 'Richiesta approvata',
             self::Reversal => 'Annullamento',
+            self::Exchange => 'Cambio monete',
         };
     }
 }

@@ -2,7 +2,7 @@
 @section('title', 'Gilda')
 
 @section('content')
-<div class="mx-auto max-w-5xl px-4 py-6">
+<x-pagina>
     <h2 class="mb-1 flex items-center justify-center gap-2 text-center text-2xl text-fg">
         <x-icona :is="\App\Enums\Icon::Guild" class="h-7 w-7" /> Gilda BlowUp
     </h2>
@@ -22,7 +22,7 @@
         </form>
     @endif
 
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
         @forelse ($characters as $character)
             <x-eroe :character="$character" :warn="in_array($character->user_id, $sottoRichiamo ?? [], true)" />
         @empty
@@ -51,12 +51,14 @@
                 «In memoria di coloro che hanno dato tutto per la causa…»
             </p>
 
-            <div class="grid gap-4 sm:grid-cols-2">
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                 @foreach ($fallen as $character)
                     <x-eroe :character="$character" :warn="in_array($character->user_id, $sottoRichiamo ?? [], true)" />
                 @endforeach
             </div>
         </section>
     @endif
-</div>
+
+    <x-back :href="route('home')">Torna alla Home</x-back>
+</x-pagina>
 @endsection

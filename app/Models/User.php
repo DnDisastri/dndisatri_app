@@ -15,7 +15,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'avatar_path'])]
+#[Fillable(['name', 'email', 'password', 'avatar_path', 'discovery_source', 'played_before'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
@@ -40,15 +40,11 @@ class User extends Authenticatable implements FilamentUser
             'approved_at' => 'datetime',
             'password' => 'hashed',
             'muted_notifications' => 'array',
+            'played_before' => 'boolean',
         ];
     }
 
-    /**
-     * Le email di una categoria arrivano finché non le si spegne.
-     *
-     * Si salva chi ha spento, non chi ha acceso: una categoria aggiunta in
-     * futuro parte accesa per tutti, senza dover toccare le righe esistenti.
-     */
+    /** Si salvano le categorie disattivate: una nuova parte attiva per tutti. */
     public function wantsEmailFor(NotificationCategory $categoria): bool
     {
         return ! in_array($categoria->value, $this->muted_notifications ?? [], true);
@@ -60,7 +56,16 @@ class User extends Authenticatable implements FilamentUser
         return $this->approved_at !== null;
     }
 
-    /** I personaggi del giocatore, vivi e caduti. */
+    /** Null per chi si è iscritto prima che si facesse la domanda. */
+    public static function playedBeforeLabel(?bool $playedBefore): string
+    {
+        return match ($playedBefore) {
+            true => 'Sì',
+            false => 'No',
+            null => 'Non indicato',
+        };
+    }
+
     public function characters(): HasMany
     {
         return $this->hasMany(Character::class);
@@ -72,7 +77,7 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(Campaign::class, 'dm_id');
     }
 
-    /** I richiami ricevuti, attivi e chiusi (D13). */
+    /** Attivi e chiusi: un richiamo revocato resta nello storico. */
     public function warnings(): HasMany
     {
         return $this->hasMany(Warning::class);

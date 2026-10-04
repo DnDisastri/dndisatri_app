@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Market;
 
+use App\Domain\Dnd\Coins;
 use App\Enums\TradeDirection;
 use App\Exceptions\MarketException;
 use App\Models\Character;
@@ -12,20 +13,9 @@ use App\Notifications\TradeProposed;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Propone uno scambio: io do questo e tanto oro, tu dai quello e tanto oro.
- *
- * **Qui non si muove niente.** A differenza degli annunci, dove l'oggetto esce
- * subito dall'inventario ed entra in deposito, una proposta di scambio è solo
- * una domanda: gli inventari si toccano all'accettazione, e lì `AcceptTrade`
- * verifica di nuovo tutto per entrambe le parti.
- *
- * La conseguenza voluta è che si può proporre uno scambio e nel frattempo
- * continuare a usare le proprie cose. La conseguenza scomoda è che una proposta
- * può fallire più tardi, perché nel frattempo l'oggetto è stato venduto. È
- * corretto così, e il messaggio di `AcceptTrade` lo dice per nome.
- *
- * Quello che si controlla adesso è solo ciò che non ha senso nemmeno chiedere:
- * scambiare con sé stessi, o offrire una cosa che non si ha in mano oggi.
+ * Qui non si muove niente: inventari e monete si toccano all'accettazione, dove
+ * `AcceptTrade` rifà tutte le verifiche. Una proposta può quindi fallire più
+ * tardi; adesso si controlla solo quello che non ha senso nemmeno chiedere.
  */
 final class CreateTrade
 {
@@ -38,8 +28,8 @@ final class CreateTrade
         Character $to,
         array $give = [],
         array $want = [],
-        int $giveGp = 0,
-        int $wantGp = 0,
+        int $giveCp = 0,
+        int $wantCp = 0,
         ?string $message = null,
     ): Trade {
         if ($from->is($to)) {
@@ -50,17 +40,14 @@ final class CreateTrade
             throw new MarketException('Non si scambia con un personaggio caduto.');
         }
 
-        if ($giveGp < 0 || $wantGp < 0) {
+        if ($giveCp < 0 || $wantCp < 0 || max($giveCp, $wantCp) > Coins::MAX) {
             throw MarketException::invalidQuantity();
         }
 
-        if ($give === [] && $want === [] && $giveGp === 0 && $wantGp === 0) {
+        if ($give === [] && $want === [] && $giveCp === 0 && $wantCp === 0) {
             throw new MarketException('Uno scambio vuoto non si propone.');
         }
 
-        // Il proponente deve avere adesso quello che offre: chiedere una cosa
-        // che non si possiede è un errore di compilazione, non un cambiamento
-        // di circostanze.
         foreach ($give as $item) {
             $qty = (int) ($item['qty'] ?? 1);
 
@@ -73,26 +60,23 @@ final class CreateTrade
             }
         }
 
-        if ($from->gp < $giveGp) {
-            throw MarketException::notEnoughGold($giveGp, $from->gp);
+        if ($from->purseValue() < $giveCp) {
+            throw MarketException::notEnoughCoins($giveCp, $from->purseValue());
         }
 
-        return DB::transaction(function () use ($from, $to, $give, $want, $giveGp, $wantGp, $message) {
+        return DB::transaction(function () use ($from, $to, $give, $want, $giveCp, $wantCp, $message) {
             $trade = Trade::create([
                 'from_character_id' => $from->getKey(),
                 'to_character_id' => $to->getKey(),
-                'give_gp' => $giveGp,
-                'want_gp' => $wantGp,
+                'give_cp' => $giveCp,
+                'want_cp' => $wantCp,
                 'message' => $message,
             ]);
 
             $this->attach($trade, $give, TradeDirection::Give, $from);
-            // Di quello che si chiede si copia solo il nome: la descrizione
-            // vera arriverà dall'inventario di chi accetta, che è l'unico posto
-            // dove quell'oggetto esiste davvero.
+            // Di quello che si chiede si copia solo il nome: i dati veri arrivano all'accettazione.
             $this->attach($trade, $want, TradeDirection::Want, $to);
 
-            // Una proposta che nessuno sa di aver ricevuto non serve a niente.
             $to->user()->first()?->notify(new TradeProposed($trade, $from->name));
 
             return $trade;
@@ -103,14 +87,17 @@ final class CreateTrade
     private function attach(Trade $trade, array $items, TradeDirection $direction, Character $owner): void
     {
         foreach ($items as $item) {
-            $source = $owner->items()->where('name', $item['name'])->first();
+            $source = $owner->items()->where('name', $item['name'])->orderByRaw('equipped_slot IS NOT NULL')->first();
 
             $trade->items()->create([
                 'direction' => $direction,
                 'name' => $item['name'],
+                'base' => $source?->base,
+                'magic_bonus' => (int) $source?->magic_bonus,
+                'effects' => $source ? Character::itemCopy($source)['effects'] : null,
                 'category' => $source?->category,
                 'qty' => (int) ($item['qty'] ?? 1),
-                'value' => $source?->value ?? 0,
+                'value_cp' => $source?->value_cp ?? 0,
                 'details' => $source?->details,
             ]);
         }

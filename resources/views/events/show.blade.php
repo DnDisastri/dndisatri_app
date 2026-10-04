@@ -2,7 +2,7 @@
 @section('title', $event->title)
 
 @section('content')
-<div class="mx-auto max-w-2xl px-4 py-6">
+<x-pagina larghezza="stretta">
     <x-back dove="sopra" :href="route('events.index')">Torna agli eventi</x-back>
 
     @if ($event->cover_path)
@@ -34,5 +34,5 @@
     @endif
 
     <x-reactions :for="$event" class="mt-6 border-t border-line pt-4" />
-</div>
+</x-pagina>
 @endsection

@@ -4,11 +4,17 @@ declare(strict_types=1);
 
 namespace App\Actions\Characters;
 
+use App\Actions\Market\Purse;
 use App\Domain\Dnd\ClassRules;
+use App\Domain\Dnd\Coins;
+use App\Enums\EquipmentSlot;
 use App\Enums\LedgerAction;
 use App\Enums\PendingChangeStatus;
 use App\Enums\PendingChangeType;
+use App\Exceptions\MarketException;
 use App\Models\Character;
+use App\Models\CharacterItem;
+use App\Models\MarketItem;
 use App\Models\PendingChange;
 use App\Models\User;
 use App\Notifications\RequestDecided;
@@ -18,62 +24,56 @@ use RuntimeException;
 /**
  * Applica una richiesta approvata al personaggio.
  *
- * È il pattern centrale del gioco: i giocatori non modificano mai la scheda
- * direttamente, propongono, e qui la proposta diventa realtà.
- *
- * Due cose da tenere a mente leggendo questo codice.
- *
- * **Il diff arriva da un giocatore.** Non si applica quello che c'è scritto:
- * si applica solo quello che quel tipo di richiesta ha il diritto di cambiare.
- * Senza l'elenco dei campi ammessi, una richiesta costruita a mano potrebbe
- * riscrivere `user_id`, `gp` o `died_at`.
- *
- * **Il bottino si somma, non sostituisce.** Rileggendo il saldo corrente sotto
- * blocco, come chiede il brief (§4.3): serve a non annullare gli acquisti fatti
- * fra la proposta e l'approvazione.
+ * Il diff arriva da un giocatore: si applicano solo i campi ammessi per quel
+ * tipo, o una richiesta costruita a mano potrebbe riscrivere `user_id`, `gp` o
+ * `died_at`. Il bottino si somma al saldo riletto sotto blocco, per non
+ * annullare le spese fatte mentre la richiesta aspettava.
  */
 final class ApprovePendingChange
 {
-    /**
-     * I campi che una modifica di scheda può toccare.
-     *
-     * Fuori di proposito: `gp` (si muove solo dal mercato e dal DM), `level`
-     * (solo dal passaggio di livello), `user_id` e `died_at` (mai da qui).
-     */
+    /** Fuori di proposito: `gp`, `level`, `user_id` e `died_at` hanno strade loro. */
     private const EDITABLE = [
         'name', 'class', 'subclass', 'race', 'background',
         'str', 'dex', 'con', 'int', 'wis', 'cha',
         'speed', 'hp_max', 'hp_current', 'hp_temp',
         'saving_throws', 'skills', 'spell_ability',
         'species_traits', 'class_features', 'subclass_features', 'background_feature', 'notes',
-        // La storia è pubblica e la foto pure: passano di qui come tutto il
-        // resto della scheda, perché è quello che vedono gli altri.
         'story', 'photo_path',
     ];
 
-    /** Quello che un passaggio di livello può cambiare, e niente di più. */
     private const LEVEL_UP = [
         'level', 'hit_die', 'subclass',
         'str', 'dex', 'con', 'int', 'wis', 'cha',
         'hp_max', 'hp_current',
     ];
 
-    public function handle(PendingChange $change, User $reviewer, ?string $note = null): PendingChange
+    /**
+     * @param  array<int, array{base?: ?string, magic_bonus?: int|string|null}>  $itemFixes  le correzioni del DM agli oggetti del bottino, per indice
+     */
+    public function handle(PendingChange $change, User $reviewer, ?string $note = null, array $itemFixes = []): PendingChange
     {
-        return DB::transaction(function () use ($change, $reviewer, $note) {
+        return DB::transaction(function () use ($change, $reviewer, $note, $itemFixes) {
             $locked = PendingChange::whereKey($change->getKey())->lockForUpdate()->firstOrFail();
 
             if (! $locked->isPending()) {
                 throw new RuntimeException('Questa richiesta è già stata decisa.');
             }
 
+            if ($itemFixes !== [] && $locked->type === PendingChangeType::Loot) {
+                $locked->grant_items = $this->fixItems($locked->grant_items ?? [], $itemFixes);
+            }
+
             $character = Character::whereKey($locked->character_id)->lockForUpdate()->firstOrFail();
 
-            $gpDelta = match ($locked->type) {
+            // Prima di applicare: dopo la scheda ha già i valori nuovi.
+            $locked->forceFill(['before' => $locked->snapshotOf($character)]);
+
+            $delta = match ($locked->type) {
                 PendingChangeType::CharacterEdit => $this->applyEdit($character, $locked),
                 PendingChangeType::LevelUp => $this->applyLevelUp($character, $locked),
                 PendingChangeType::Loot => $this->applyLoot($character, $locked),
                 PendingChangeType::ItemEffect => $this->applyItemEffect($character, $locked),
+                PendingChangeType::Barter => $this->applyBarter($character, $locked),
             };
 
             $locked->forceFill([
@@ -83,29 +83,26 @@ final class ApprovePendingChange
                 'review_note' => $note,
             ])->save();
 
+            $message = $locked->summary ?: $locked->type->label().' approvata';
+
             $character->refresh()->recordInLedger(
                 LedgerAction::Approve,
-                $locked->summary ?: $locked->type->label().' approvata',
-                $gpDelta,
+                $locked->note ? "{$message} ({$locked->note})" : $message,
+                $delta,
                 $reviewer,
             );
 
-            // Il proponente va avvisato, o resterebbe a controllare la bacheca
-            // a mano. La notifica non dice chi ha deciso: quello lo vedono
-            // solo DM e admin, dal pannello.
             $locked->requestedBy()->first()?->notify(new RequestDecided($locked));
 
             return $locked;
         });
     }
 
-    private function applyEdit(Character $character, PendingChange $change): int
+    private function applyEdit(Character $character, PendingChange $change): Coins
     {
         $fields = $this->allowed($change->diff, self::EDITABLE);
 
-        // La foto non è un valore da copiare: è un file che aspetta su un
-        // disco privato e va spostato dove il mondo può vederlo. Solo adesso,
-        // perché è adesso che qualcuno l'ha guardata e ha detto di sì.
+        // La foto è un file sul disco privato: si pubblica solo ora, approvata.
         if ($pending = ($fields['photo_path'] ?? null)) {
             $published = app(CharacterPhoto::class)->publish($character, $pending);
 
@@ -118,22 +115,18 @@ final class ApprovePendingChange
 
         $character->forceFill($fields)->save();
 
-        return 0;
+        return Coins::none();
     }
 
-    private function applyLevelUp(Character $character, PendingChange $change): int
+    private function applyLevelUp(Character $character, PendingChange $change): Coins
     {
         $character->forceFill($this->allowed($change->diff, self::LEVEL_UP))->save();
 
-        // La classe: è l'unico punto del sistema in cui una classe nuova nasce.
-        // Sta qui e non nella richiesta perché finché non è approvata il
-        // personaggio non è multiclasse.
+        // Talento, classe e incantesimi sono righe a parte: il filtro dei campi li scarta.
         if ($classUp = ($change->diff['class_up'] ?? null)) {
             $this->applyClassUp($character, $classUp);
         }
 
-        // Un talento non è una colonna della scheda: è una riga a parte, e
-        // arriva sotto una chiave che il filtro dei campi scarta da sé.
         if ($feat = ($change->diff['feat'] ?? null)) {
             $character->feats()->create([
                 'name' => $feat['name'],
@@ -143,9 +136,7 @@ final class ApprovePendingChange
             ]);
         }
 
-        // Gli incantesimi imparati salendo, per la stessa strada dei talenti.
-        // `firstOrCreate` perché la lista non deve poter sdoppiarsi: un
-        // incantesimo si conosce o non si conosce.
+        // `firstOrCreate`: un incantesimo già conosciuto non si sdoppia.
         foreach ($change->diff['spells'] ?? [] as $spell) {
             $character->spells()->firstOrCreate(
                 ['name' => $spell],
@@ -153,15 +144,12 @@ final class ApprovePendingChange
             );
         }
 
-        return 0;
+        return Coins::none();
     }
 
     /**
-     * Scrive la riga della classe e tiene allineata la copia sulla scheda.
-     *
-     * La copia (`characters.level`, `class`, `subclass`) esiste per poter
-     * ordinare ed elencare in SQL, e il patto per non farla scollare è che la
-     * scriva **solo questo metodo**, nella stessa transazione delle righe.
+     * La copia sulla scheda (`characters.level`, `class`, `subclass`) la scrive
+     * solo questo metodo, nella stessa transazione delle righe, o si scolla.
      *
      * @param  array<string,mixed>  $classUp
      */
@@ -171,8 +159,7 @@ final class ApprovePendingChange
             ['class' => $classUp['class']],
             [
                 'level' => (int) $classUp['level'],
-                // La prima classe che il personaggio abbia mai avuto: da lei, e
-                // solo da lei, vengono i tiri salvezza competenti.
+                // Solo la prima classe dà i tiri salvezza competenti.
                 'is_primary' => $character->classes()->count() === 0,
             ],
         );
@@ -181,9 +168,7 @@ final class ApprovePendingChange
             $row->forceFill(['subclass' => $classUp['subclass']])->save();
         }
 
-        // Entrando in una classe nuova arrivano poche abilità, e solo per
-        // Bardo, Ladro e Ranger. Si aggiungono a quelle che ci sono: una
-        // competenza acquisita non si perde salendo di livello.
+        // Le abilità della nuova classe si aggiungono: una competenza non si perde.
         if ($skills = ($classUp['skills'] ?? [])) {
             $current = $character->skills ?? [];
 
@@ -195,16 +180,16 @@ final class ApprovePendingChange
         }
     }
 
-    /**
-     * L'oro si somma al valore corrente e gli oggetti si accodano
-     * all'inventario: una richiesta di bottino non sovrascrive mai niente.
-     */
-    private function applyLoot(Character $character, PendingChange $change): int
+    private function applyLoot(Character $character, PendingChange $change): Coins
     {
-        $gp = (int) $change->grant_gp;
+        $coins = $change->grantCoins();
 
-        if ($gp !== 0) {
-            $character->increment('gp', $gp);
+        if (! $coins->isEmpty()) {
+            try {
+                app(Purse::class)->receive($character, $coins);
+            } catch (MarketException $e) {
+                throw new RuntimeException($e->getMessage());
+            }
         }
 
         foreach ($change->grant_items ?? [] as $item) {
@@ -212,33 +197,109 @@ final class ApprovePendingChange
                 name: $item['name'],
                 qty: (int) ($item['qty'] ?? 1),
                 category: $item['category'] ?? null,
-                value: (int) ($item['value'] ?? 0),
+                valueCp: (int) ($item['value_cp'] ?? 0),
                 details: $item['details'] ?? null,
+                base: EquipmentSlot::isBase($item['base'] ?? null) ? $item['base'] : null,
+                magicBonus: $this->bonus($item['magic_bonus'] ?? 0),
             );
         }
 
-        return $gp;
+        return $coins;
     }
 
     /**
-     * L'oggetto magico trovato in sessione.
-     *
-     * Crea **l'oggetto prima dell'effetto**, e li lega: da qui in poi il bonus
-     * vale finché l'oggetto è in sintonia, e vendendolo sparisce da sé. Se il
-     * personaggio l'oggetto ce l'ha già — comprato o raccolto prima di chiedere
-     * l'effetto — ci si aggancia invece di crearne un doppione.
-     *
-     * La sintonia si dà subito, se c'è posto: chi ha appena trovato un oggetto
-     * magico se lo mette. Con tre già in uso l'oggetto arriva spento, e il
-     * giocatore sceglie a cosa rinunciare.
+     * Dalla proposta può essere passato del tempo: l'articolo può essere finito e
+     * l'oggetto venduto. L'oggetto del giocatore entra in magazzino col suo valore
+     * come prezzo di partenza, e in vendita lo mette un DM o un admin.
      */
-    private function applyItemEffect(Character $character, PendingChange $change): int
+    private function applyBarter(Character $character, PendingChange $change): Coins
+    {
+        $give = $change->diff['give'] ?? [];
+        $take = $change->diff['take'] ?? [];
+
+        $wanted = MarketItem::whereKey($take['market_item_id'] ?? null)->lockForUpdate()->first();
+
+        if ($wanted === null || ! $wanted->isAvailable()) {
+            throw new RuntimeException("«{$take['name']}» non è più disponibile nel negozio: rifiuta il baratto.");
+        }
+
+        $given = $character->items()
+            ->where('name', $give['name'] ?? null)
+            ->orderByRaw('equipped_slot IS NOT NULL')
+            ->first();
+
+        if ($given === null) {
+            throw new RuntimeException("{$character->name} non ha più «{$give['name']}»: rifiuta il baratto.");
+        }
+
+        // Dall'oggetto com'è adesso: tipo e bonus possono essere stati corretti nel frattempo.
+        $copia = Character::itemCopy($given);
+
+        if ($wanted->price_cp > $copia['valueCp']) {
+            throw new RuntimeException("Ora «{$wanted->name}» costa più di quanto vale «{$given->name}»: rifiuta il baratto.");
+        }
+
+        $character->removeFromInventory($given->name);
+        $character->addToInventory(...Character::itemCopy($wanted));
+
+        if (! $wanted->is_unlimited) {
+            $wanted->decrement('stock');
+        }
+
+        $magazzino = new MarketItem([
+            'name' => $copia['name'],
+            'base' => $copia['base'],
+            'magic_bonus' => $copia['magicBonus'],
+            'effects' => $copia['effects'],
+            'category' => $copia['category'],
+            'details' => $copia['details'],
+            'price_cp' => $copia['valueCp'],
+            'is_unlimited' => false,
+            'stock' => 1,
+        ]);
+        $magazzino->forceFill(['in_storage' => true])->save();
+
+        return Coins::none();
+    }
+
+    /**
+     * Si salvano nella richiesta: lo storico mostra quello che è stato davvero dato.
+     *
+     * @param  list<array<string,mixed>>  $items
+     * @param  array<int, array<string,mixed>>  $fixes
+     * @return list<array<string,mixed>>
+     */
+    private function fixItems(array $items, array $fixes): array
+    {
+        foreach ($fixes as $indice => $fix) {
+            if (! isset($items[$indice])) {
+                continue;
+            }
+
+            $base = $fix['base'] ?? null;
+            $items[$indice]['base'] = EquipmentSlot::isBase($base) ? $base : null;
+            $items[$indice]['magic_bonus'] = $this->bonus($fix['magic_bonus'] ?? 0);
+        }
+
+        return $items;
+    }
+
+    private function bonus(mixed $value): int
+    {
+        return max(0, min(CharacterItem::MAX_MAGIC_BONUS, (int) $value));
+    }
+
+    /**
+     * L'effetto si lega all'oggetto (creato o già posseduto): vale finché è in
+     * sintonia e sparisce se lo si vende. La sintonia si dà solo se c'è posto.
+     */
+    private function applyItemEffect(Character $character, PendingChange $change): Coins
     {
         $effect = $change->diff ?? [];
         $name = $effect['name'] ?? 'Oggetto magico';
 
         $item = $character->items()->where('name', $name)->first()
-            ?? $character->addToInventory(name: $name, category: 'Oggetti magici');
+            ?? $character->addToInventory(name: $name, category: 'Oggetti Magici');
 
         $character->itemEffects()->create([
             'character_item_id' => $item->getKey(),
@@ -252,7 +313,7 @@ final class ApprovePendingChange
             $item->forceFill(['attuned' => true])->save();
         }
 
-        return 0;
+        return Coins::none();
     }
 
     /**

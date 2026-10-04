@@ -2,7 +2,7 @@
 @section('title', 'Notifiche')
 
 @section('content')
-<div class="mx-auto max-w-3xl px-4 py-6">
+<x-pagina larghezza="stretta">
 
     <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h2 class="flex items-center gap-2 text-2xl text-fg">
@@ -15,9 +15,19 @@
                 <x-button variant="quiet" size="sm" :href="route('notifications.index')">
                     <x-icona :is="\App\Enums\Icon::Back" class="h-4 w-4" /> Torna alle attive
                 </x-button>
+
+                @if ($notifications->isNotEmpty())
+                    <form method="POST" action="{{ route('notifications.empty-archive') }}"
+                          data-conferma="Eliminare tutte le notifiche archiviate? Non si possono recuperare.">
+                        @csrf
+                        @method('DELETE')
+                        <x-button variant="quiet" size="sm">
+                            <x-icona :is="\App\Enums\Icon::Delete" class="h-4 w-4" /> Svuota archivio
+                        </x-button>
+                    </form>
+                @endif
             @else
                 @if ($daSvuotare > 0)
-{{-- "Svuota" archivia tutte le notifiche attive; l'archiviazione singola resta disponibile su ogni card. --}}
                     <form method="POST" action="{{ route('notifications.clear') }}">
                         @csrf
                         <x-button variant="quiet" size="sm">
@@ -50,7 +60,7 @@
                         </p>
 
                         @if (filled($data['body'] ?? null))
-                            <p class="mt-1 text-sm text-muted">{{ $data['body'] }}</p>
+                            <p class="mt-1 whitespace-pre-line text-sm text-muted">{{ $data['body'] }}</p>
                         @endif
 
                         @if (filled($data['url'] ?? null))
@@ -64,14 +74,27 @@
                         <span class="text-xs text-muted">{{ $notification->created_at->diffForHumans() }}</span>
 
                         @if ($mostraArchiviate)
-                            <form method="POST" action="{{ route('notifications.restore', $notification->id) }}">
-                                @csrf
-                                <button type="submit" title="Rimetti in lista"
-                                        class="rounded-full p-1 text-muted transition hover:bg-page hover:text-fg">
-                                    <x-icona :is="\App\Enums\Icon::Unstash" class="h-5 w-5" />
-                                    <span class="sr-only">Ripristina</span>
-                                </button>
-                            </form>
+                            <div class="flex gap-1">
+                                <form method="POST" action="{{ route('notifications.restore', $notification->id) }}">
+                                    @csrf
+                                    <button type="submit" title="Rimetti in lista"
+                                            class="rounded-full p-1 text-muted transition hover:bg-page hover:text-fg">
+                                        <x-icona :is="\App\Enums\Icon::Unstash" class="h-5 w-5" />
+                                        <span class="sr-only">Ripristina</span>
+                                    </button>
+                                </form>
+
+                                <form method="POST" action="{{ route('notifications.destroy', $notification->id) }}"
+                                      data-conferma="Eliminare questa notifica? Non si potrà recuperare.">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" title="Elimina per sempre"
+                                            class="rounded-full p-1 text-muted transition hover:bg-page hover:text-on-danger-soft">
+                                        <x-icona :is="\App\Enums\Icon::Delete" class="h-5 w-5" />
+                                        <span class="sr-only">Elimina</span>
+                                    </button>
+                                </form>
+                            </div>
                         @else
                             <form method="POST" action="{{ route('notifications.archive', $notification->id) }}">
                                 @csrf
@@ -93,5 +116,9 @@
             </p>
         @endforelse
     </div>
-</div>
+
+    <x-back :href="route('home')">Torna alla Home</x-back>
+</x-pagina>
+
+@include('partials.conferma')
 @endsection
