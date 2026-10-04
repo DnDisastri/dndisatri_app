@@ -5,7 +5,9 @@
     $rows = $record->diffRows();
     $fotoProposta = $record->proposedPhotoPath();
     $cambiaScheda = $rows->isNotEmpty() || $fotoProposta;
-    $haBottino = $record->grant_gp || ! empty($record->grant_items);
+    $monete = $record->grantCoins();
+    $haBottino = ! $monete->isEmpty() || ! empty($record->grant_items);
+    $borsa = $character?->coins() ?? \App\Domain\Dnd\Coins::none();
 
     $etichetta = 'font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;margin-bottom:.15rem;';
     $prima = 'color:#6b7280;text-decoration:line-through;word-break:break-word;';
@@ -66,13 +68,13 @@
         <div style="display:flex;flex-direction:column;gap:.5rem;">
             <div style="{{ $etichetta }}">Bottino</div>
 
-            @if ($record->grant_gp)
+            @if (! $monete->isEmpty())
                 <p>
-                    <strong>Oro:</strong>
-                    {{ $character?->gp ?? 0 }} mo
+                    <strong>Monete:</strong>
+                    {{ $borsa->format() }}
                     <span style="color:#9ca3af;">→</span>
-                    <span style="{{ $dopo }}">{{ ($character?->gp ?? 0) + $record->grant_gp }} mo</span>
-                    <span style="color:#6b7280;">({{ $record->grant_gp > 0 ? '+' : '' }}{{ $record->grant_gp }} mo)</span>
+                    <span style="{{ $dopo }}">{{ $borsa->plus($monete)->format() }}</span>
+                    <span style="color:#6b7280;">(+{{ $monete->format() }})</span>
                 </p>
             @endif
 
@@ -84,7 +86,7 @@
                             @php
                                 $extra = array_filter([
                                     $item['category'] ?? null,
-                                    isset($item['value']) && $item['value'] ? $item['value'].' mo' : null,
+                                    ! empty($item['value_cp']) ? \App\Domain\Dnd\Coins::formatValue((int) $item['value_cp']) : null,
                                 ]);
                             @endphp
                             <li style="color:#15803d;font-weight:600;">

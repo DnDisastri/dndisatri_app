@@ -20,7 +20,7 @@
 
         <div class="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
             @forelse ($elenco as $item)
-                <x-market-card :nome="$item->name" :prezzo="$item->price"
+                <x-market-card :nome="$item->name" :prezzo="$item->price_cp"
                                :apri="'apri('.$item->id.')'"
                                :meta="collect([
                                    $item->category,
@@ -79,9 +79,7 @@
                 <div class="space-y-2 border-t border-line pt-3">
                     <div class="flex items-baseline justify-between gap-3">
                         <span class="text-muted">Prezzo</span>
-                        <strong class="text-lg text-on-accent-soft">
-                            {{ number_format($oggetto->price, 0, ',', '.') }} mo
-                        </strong>
+                        <strong class="text-lg text-on-accent-soft"><x-monete :valore="$oggetto->price_cp" /></strong>
                     </div>
 
                     @if ($character && $oggetto->isAvailable())
@@ -102,13 +100,13 @@
                              Il pulsante resta premibile anche senza soldi: la riga spiega perché. --}}
                         @if ($quantita > 1)
                             <p class="text-center text-muted">
-                                in tutto <strong class="text-on-accent-soft">{{ number_format($totale, 0, ',', '.') }} mo</strong>
+                                in tutto <strong class="text-on-accent-soft"><x-monete :valore="$totale" /></strong>
                             </p>
                         @endif
 
-                        @if ($character->gp < $totale)
+                        @if ($character->purseValue() < $totale)
                             <p class="text-center text-xs text-muted">
-                                ti mancano {{ number_format($totale - $character->gp, 0, ',', '.') }} mo
+                                ti mancano <x-monete :valore="$totale - $character->purseValue()" />
                             </p>
                         @endif
 

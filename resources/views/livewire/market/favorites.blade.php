@@ -1,6 +1,4 @@
-{{-- La scheda la guardano anche gli altri (P14): la lista è privata come lo
-     zaino, e a chi non è suo questo componente non dice niente. Il pannello lo
-     nasconde già la vista della scheda — questo è il secondo giro di chiave. --}}
+{{-- La lista è privata come lo zaino: la scheda la nasconde già, questo è il secondo controllo. --}}
 <div>
     @if ($mio)
     <x-panel title="Preferiti dell'emporio">
@@ -28,9 +26,7 @@
                             </span>
                         </a>
 
-                        <span class="shrink-0 text-sm font-bold text-on-accent-soft">
-                            {{ number_format($item->price, 0, ',', '.') }} mo
-                        </span>
+                        <x-monete :valore="$item->price_cp" class="shrink-0 text-sm font-bold text-on-accent-soft" />
 
                         {{-- Da qui si toglie soltanto: la stella è già piena, e
                              premerla la spegne. Metterla si fa dove l'articolo

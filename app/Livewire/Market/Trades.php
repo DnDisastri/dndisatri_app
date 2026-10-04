@@ -7,6 +7,7 @@ use App\Actions\Market\CreateTradeRequest;
 use App\Actions\Market\ResolveTrade;
 use App\Actions\Market\ResolveTradeRequest;
 use App\Actions\Supervision\Supervisor;
+use App\Domain\Dnd\Coins;
 use App\Enums\TradeStatus;
 use App\Exceptions\MarketException;
 use App\Livewire\Concerns\ActsAsCharacter;
@@ -29,9 +30,11 @@ class Trades extends Component
     /** @var list<string> nomi degli oggetti chiesti */
     public array $want = [];
 
-    public int $giveGp = 0;
+    /** @var array<string,int|string|null> */
+    public array $giveMonete = [];
 
-    public int $wantGp = 0;
+    /** @var array<string,int|string|null> */
+    public array $wantMonete = [];
 
     public string $message = '';
 
@@ -43,7 +46,8 @@ class Trades extends Component
     /** @var list<string> quello che si dà rispondendo a una richiesta */
     public array $offro = [];
 
-    public int $offroGp = 0;
+    /** @var array<string,int|string|null> */
+    public array $offroMonete = [];
 
     public function mount(): void
     {
@@ -93,7 +97,7 @@ class Trades extends Component
             return;
         }
 
-        $this->validaOro(['giveGp', 'wantGp']);
+        $this->validaMonete(['giveMonete', 'wantMonete']);
 
         if ($this->chiedo !== '') {
             $this->request($character, $to);
@@ -108,12 +112,12 @@ class Trades extends Component
                 to: $to,
                 give: $this->asItems($this->give),
                 want: $this->asItems($this->want),
-                giveGp: $this->giveGp,
-                wantGp: $this->wantGp,
+                giveCp: Coins::fromArray($this->giveMonete)->value(),
+                wantCp: Coins::fromArray($this->wantMonete)->value(),
                 message: $this->message ?: null,
             );
 
-            $this->reset('give', 'want', 'giveGp', 'wantGp', 'message');
+            $this->reset('give', 'want', 'giveMonete', 'wantMonete', 'message');
 
             $this->esito($result instanceof SupervisedAction
                 ? 'Sei sotto richiamo: la proposta è in attesa che un DM la approvi.'
@@ -132,11 +136,11 @@ class Trades extends Component
                 to: $to,
                 wanted: $this->chiedo,
                 offered: array_values(array_filter($this->give)),
-                offeredGp: $this->giveGp,
+                offeredCp: Coins::fromArray($this->giveMonete)->value(),
                 message: $this->message ?: null,
             );
 
-            $this->reset('give', 'want', 'giveGp', 'wantGp', 'message', 'chiedo');
+            $this->reset('give', 'want', 'giveMonete', 'wantMonete', 'message', 'chiedo');
 
             $this->esito('Richiesta inviata: adesso tocca a lui.');
         } catch (MarketException $e) {
@@ -153,7 +157,7 @@ class Trades extends Component
 
         $this->richiestaAperta = $request->getKey();
         $this->offro = [];
-        $this->offroGp = 0;
+        $this->offroMonete = [];
         $this->resetErrorBag('scambio');
     }
 
@@ -168,14 +172,14 @@ class Trades extends Component
         $request = TradeRequest::findOrFail($this->richiestaAperta);
         $this->authorize('accept', $request);
 
-        $this->validaOro(['offroGp']);
+        $this->validaMonete(['offroMonete']);
 
         try {
             $result = app(AcceptTradeRequest::class)->handle(
                 $request,
                 auth()->user(),
                 $this->asItems($this->offro),
-                $this->offroGp,
+                Coins::fromArray($this->offroMonete)->value(),
             );
 
             $this->chiudiRichiesta();
@@ -269,20 +273,20 @@ class Trades extends Component
     }
 
     /**
-     * Colonne `unsignedInteger`: oltre il limite la scrittura fallisce, e il `min="0"` del modulo è solo lato client.
+     * Il `min="0"` del modulo vale solo nel browser.
      *
      * @param  list<string>  $campi
      */
-    private function validaOro(array $campi): void
+    private function validaMonete(array $campi): void
     {
-        $regole = ['integer', 'min:0', 'max:'.Character::MAX_GP];
+        $regole = ['nullable', 'integer', 'min:0', 'max:'.Coins::MAX];
 
         $this->validate(
-            array_fill_keys($campi, $regole),
+            array_fill_keys(array_map(fn (string $campo) => "{$campo}.*", $campi), $regole),
             array_merge(...array_map(fn (string $campo) => [
-                "{$campo}.integer" => 'Le monete si contano a numeri interi.',
-                "{$campo}.min" => 'Non puoi mettere una cifra negativa.',
-                "{$campo}.max" => 'Cifra troppo alta: tanto oro non esiste.',
+                "{$campo}.*.integer" => 'Le monete si contano a numeri interi.',
+                "{$campo}.*.min" => 'Non puoi mettere una cifra negativa.',
+                "{$campo}.*.max" => 'Cifra troppo alta: tante monete non esistono.',
             ], $campi)),
         );
     }

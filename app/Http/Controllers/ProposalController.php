@@ -7,6 +7,7 @@ use App\Actions\Characters\ProposeChange;
 use App\Actions\Characters\RequestLevelUp;
 use App\Domain\Dnd\Ability;
 use App\Domain\Dnd\ClassRules;
+use App\Domain\Dnd\Coins;
 use App\Domain\Dnd\ItemEffectMode;
 use App\Domain\Dnd\Multiclass;
 use App\Domain\Dnd\Progression;
@@ -204,23 +205,37 @@ class ProposalController extends Controller
         $this->authorize('propose', $character);
 
         $validated = $request->validate([
-            'gp' => ['nullable', 'integer', 'min:0', 'max:'.ProposeChange::LOOT_MAX_GP],
+            'coins' => ['nullable', 'array'],
+            'coins.*' => ['nullable', 'integer', 'min:0', 'max:'.Coins::MAX],
             'items' => ['nullable', 'array', 'max:'.ProposeChange::LOOT_MAX_ITEMS],
             'items.*.name' => ['nullable', 'string', 'max:100'],
             'items.*.qty' => ['nullable', 'integer', 'min:1', 'max:999'],
             'items.*.category' => ['nullable', 'string', 'max:50'],
-            'items.*.value' => ['nullable', 'integer', 'min:0', 'max:'.Character::MAX_GP],
+            'items.*.value' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
             'items.*.details' => ['nullable', 'string', 'max:1000'],
             'note' => ['nullable', 'string', 'max:255'],
         ], [
-            'gp.max' => 'Al massimo :max mo per richiesta: per somme più alte chiedi al DM.',
             'items.max' => 'Al massimo :max oggetti per richiesta: registra il resto con una seconda richiesta.',
             'items.*.name.max' => 'Il nome di un oggetto può avere al massimo :max caratteri: la descrizione va nei dettagli.',
         ]);
 
-        // Le righe lasciate in bianco non sono oggetti.
+        $coins = Coins::fromArray($validated['coins'] ?? []);
+
+        if ($coins->value() > ProposeChange::LOOT_MAX_CP) {
+            throw ValidationException::withMessages([
+                'coins' => 'Al massimo '.Coins::formatValue(ProposeChange::LOOT_MAX_CP).' di monete per richiesta: per somme più alte chiedi al DM.',
+            ]);
+        }
+
+        // Le righe lasciate in bianco non sono oggetti; il valore arriva in mo.
         $items = collect($validated['items'] ?? [])
             ->filter(fn ($item) => filled($item['name'] ?? null))
+            ->map(function (array $item) {
+                $item['value_cp'] = (int) round((float) ($item['value'] ?? 0) * 100);
+                unset($item['value']);
+
+                return $item;
+            })
             ->values()
             ->all();
 
@@ -228,7 +243,7 @@ class ProposalController extends Controller
             fn () => $proposals->loot(
                 $character,
                 $request->user(),
-                (int) ($validated['gp'] ?? 0),
+                $coins,
                 $items,
                 $validated['note'] ?? null,
             ),

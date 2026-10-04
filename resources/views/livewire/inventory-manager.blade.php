@@ -1,9 +1,23 @@
 <div>
     <x-panel title="Inventario">
-        <p class="mb-1 text-lg">
-            <span class="font-bold text-fg">{{ number_format($character->gp, 0, ',', '.') }}</span>
-            <span class="text-sm text-muted">monete d'oro</span>
-        </p>
+        @php $borsa = $character->coins(); @endphp
+
+        <div class="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <dl class="grid grid-cols-4 gap-2">
+                @foreach (\App\Domain\Dnd\Coin::descending() as $moneta)
+                    <div class="rounded-md border border-line bg-page px-2 py-1 text-center">
+                        <dt class="text-xs text-muted" title="{{ $moneta->label() }}">{{ $moneta->abbreviation() }}</dt>
+                        <dd class="font-bold text-fg">{{ number_format($borsa->get($moneta), 0, ',', '.') }}</dd>
+                    </div>
+                @endforeach
+            </dl>
+
+            @if ($canManage)
+                <x-button type="button" variant="quiet" size="sm" wire:click="apriCambio">Cambia monete</x-button>
+            @endif
+        </div>
+
+        <p class="mb-1 text-xs text-muted">Valore: <x-monete :valore="$borsa->value()" /></p>
 
         <p class="mb-3 text-xs text-muted">
             In sintonia: {{ $character->attunedItems()->count() }} / {{ App\Models\Character::ATTUNEMENT_LIMIT }}
@@ -35,10 +49,7 @@
                         </span>
                     @endif
 
-                    {{-- L'unica cosa di questo zaino che vedono gli altri. Il
-                         segno è più marcato degli altri due apposta: le altre
-                         due pillole dicono come tieni la tua roba, questa dice
-                         che qualcun altro la sta guardando. --}}
+                    {{-- Più marcata delle altre: è l'unica cosa dello zaino che vedono gli altri. --}}
                     @if ($item->tradeable)
                         <span class="ml-1 rounded bg-primary px-1.5 py-0.5 text-xs text-on-primary">
                             in vetrina
@@ -105,4 +116,50 @@
             <p class="text-sm text-muted">Lo zaino è vuoto.</p>
         @endforelse
     </x-panel>
+
+    @if ($modaleCambio)
+        <x-modal title="Cambia monete" close="chiudiCambio">
+            <div class="space-y-3 text-left text-sm">
+                <p class="text-muted">Solo cambi esatti: 1 mp = 10 mo = 100 ma = 1.000 mr.</p>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="block">
+                        <span class="mb-1 block text-muted">Da</span>
+                        <select wire:model.live="cambioDa" class="w-full rounded-md border border-line bg-page px-2 py-2 text-fg">
+                            @foreach (\App\Domain\Dnd\Coin::descending() as $moneta)
+                                <option value="{{ $moneta->value }}">{{ $moneta->label() }} ({{ $moneta->abbreviation() }})</option>
+                            @endforeach
+                        </select>
+                    </label>
+
+                    <label class="block">
+                        <span class="mb-1 block text-muted">In</span>
+                        <select wire:model.live="cambioA" class="w-full rounded-md border border-line bg-page px-2 py-2 text-fg">
+                            @foreach (\App\Domain\Dnd\Coin::descending() as $moneta)
+                                <option value="{{ $moneta->value }}">{{ $moneta->label() }} ({{ $moneta->abbreviation() }})</option>
+                            @endforeach
+                        </select>
+                    </label>
+                </div>
+
+                <label class="block">
+                    <span class="mb-1 block text-muted">Quante ne cambi</span>
+                    <input type="number" min="1" inputmode="numeric" wire:model.live.debounce.300ms="cambioQuante"
+                           class="w-full rounded-md border border-line bg-page px-2 py-2 text-fg">
+                </label>
+                @error('cambioA') <p class="text-on-danger-soft">{{ $message }}</p> @enderror
+                @error('cambioQuante') <p class="text-on-danger-soft">{{ $message }}</p> @enderror
+
+                <p class="rounded-md bg-page px-3 py-2 text-muted">
+                    @if ($anteprima)
+                        Dopo il cambio: <span class="font-semibold text-fg">{{ $anteprima->format() }}</span>
+                    @else
+                        Scegli due monete e una quantità che dia un cambio esatto.
+                    @endif
+                </p>
+
+                <x-button full type="button" wire:click="cambia" :disabled="$anteprima === null">Cambia</x-button>
+            </div>
+        </x-modal>
+    @endif
 </div>

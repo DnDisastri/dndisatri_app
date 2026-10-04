@@ -62,8 +62,8 @@
                                     <x-icona :is="\App\Enums\Icon::HitPoints" class="h-4 w-4" />
                                     {{ $character->hp_current }}/{{ $character->effectiveHpMax() }}
                                 </span>
-                                <span class="flex items-center gap-1" title="Oro">
-                                    <x-icona :is="\App\Enums\Icon::Gold" class="h-4 w-4" /> {{ $character->gp }}
+                                <span class="flex items-center gap-1" title="Borsa">
+                                    <x-icona :is="\App\Enums\Icon::Gold" class="h-4 w-4" /> <x-monete :borsa="$character->coins()" />
                                 </span>
                             </p>
 
