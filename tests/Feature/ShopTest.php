@@ -3,7 +3,8 @@
 declare(strict_types=1);
 
 use App\Actions\Market\BuyFromShop;
-use App\Actions\Market\GrantGold;
+use App\Actions\Market\GrantCoins;
+use App\Domain\Dnd\Coins;
 use App\Enums\EquipmentSlot;
 use App\Enums\LedgerAction;
 use App\Exceptions\MarketException;
@@ -58,7 +59,7 @@ describe('acquisto dal negozio', function () {
 
         expect($character->fresh()->gp)->toBe(500);
     });
-// `stock: null` rappresenta disponibilità illimitata e non viene decrementato dagli acquisti.
+    // `stock: null` rappresenta disponibilità illimitata e non viene decrementato dagli acquisti.
     it('non esaurisce mai gli articoli a scorte infinite', function () {
         $character = Character::factory()->create(['gp' => 1000]);
         $item = MarketItem::factory()->named('Razione', 5)->unlimited()->create();
@@ -127,7 +128,7 @@ describe('inventario', function () {
         expect($character->fresh()->items()->where('name', 'Pozione di Cura')->count())->toBe(1)
             ->and($character->fresh()->items()->where('name', 'Pozione di Cura')->value('qty'))->toBe(5);
     });
-// Gli acquisti non si accorpano a righe equipaggiate per non alterare lo stato dell'equipaggiamento.
+    // Gli acquisti non si accorpano a righe equipaggiate per non alterare lo stato dell'equipaggiamento.
     it('non accorpa su una riga equipaggiata', function () {
         $character = Character::factory()->create(['gp' => 1000]);
         CharacterItem::factory()->for($character)->armor('Cotta di Maglia')->create();
@@ -160,8 +161,8 @@ describe('il Registro', function () {
         $entry = LedgerEntry::forCharacter($character)->latestFirst()->first();
 
         expect($entry->action)->toBe(LedgerAction::Buy)
-            ->and($entry->gp_delta)->toBe(-50)
-            ->and($entry->gp_after)->toBe(150)
+            ->and($entry->cp_delta)->toBe(-5000)
+            ->and($entry->coins_after)->toBe(['gp' => 150])
             ->and($entry->message)->toContain('Pozione di Cura');
     });
 
@@ -169,40 +170,53 @@ describe('il Registro', function () {
         $dm = User::factory()->dm()->create();
         $character = Character::factory()->create(['gp' => 100]);
 
-        app(GrantGold::class)->handle($character, 250, $dm, 'Bottino di sessione');
+        app(GrantCoins::class)->give($character, new Coins(gp: 250), $dm, 'Bottino di sessione');
 
         $entry = LedgerEntry::forCharacter($character)->latestFirst()->first();
 
         expect($entry->actor_id)->toBe($dm->id)
             ->and($entry->action)->toBe(LedgerAction::DmGold)
-            ->and($entry->gp_delta)->toBe(250)
-            ->and($entry->gp_after)->toBe(350)
+            ->and($entry->cp_delta)->toBe(25000)
+            ->and($entry->coins_after)->toBe(['gp' => 350])
             ->and($entry->message)->toContain('Bottino di sessione');
     });
-// Il saldo finale deve coincidere con la somma dei movimenti registrati.
+    // Il saldo finale deve coincidere con la somma dei movimenti registrati.
     it('il saldo torna sempre con la somma dei movimenti', function () {
         $dm = User::factory()->dm()->create();
         $character = Character::factory()->create(['gp' => 0]);
         $item = MarketItem::factory()->named('Corda', 20)->stock(10)->create();
 
-        app(GrantGold::class)->handle($character, 500, $dm);
+        app(GrantCoins::class)->give($character, new Coins(gp: 500), $dm);
         app(BuyFromShop::class)->handle($character->fresh(), $item, qty: 4);
-        app(GrantGold::class)->handle($character->fresh(), -100, $dm, 'Multa della gilda');
+        app(GrantCoins::class)->take($character->fresh(), new Coins(gp: 100), $dm, 'Multa della gilda');
 
-        expect($character->fresh()->gp)
-            ->toBe(LedgerEntry::forCharacter($character)->sum('gp_delta'));
+        expect($character->fresh()->purseValue())
+            ->toBe((int) LedgerEntry::forCharacter($character)->sum('cp_delta'));
     });
 });
 
-describe('oro assegnato dal DM', function () {
-    it('non manda il personaggio in debito', function () {
+describe('monete date dal DM', function () {
+    it('non mandano il personaggio in debito: toglierne troppe si rifiuta', function () {
         $dm = User::factory()->dm()->create();
         $character = Character::factory()->create(['gp' => 40]);
 
-        app(GrantGold::class)->handle($character, -500, $dm);
+        expect(fn () => app(GrantCoins::class)->take($character, new Coins(gp: 500), $dm))
+            ->toThrow(MarketException::class);
 
-        expect($character->fresh()->gp)->toBe(0)
-            ->and(LedgerEntry::forCharacter($character)->latestFirst()->first()->gp_delta)->toBe(-40);
+        expect($character->fresh()->gp)->toBe(40)
+            ->and(LedgerEntry::forCharacter($character)->count())->toBe(0);
+    });
+
+    it('tolgono le monete esatte se ci sono, altrimenti il valore col resto', function () {
+        $dm = User::factory()->dm()->create();
+        $esatte = Character::factory()->create(['gp' => 5, 'sp' => 3]);
+        $colResto = Character::factory()->create(['gp' => 5]);
+
+        app(GrantCoins::class)->take($esatte, new Coins(sp: 3), $dm);
+        app(GrantCoins::class)->take($colResto, new Coins(sp: 3), $dm);
+
+        expect($esatte->fresh()->coins()->toArray())->toBe(['pp' => 0, 'gp' => 5, 'sp' => 0, 'cp' => 0])
+            ->and($colResto->fresh()->coins()->toArray())->toBe(['pp' => 0, 'gp' => 4, 'sp' => 7, 'cp' => 0]);
     });
 });
 

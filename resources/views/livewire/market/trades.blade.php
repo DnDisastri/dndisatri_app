@@ -65,7 +65,7 @@
                         <span class="text-fg">
                             {{ collect([
                                 $richiesta->offeredNames()->implode(', ') ?: null,
-                                $richiesta->offered_gp > 0 ? $richiesta->offered_gp.' mo' : null,
+                                $richiesta->offered_cp > 0 ? \App\Domain\Dnd\Coins::formatValue($richiesta->offered_cp) : null,
                             ])->filter()->implode(' e ') ?: 'niente' }}
                         </span>
                     </p>
@@ -163,9 +163,7 @@
                         @endforelse
                     </div>
 
-                    <label class="block text-xs text-muted">Monete d'oro</label>
-                    <input type="number" min="0" wire:model="giveGp"
-                           class="w-full rounded-md border border-line bg-surface px-2 py-1 text-sm text-fg">
+                    <x-campo-monete model="giveMonete" label="Monete" />
                 </x-inset>
 
                 <x-inset>
@@ -188,9 +186,7 @@
                         @endforelse
                     </div>
 
-                    <label class="mb-1 block text-xs text-muted">Monete d'oro</label>
-                    <input type="number" min="0" wire:model="wantGp"
-                           class="mb-3 w-full rounded-md border border-line bg-surface px-2 py-1 text-sm text-fg">
+                    <x-campo-monete model="wantMonete" label="Monete" class="mb-3" />
 
                     <label for="chiedo" class="mb-1 block border-t border-line pt-3 text-xs text-muted">
                         Oppure chiedigli qualcosa che non vedi
@@ -230,7 +226,7 @@
                     <span class="text-fg">
                         {{ collect([
                             $richiesta->offeredNames()->implode(', ') ?: null,
-                            $richiesta->offered_gp > 0 ? $richiesta->offered_gp.' mo' : null,
+                            $richiesta->offered_cp > 0 ? \App\Domain\Dnd\Coins::formatValue($richiesta->offered_cp) : null,
                         ])->filter()->implode(' e ') ?: 'niente' }}.
                     </span>
                 </p>
@@ -250,9 +246,7 @@
                         @endforelse
                     </div>
 
-                    <label for="offroGp" class="mb-1 block text-xs text-muted">Monete d'oro</label>
-                    <input id="offroGp" type="number" min="0" wire:model="offroGp"
-                           class="w-full rounded-md border border-line bg-page px-2 py-1 text-fg">
+                    <x-campo-monete model="offroMonete" label="Monete" />
                 </div>
 
                 @error('scambio')

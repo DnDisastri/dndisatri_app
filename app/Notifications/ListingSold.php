@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Domain\Dnd\Coins;
 use App\Enums\NotificationCategory;
 use App\Models\MarketListing;
 
@@ -24,8 +25,8 @@ final class ListingSold extends InAppNotification
     {
         return [
             'title' => 'Hai venduto '.$this->listing->qty.'× '.$this->listing->name,
-            'body' => "{$this->buyerName} l'ha comprato per {$this->listing->price} mo, "
-                .'che sono già sul tuo conto.',
+            'body' => "{$this->buyerName} l'ha comprato per ".Coins::formatValue($this->listing->price_cp)
+                .', che sono già nella tua borsa.',
             'url' => null,
         ];
     }

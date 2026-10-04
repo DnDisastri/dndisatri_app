@@ -34,7 +34,7 @@ final class TransactionReversed extends InAppNotification
         return [
             'title' => 'Una transazione è stata annullata',
             'body' => "{$this->what}. Motivo: {$this->reason} "
-                .'Controlla il Registro: oggetti e oro sono già tornati a posto.',
+                .'Controlla il Registro: oggetti e monete sono già tornati a posto.',
             'url' => null,
         ];
     }

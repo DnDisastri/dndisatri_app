@@ -21,11 +21,12 @@
     <x-panel>
         <h2 class="text-xl text-fg">Bottino di sessione</h2>
         <p class="mt-1 text-sm text-muted">
-            L'oro si <strong>somma</strong> a quello che hai: se spendi qualcosa mentre la
+            Le monete si <strong>sommano</strong> a quelle che hai: se spendi qualcosa mentre la
             richiesta aspetta, la spesa non viene annullata.
         </p>
         <p class="mt-1 text-sm text-muted">
-            Per ogni richiesta: al massimo {{ ProposeChange::LOOT_MAX_GP }} mo e {{ $massimo }} oggetti.
+            Per ogni richiesta: monete per al massimo {{ \App\Domain\Dnd\Coins::formatValue(ProposeChange::LOOT_MAX_CP) }}
+            e {{ $massimo }} oggetti.
         </p>
     </x-panel>
 
@@ -36,13 +37,14 @@
     <form method="POST" action="{{ route('proposals.loot', $character) }}" class="space-y-4">
         @csrf
 
-        <x-panel title="Oro">
-            <x-field name="gp" label="Monete d'oro" type="number" min="0" :max="ProposeChange::LOOT_MAX_GP" value="0" />
+        <x-panel title="Monete">
+            <x-campo-monete name="coins" label="Quante monete, per tipo" />
         </x-panel>
 
         <x-panel title="Oggetti">
             <p class="mb-3 text-sm text-muted">
-                Il nome breve, la descrizione nei dettagli. Lascia in bianco le righe che non ti servono.
+                Il nome breve, la descrizione nei dettagli, il valore in mo (anche 0,5).
+                Lascia in bianco le righe che non ti servono.
             </p>
 
             @error('items')
@@ -63,7 +65,7 @@
                             <input type="text" name="items[{{ $i }}][category]" placeholder="Categoria" maxlength="50"
                                    value="{{ old("items.$i.category") }}" aria-label="Categoria"
                                    class="{{ $campo }}">
-                            <input type="number" name="items[{{ $i }}][value]" placeholder="Valore" min="0"
+                            <input type="number" name="items[{{ $i }}][value]" placeholder="Valore" min="0" step="0.01"
                                    value="{{ old("items.$i.value") }}" aria-label="Valore in mo"
                                    class="{{ $campo }}">
                             <textarea name="items[{{ $i }}][details]" rows="2" placeholder="Dettagli (facoltativo)" maxlength="1000"

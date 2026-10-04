@@ -6,6 +6,7 @@ use App\Actions\Characters\ApprovePendingChange;
 use App\Actions\Characters\ProposeChange;
 use App\Actions\Characters\RequestLevelUp;
 use App\Domain\Dnd\Ability;
+use App\Domain\Dnd\Coins;
 use App\Domain\Dnd\ItemEffectMode;
 use App\Enums\PendingChangeType;
 use App\Models\Character;
@@ -187,18 +188,18 @@ describe('bottino', function () {
         $player = User::factory()->player()->create();
         $character = Character::factory()->ownedBy($player)->create(['gp' => 10]);
 
-        $change = app(ProposeChange::class)->loot($character, $player, 150, [
-            ['name' => 'Spada Lunga', 'qty' => 1, 'category' => 'Armi', 'value' => 15],
+        $change = app(ProposeChange::class)->loot($character, $player, new Coins(gp: 150, sp: 5), [
+            ['name' => 'Spada Lunga', 'qty' => 1, 'category' => 'Armi', 'value_cp' => 1500],
         ], 'Drago rosso');
 
-        expect($change->grant_gp)->toBe(150)
+        expect($change->grant_coins)->toBe(['gp' => 150, 'sp' => 5])
             ->and($change->summary)->toContain('150 mo')
             ->and($change->note)->toBe('Drago rosso');
 
         app(ApprovePendingChange::class)->handle($change, User::factory()->dm()->create());
 
-        expect($character->fresh()->gp)->toBe(160)
-            ->and($character->fresh()->ownsItem('Spada Lunga'))->toBeTrue();
+        expect($character->fresh()->coins()->toArray())->toBe(['pp' => 0, 'gp' => 160, 'sp' => 5, 'cp' => 0])
+            ->and($character->fresh()->items()->where('name', 'Spada Lunga')->value('value_cp'))->toBe(1500);
     });
 
     it('non si registra vuoto', function () {
@@ -214,9 +215,9 @@ describe('bottino', function () {
         $character = Character::factory()->ownedBy($player)->create();
         $troppi = array_fill(0, ProposeChange::LOOT_MAX_ITEMS + 1, ['name' => 'Torcia']);
 
-        expect(fn () => app(ProposeChange::class)->loot($character, $player, ProposeChange::LOOT_MAX_GP + 1))
+        expect(fn () => app(ProposeChange::class)->loot($character, $player, new Coins(pp: 50, cp: 1)))
             ->toThrow(InvalidArgumentException::class)
-            ->and(fn () => app(ProposeChange::class)->loot($character, $player, 0, $troppi))
+            ->and(fn () => app(ProposeChange::class)->loot($character, $player, null, $troppi))
             ->toThrow(InvalidArgumentException::class);
     });
 });

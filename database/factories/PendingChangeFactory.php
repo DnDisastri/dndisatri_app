@@ -22,7 +22,7 @@ class PendingChangeFactory extends Factory
             'type' => PendingChangeType::CharacterEdit,
             'diff' => ['notes' => 'Ho aggiunto due righe di background.'],
             'summary' => null,
-            'grant_gp' => 0,
+            'grant_coins' => null,
             'grant_items' => null,
             'base_updated_at' => now(),
             'status' => PendingChangeStatus::Pending,
@@ -44,7 +44,7 @@ class PendingChangeFactory extends Factory
         return $this->state(fn () => [
             'type' => PendingChangeType::Loot,
             'diff' => null,
-            'grant_gp' => $gp,
+            'grant_coins' => ['gp' => $gp],
             'grant_items' => [['name' => 'Pozione di Cura', 'qty' => 1]],
             'summary' => "Bottino di sessione: {$gp} mo e una pozione.",
         ]);

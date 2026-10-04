@@ -19,7 +19,7 @@
                 <span class="block text-xs text-muted">stai comprando come</span>
             </div>
 
-            <x-badge tone="accent" size="md">{{ number_format($character->gp, 0, ',', '.') }} mo</x-badge>
+            <x-badge tone="accent" size="md"><x-monete :borsa="$character->coins()" /></x-badge>
         </x-card>
     @else
         <x-note>Serve un personaggio in salute per vendere o comprare.</x-note>

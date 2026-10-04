@@ -127,9 +127,9 @@ describe('registrare un bottino', function () {
 
         $this->actingAs($owner)
             ->post(route('proposals.loot', $character), [
-                'gp' => 150,
+                'coins' => ['pp' => '', 'gp' => 150, 'sp' => 3, 'cp' => ''],
                 'items' => [
-                    ['name' => 'Spada Lunga', 'qty' => 1],
+                    ['name' => 'Spada Lunga', 'qty' => 1, 'value' => '15.5'],
                     ['name' => '', 'qty' => null],
                 ],
                 'note' => 'Drago rosso',
@@ -138,8 +138,9 @@ describe('registrare un bottino', function () {
 
         $change = PendingChange::first();
 
-        expect($change->grant_gp)->toBe(150)
+        expect($change->grant_coins)->toBe(['gp' => 150, 'sp' => 3])
             ->and($change->grant_items)->toHaveCount(1)
+            ->and($change->grant_items[0]['value_cp'])->toBe(1550)
             ->and($change->note)->toBe('Drago rosso')
             ->and($change->summary)->not->toContain('Drago rosso');
     });
@@ -159,13 +160,13 @@ describe('registrare un bottino', function () {
         expect($character->items()->where('name', 'Anello della Gilda')->value('details'))->toBe('Regalo di Orcus');
     });
 
-    it('non accetta più di 500 mo per richiesta', function () {
+    it('non accetta monete per più di 500 mo per richiesta', function () {
         $owner = User::factory()->player()->create();
         $character = Character::factory()->ownedBy($owner)->create();
 
         $this->actingAs($owner)
-            ->post(route('proposals.loot', $character), ['gp' => ProposeChange::LOOT_MAX_GP + 1])
-            ->assertSessionHasErrors('gp');
+            ->post(route('proposals.loot', $character), ['coins' => ['pp' => 50, 'cp' => 1]])
+            ->assertSessionHasErrors('coins');
 
         expect(PendingChange::count())->toBe(0);
     });

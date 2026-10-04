@@ -23,7 +23,6 @@ use App\Notifications\TradeProposed;
 use App\Notifications\TradeResolved;
 use Illuminate\Support\Facades\Notification;
 
-
 describe('le richieste', function () {
     it('avvisano il proponente quando sono approvate', function () {
         Notification::fake();
@@ -50,7 +49,7 @@ describe('le richieste', function () {
 
         Notification::assertSentTo($character->user, RequestDecided::class);
     });
-// Le notifiche delle decisioni non espongono l'identità del revisore al giocatore.
+    // Le notifiche delle decisioni non espongono l'identità del revisore al giocatore.
     it('ma non dicono chi ha deciso', function () {
         $character = Character::factory()->create();
         $dm = User::factory()->dm()->create(['name' => 'Il Nome Del DM']);
@@ -79,14 +78,14 @@ describe('gli scambi', function () {
     it('avvisano chi riceve la proposta', function () {
         Notification::fake();
 
-        app(CreateTrade::class)->handle(from: $this->anna, to: $this->bruno, giveGp: 10);
+        app(CreateTrade::class)->handle(from: $this->anna, to: $this->bruno, giveCp: 1000);
 
         Notification::assertSentTo($this->bruno->user, TradeProposed::class);
         Notification::assertNotSentTo($this->anna->user, TradeProposed::class);
     });
 
     it('avvisano chi ha proposto quando viene accettata', function () {
-        $trade = app(CreateTrade::class)->handle(from: $this->anna, to: $this->bruno, giveGp: 10);
+        $trade = app(CreateTrade::class)->handle(from: $this->anna, to: $this->bruno, giveCp: 1000);
 
         Notification::fake();
 
@@ -98,7 +97,7 @@ describe('gli scambi', function () {
     });
 
     it('su un rifiuto avvisano chi aveva proposto', function () {
-        $trade = app(CreateTrade::class)->handle(from: $this->anna, to: $this->bruno, giveGp: 10);
+        $trade = app(CreateTrade::class)->handle(from: $this->anna, to: $this->bruno, giveCp: 1000);
 
         Notification::fake();
 
@@ -108,7 +107,7 @@ describe('gli scambi', function () {
     });
 
     it('su un ritiro avvisano il destinatario', function () {
-        $trade = app(CreateTrade::class)->handle(from: $this->anna, to: $this->bruno, giveGp: 10);
+        $trade = app(CreateTrade::class)->handle(from: $this->anna, to: $this->bruno, giveCp: 1000);
 
         Notification::fake();
 
@@ -121,10 +120,10 @@ describe('gli scambi', function () {
 describe('il mercato', function () {
     it('avvisa il venditore quando qualcuno compra', function () {
         $seller = Character::factory()->create();
-        $seller->addToInventory('Spada Lunga', value: 15);
+        $seller->addToInventory('Spada Lunga', valueCp: 1500);
         $buyer = Character::factory()->create(['gp' => 100]);
 
-        $listing = app(CreateListing::class)->handle($seller, 'Spada Lunga', 1, 20);
+        $listing = app(CreateListing::class)->handle($seller, 'Spada Lunga', 1, 2000);
 
         Notification::fake();
 

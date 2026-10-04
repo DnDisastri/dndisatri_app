@@ -6,7 +6,7 @@ use App\Actions\Market\AcceptTrade;
 use App\Actions\Market\CreateTrade;
 use App\Exceptions\MarketException;
 use App\Models\Character;
-
+use App\Models\Trade;
 
 beforeEach(function () {
     $this->anna = Character::factory()->create(['name' => 'Anna', 'gp' => 100]);
@@ -15,20 +15,20 @@ beforeEach(function () {
 
 describe('la proposta', function () {
     it('registra oggetti e oro nelle due direzioni', function () {
-        $this->anna->addToInventory('Spada Lunga', value: 15);
+        $this->anna->addToInventory('Spada Lunga', valueCp: 1500);
 
         $trade = app(CreateTrade::class)->handle(
             from: $this->anna,
             to: $this->bruno,
             give: [['name' => 'Spada Lunga']],
             want: [['name' => 'Scudo']],
-            giveGp: 10,
+            giveCp: 1000,
             message: 'Ti serve più di quanto serva a me.',
         );
 
         expect($trade->givenItems()->pluck('name')->all())->toBe(['Spada Lunga'])
             ->and($trade->wantedItems()->pluck('name')->all())->toBe(['Scudo'])
-            ->and($trade->give_gp)->toBe(10)
+            ->and($trade->give_cp)->toBe(1000)
             ->and($trade->isOpen())->toBeTrue();
     });
 
@@ -44,7 +44,7 @@ describe('la proposta', function () {
     });
 
     it('copia i dettagli dell\'oggetto offerto', function () {
-        $this->anna->addToInventory('Spada Lunga', category: 'Armi', value: 15, details: 'Intaccata');
+        $this->anna->addToInventory('Spada Lunga', category: 'Armi', valueCp: 1500, details: 'Intaccata');
 
         $trade = app(CreateTrade::class)->handle(
             from: $this->anna, to: $this->bruno, give: [['name' => 'Spada Lunga']],
@@ -52,23 +52,23 @@ describe('la proposta', function () {
 
         $offered = $trade->givenItems()->first();
 
-        expect($offered->value)->toBe(15)
+        expect($offered->value_cp)->toBe(1500)
             ->and($offered->category)->toBe('Armi')
             ->and($offered->details)->toBe('Intaccata');
     });
 
     it('una proposta di solo oro è valida', function () {
         $trade = app(CreateTrade::class)->handle(
-            from: $this->anna, to: $this->bruno, giveGp: 50, wantGp: 0,
+            from: $this->anna, to: $this->bruno, giveCp: 5000, wantCp: 0,
         );
 
-        expect($trade->give_gp)->toBe(50);
+        expect($trade->give_cp)->toBe(5000);
     });
 });
 
 describe('cosa non si può proporre', function () {
     it('uno scambio con sé stessi', function () {
-        expect(fn () => app(CreateTrade::class)->handle(from: $this->anna, to: $this->anna, giveGp: 10))
+        expect(fn () => app(CreateTrade::class)->handle(from: $this->anna, to: $this->anna, giveCp: 1000))
             ->toThrow(MarketException::class, 'a te stesso');
     });
 
@@ -93,7 +93,7 @@ describe('cosa non si può proporre', function () {
 
     it('più oro di quanto se ne ha', function () {
         expect(fn () => app(CreateTrade::class)->handle(
-            from: $this->anna, to: $this->bruno, giveGp: 500,
+            from: $this->anna, to: $this->bruno, giveCp: 50000,
         ))->toThrow(MarketException::class);
     });
 
@@ -101,10 +101,10 @@ describe('cosa non si può proporre', function () {
         $morto = Character::factory()->fallen()->create();
 
         expect(fn () => app(CreateTrade::class)->handle(
-            from: $this->anna, to: $morto, giveGp: 10,
+            from: $this->anna, to: $morto, giveCp: 1000,
         ))->toThrow(MarketException::class, 'caduto');
     });
-// Gli oggetti richiesti vengono validati all'accettazione, perché il destinatario può procurarseli dopo la proposta.
+    // Gli oggetti richiesti vengono validati all'accettazione, perché il destinatario può procurarseli dopo la proposta.
     it('quello che si chiede invece non viene controllato', function () {
 
         $trade = app(CreateTrade::class)->handle(
@@ -117,15 +117,15 @@ describe('cosa non si può proporre', function () {
 
 describe('il giro completo', function () {
     it('proposta e accettazione si scambiano davvero le cose', function () {
-        $this->anna->addToInventory('Spada Lunga', value: 15);
-        $this->bruno->addToInventory('Scudo', value: 10);
+        $this->anna->addToInventory('Spada Lunga', valueCp: 1500);
+        $this->bruno->addToInventory('Scudo', valueCp: 1000);
 
         $trade = app(CreateTrade::class)->handle(
             from: $this->anna,
             to: $this->bruno,
             give: [['name' => 'Spada Lunga']],
             want: [['name' => 'Scudo']],
-            giveGp: 20,
+            giveCp: 2000,
         );
 
         app(AcceptTrade::class)->handle($trade);
@@ -152,9 +152,9 @@ describe('il giro completo', function () {
 
 // `deliveryProblems()` replica la verifica di consegna in sola lettura per poter avvisare prima dell'accettazione.
 describe('se lo scambio non è più eseguibile', function () {
-    function conRelazioni(App\Models\Trade $trade): App\Models\Trade
+    function conRelazioni(Trade $trade): Trade
     {
-        return App\Models\Trade::with(['from', 'to', 'items'])->findOrFail($trade->getKey());
+        return Trade::with(['from', 'to', 'items'])->findOrFail($trade->getKey());
     }
 
     it('appena fatta, si può accettare', function () {
@@ -163,7 +163,7 @@ describe('se lo scambio non è più eseguibile', function () {
 
         $trade = app(CreateTrade::class)->handle(
             from: $this->anna, to: $this->bruno,
-            give: [['name' => 'Spada Lunga']], want: [['name' => 'Scudo']], giveGp: 20,
+            give: [['name' => 'Spada Lunga']], want: [['name' => 'Scudo']], giveCp: 2000,
         );
 
         expect(conRelazioni($trade)->deliveryProblems())->toBe([])
@@ -183,16 +183,16 @@ describe('se lo scambio non è più eseguibile', function () {
             ->and(conRelazioni($trade)->canBeAccepted())->toBeFalse();
     });
 
-    it('se a chi riceve non basta l\'oro, lo dice col conto', function () {
-        $povero = Character::factory()->create(['name' => 'Ciro', 'gp' => 5]);
+    it('se a chi riceve non bastano le monete, lo dice col conto', function () {
+        $povero = Character::factory()->create(['name' => 'Ciro', 'gp' => 5, 'sp' => 3]);
         $this->anna->addToInventory('Spada Lunga');
 
         $trade = app(CreateTrade::class)->handle(
             from: $this->anna, to: $povero,
-            give: [['name' => 'Spada Lunga']], wantGp: 30,
+            give: [['name' => 'Spada Lunga']], wantCp: 3000,
         );
 
-        expect(conRelazioni($trade)->deliveryProblems())->toContain('Ciro non ha abbastanza oro (5/30 mo)');
+        expect(conRelazioni($trade)->deliveryProblems())->toContain('Ciro non ha abbastanza monete (5 mo 3 ma su 30 mo)');
     });
 
     it('e guarda tutte e due le parti', function () {
@@ -201,12 +201,12 @@ describe('se lo scambio non è più eseguibile', function () {
         $this->anna->addToInventory('Spada Lunga');
         $trade = app(CreateTrade::class)->handle(
             from: $this->anna, to: $poveraccio,
-            give: [['name' => 'Spada Lunga']], wantGp: 50,
+            give: [['name' => 'Spada Lunga']], wantCp: 5000,
         );
         $this->anna->removeFromInventory('Spada Lunga');
 
         expect(conRelazioni($trade)->deliveryProblems())
             ->toContain('Anna non ha più 1× Spada Lunga')
-            ->toContain('Dario non ha abbastanza oro (0/50 mo)');
+            ->toContain('Dario non ha abbastanza monete (0 mo su 50 mo)');
     });
 });

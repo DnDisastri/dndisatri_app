@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\MarketItems\Tables;
 
+use App\Domain\Dnd\Coins;
 use App\Models\MarketItem;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -24,10 +25,9 @@ class MarketItemsTable
                     ->searchable()
                     ->sortable(),
 
-                TextColumn::make('price')
+                TextColumn::make('price_cp')
                     ->label('Prezzo')
-                    ->numeric()
-                    ->suffix(' mo')
+                    ->formatStateUsing(fn (int $state) => Coins::formatValue($state))
                     ->sortable(),
 
                 TextColumn::make('stock')

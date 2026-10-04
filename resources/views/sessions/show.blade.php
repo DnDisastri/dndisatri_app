@@ -124,7 +124,7 @@
             </div>
 
             <p class="mt-3 text-xs text-muted">
-                Tocca un eroe per la sua scheda: lì hai i comandi da DM (punti ferita, oro, «dichiara caduto»).
+                Tocca un eroe per la sua scheda: lì hai i comandi da DM (punti ferita, monete, «dichiara caduto»).
             </p>
         </x-panel>
     @endif

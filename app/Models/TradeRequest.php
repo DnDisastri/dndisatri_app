@@ -11,14 +11,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Collection;
 
 /**
- * Una richiesta di scambio: si chiede a parole una cosa che non si vede (lo
- * zaino di un altro non è pubblico). Quello che si chiede è un nome scritto a
- * mano, che può essere sbagliato.
- *
- * Non muove niente: quando chi la riceve dice di sì nasce uno `Trade`. Gli stati
- * sono quelli degli scambi (`TradeStatus`), per non tenerne due serie allineate.
+ * Una cosa chiesta a parole, che può non esistere. Non muove niente: dal sì nasce
+ * un `Trade`. Usa gli stati degli scambi per non tenerne due serie allineate.
  */
-#[Fillable(['from_character_id', 'to_character_id', 'wanted', 'offered', 'offered_gp', 'message'])]
+#[Fillable(['from_character_id', 'to_character_id', 'wanted', 'offered', 'offered_cp', 'message'])]
 class TradeRequest extends Model
 {
     use HasFactory;
@@ -31,7 +27,7 @@ class TradeRequest extends Model
         return [
             'status' => TradeStatus::class,
             'offered' => 'array',
-            'offered_gp' => 'integer',
+            'offered_cp' => 'integer',
             'resolved_at' => 'datetime',
         ];
     }

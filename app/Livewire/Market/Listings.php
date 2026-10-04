@@ -4,9 +4,9 @@ namespace App\Livewire\Market;
 
 use App\Actions\Market\CancelListing;
 use App\Actions\Supervision\Supervisor;
+use App\Domain\Dnd\Coins;
 use App\Exceptions\MarketException;
 use App\Livewire\Concerns\ActsAsCharacter;
-use App\Models\Character;
 use App\Models\MarketListing;
 use App\Models\SupervisedAction;
 use Livewire\Component;
@@ -24,12 +24,11 @@ class Listings extends Component
 
     public int $sellQty = 1;
 
-    public int $price = 0;
+    /** @var array<string,int|string|null> il prezzo, pila per pila */
+    public array $price = [];
 
-    /** L'annuncio aperto nel riquadro di dettaglio. */
     public ?int $aperto = null;
 
-    /** Quello che si sta cercando fra gli annunci. */
     public string $cerca = '';
 
     public function mount(): void
@@ -52,17 +51,24 @@ class Listings extends Component
     {
         $character = $this->requireCharacter();
 
-        // Colonna `unsignedInteger`: oltre il limite la scrittura fallisce.
         $this->validate([
-            'price' => ['integer', 'min:0', 'max:'.Character::MAX_GP],
+            'price.*' => ['nullable', 'integer', 'min:0', 'max:'.Coins::MAX],
         ], [
-            'price.min' => 'Il prezzo non può essere negativo.',
-            'price.max' => 'Prezzo troppo alto: tanto oro non esiste.',
+            'price.*.min' => 'Il prezzo non può essere negativo.',
+            'price.*.max' => 'Prezzo troppo alto: tante monete non esistono.',
         ]);
+
+        $prezzo = Coins::fromArray($this->price)->value();
+
+        if ($prezzo > Coins::MAX) {
+            $this->addError('price', 'Prezzo troppo alto: tante monete non esistono.');
+
+            return;
+        }
 
         try {
             $result = app(Supervisor::class)->createListing(
-                auth()->user(), $character, $this->itemName, $this->sellQty, $this->price,
+                auth()->user(), $character, $this->itemName, $this->sellQty, $prezzo,
             );
 
             $this->reset('itemName', 'sellQty', 'price');

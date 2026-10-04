@@ -37,10 +37,8 @@ class CharactersRelationManager extends RelationManager
                     ->sortable(),
 
                 TextColumn::make('gp')
-                    ->label('Oro')
-                    ->numeric()
-                    ->suffix(' mo')
-                    ->sortable()
+                    ->label('Borsa')
+                    ->state(fn (Character $record) => $record->coins()->format())
                     ->visibleFrom('md'),
 
                 TextColumn::make('stato')

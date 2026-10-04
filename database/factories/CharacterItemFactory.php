@@ -19,7 +19,7 @@ class CharacterItemFactory extends Factory
             'name' => 'Corda di Canapa',
             'category' => 'Equipaggiamento',
             'qty' => 1,
-            'value' => 1,
+            'value_cp' => 100,
             'details' => null,
             'equipped_slot' => null,
         ];

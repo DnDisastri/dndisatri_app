@@ -106,12 +106,12 @@
             <div class="mt-4 border-t border-line pt-3">
                 <p class="text-xs uppercase tracking-wide text-muted">Ricompense</p>
 
-                @if ((int) $quest->reward_gold > 0)
+                @unless ($quest->rewardCoins()->isEmpty())
                     <p class="mt-1 flex items-center gap-1.5 text-sm font-medium text-fg">
                         <x-icona :is="\App\Enums\Icon::Gold" class="h-4 w-4" />
-                        {{ $quest->reward_gold }} mo
+                        <x-monete :borsa="$quest->rewardCoins()" />
                     </p>
-                @endif
+                @endunless
 
                 @if (filled($quest->reward_items))
                     <ul class="mt-1 list-inside list-disc text-sm text-fg">

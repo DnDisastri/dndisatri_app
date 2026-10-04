@@ -20,7 +20,7 @@ class TradeItemFactory extends Factory
             'name' => 'Pozione di Cura',
             'category' => 'Pozioni',
             'qty' => 1,
-            'value' => 50,
+            'value_cp' => 5000,
             'details' => null,
         ];
     }

@@ -61,9 +61,9 @@ class DevCharacterSeeder extends Seeder
         ]);
 
         $character->items()->createMany([
-            ['name' => 'Armatura di Cuoio', 'category' => 'Armature', 'qty' => 1, 'value' => 10],
-            ['name' => 'Pugnale', 'category' => 'Armi', 'qty' => 1, 'value' => 2],
-            ['name' => 'Pozione di Cura', 'category' => 'Pozioni', 'qty' => 3, 'value' => 50],
+            ['name' => 'Armatura di Cuoio', 'category' => 'Armature', 'qty' => 1, 'value_cp' => 1000],
+            ['name' => 'Pugnale', 'category' => 'Armi', 'qty' => 1, 'value_cp' => 200],
+            ['name' => 'Pozione di Cura', 'category' => 'Pozioni', 'qty' => 3, 'value_cp' => 5000],
         ]);
 
         $character->items()->where('name', 'Armatura di Cuoio')
@@ -115,10 +115,10 @@ class DevCharacterSeeder extends Seeder
         ]);
 
         $character->items()->createMany([
-            ['name' => 'Cotta di Maglia', 'category' => 'Armature', 'qty' => 1, 'value' => 75],
-            ['name' => 'Scudo', 'category' => 'Armature', 'qty' => 1, 'value' => 10],
-            ['name' => 'Ascia Bipenne', 'category' => 'Armi', 'qty' => 1, 'value' => 30],
-            ['name' => 'Corda di Canapa', 'category' => 'Equipaggiamento', 'qty' => 1, 'value' => 1],
+            ['name' => 'Cotta di Maglia', 'category' => 'Armature', 'qty' => 1, 'value_cp' => 7500],
+            ['name' => 'Scudo', 'category' => 'Armature', 'qty' => 1, 'value_cp' => 1000],
+            ['name' => 'Ascia Bipenne', 'category' => 'Armi', 'qty' => 1, 'value_cp' => 3000],
+            ['name' => 'Corda di Canapa', 'category' => 'Equipaggiamento', 'qty' => 1, 'value_cp' => 100],
         ]);
 
         $character->items()->where('name', 'Cotta di Maglia')->update(['equipped_slot' => EquipmentSlot::Armor]);

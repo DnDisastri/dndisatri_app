@@ -2,11 +2,14 @@
 
 namespace App\Filament\Resources\Quests\Schemas;
 
+use App\Domain\Dnd\Coin;
+use App\Domain\Dnd\Coins;
 use App\Enums\QuestDifficulty;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Str;
@@ -59,18 +62,23 @@ class QuestForm
                         ->rows(2)
                         ->columnSpanFull(),
 
-                    // La ricompensa, strutturata. Una quest **deve** darne una:
-                    // basta una delle tre parti, e `required_without_all` sul
-                    // primo campo lo garantisce senza obbligare a riempirle tutte.
-                    TextInput::make('reward_gold')
-                        ->label('Oro')
-                        ->numeric()
-                        ->minValue(0)
-                        ->suffix('mo')
-                        ->requiredWithoutAll('reward_items,rewards')
-                        ->validationMessages([
-                            'required_without_all' => 'Metti almeno una ricompensa: oro, oggetti o testo.',
-                        ]),
+                    // Una quest deve dare una ricompensa: basta una delle tre parti.
+                    Grid::make(4)
+                        ->schema(collect(Coin::descending())->map(fn (Coin $moneta) => TextInput::make("reward_coins.{$moneta->value}")
+                            ->label($moneta->label())
+                            ->numeric()
+                            ->integer()
+                            ->minValue(0)
+                            ->maxValue(Coins::MAX)
+                            ->suffix($moneta->abbreviation())
+                            ->dehydrateStateUsing(fn ($state) => filled($state) ? (int) $state : null)
+                            ->when($moneta === Coin::Platinum, fn (TextInput $campo) => $campo
+                                ->requiredWithoutAll('reward_coins.gp,reward_coins.sp,reward_coins.cp,reward_items,rewards')
+                                ->validationMessages([
+                                    'required_without_all' => 'Metti almeno una ricompensa: monete, oggetti o testo.',
+                                ])))
+                            ->all())
+                        ->columnSpanFull(),
 
                     TagsInput::make('reward_items')
                         ->label('Oggetti magici')
@@ -80,7 +88,7 @@ class QuestForm
 
                     Textarea::make('rewards')
                         ->label('Altre ricompense')
-                        ->helperText('Testo libero: un favore, un titolo, un indizio… ciò che non è oro né oggetti.')
+                        ->helperText('Testo libero: un favore, un titolo, un indizio… ciò che non è monete né oggetti.')
                         ->rows(2)
                         ->columnSpanFull(),
                 ])
@@ -107,10 +115,7 @@ class QuestForm
                 ])
                 ->columns(2),
 
-            // `completed_at` e `closed_at` non stanno qui: concludere una quest
-            // è irreversibile e passa dall'azione di dominio, che è la garanzia
-            // che nessuno lo faccia per sbaglio da un modulo. Lo stesso vale
-            // per `night_confirmed_at`, che si scrive con «la serata si fa».
+            // `completed_at`, `closed_at` e `night_confirmed_at` passano dalle azioni di dominio, mai da un modulo.
         ])->columns(1);
     }
 }

@@ -60,7 +60,7 @@
                 <div class="mt-3 flex items-center justify-between text-xs text-muted">
                     <span class="flex items-center gap-1.5">
                         <x-icona :is="\App\Enums\Icon::Gold" class="h-4 w-4" />
-                        <span class="font-semibold text-fg">{{ $pg->gp }}</span> mo
+                        <x-monete :borsa="$pg->coins()" class="font-semibold text-fg" />
                     </span>
                     <span class="flex items-center gap-1.5">
                         <x-icona :is="\App\Enums\Icon::ArmorClass" class="h-4 w-4" />

@@ -19,14 +19,16 @@ it('mostra il titolo leggibile invece dell\'id', function () {
 it('rende la pagina di un bottino con i suoi oggetti', function () {
     $change = PendingChange::factory()->create([
         'type' => PendingChangeType::Loot,
-        'grant_gp' => 40,
-        'grant_items' => [['name' => 'Spadone lunghissimo', 'qty' => 1]],
-        'summary' => 'Bottino: 40 mo e 1× Spadone lunghissimo',
+        'grant_coins' => ['gp' => 40, 'sp' => 5],
+        'grant_items' => [['name' => 'Spadone lunghissimo', 'qty' => 1, 'value_cp' => 750]],
+        'summary' => 'Bottino: 40 mo 5 ma e 1× Spadone lunghissimo',
     ]);
 
     $this->actingAs(User::factory()->dm()->create())
         ->get(PendingChangeResource::getUrl('view', ['record' => $change]))
         ->assertOk()
         ->assertSee('Spadone lunghissimo')
+        ->assertSee('7 mo 5 ma')
+        ->assertSee('+40 mo 5 ma')
         ->assertSee('Bottino');
 });

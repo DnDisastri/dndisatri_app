@@ -6,14 +6,8 @@ use App\Models\MarketItem;
 use Illuminate\Database\Seeder;
 
 /**
- * Il catalogo di partenza del negozio della gilda, dai dati della vecchia
- * applicazione (`catalog.js` → `DEFAULT_MARKET`).
- *
- * È l'unico dato di gioco che finisce su database e non in config/dnd/: gli
- * admin lo modificano, quindi deve vivere nel database.
- *
- * Qui si traduce la vecchia convenzione implicita: `stock: null` significava
- * "scorte infinite", e diventa `is_unlimited = true` (§4.6 del brief).
+ * Il catalogo di partenza: sta nel database e non in config/dnd/ perché gli
+ * admin lo modificano. Nei dati `stock: null` vuol dire scorte infinite.
  */
 class MarketSeeder extends Seeder
 {
@@ -24,7 +18,8 @@ class MarketSeeder extends Seeder
                 ['name' => $entry['name']],
                 [
                     'category' => $entry['category'],
-                    'price' => $entry['price'],
+                    // I dati del catalogo sono in mo.
+                    'price_cp' => (int) round($entry['price'] * 100),
                     'is_unlimited' => $entry['stock'] === null,
                     'stock' => $entry['stock'] ?? 0,
                     'details' => $entry['details'] ?? null,
