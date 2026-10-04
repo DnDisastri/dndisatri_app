@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\SheetSection;
 use App\Http\Controllers\AboutController;
 use App\Http\Controllers\BugReportController;
 use App\Http\Controllers\BuildController;
@@ -14,9 +15,9 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\MarketController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PendingChangePhotoController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\PendingChangePhotoController;
 use App\Http\Controllers\ProposalController;
 use App\Http\Controllers\QuestController;
 use App\Http\Controllers\ReactionController;
@@ -34,10 +35,12 @@ Route::middleware('auth')->group(function () {
     Route::get('bacheca/{change}/foto', [PendingChangePhotoController::class, 'show'])->name('pending-changes.photo');
 
     Route::get('notifiche', [NotificationController::class, 'index'])->name('notifications.index');
-// La rotta fissa deve precedere `{notification}` per non essere interpretata come parametro dinamico.
+    // La rotta fissa deve precedere `{notification}` per non essere interpretata come parametro dinamico.
     Route::post('notifiche/svuota', [NotificationController::class, 'clear'])->name('notifications.clear');
+    Route::delete('notifiche/archivio', [NotificationController::class, 'emptyArchive'])->name('notifications.empty-archive');
     Route::post('notifiche/{notification}/archivia', [NotificationController::class, 'archive'])->name('notifications.archive');
     Route::post('notifiche/{notification}/ripristina', [NotificationController::class, 'restore'])->name('notifications.restore');
+    Route::delete('notifiche/{notification}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
 
     Route::get('profilo', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('profilo', [ProfileController::class, 'update'])->name('profile.update');
@@ -58,7 +61,7 @@ Route::middleware('auth')->group(function () {
     Route::get('regia', [DmController::class, 'home'])->name('dm.home');
 
     Route::get('regia/serata/{session}/prepara', [DmController::class, 'prepare'])->name('dm.prepare');
-// Mantiene compatibili i vecchi link a `/caduti`; il redirect resta temporaneo per evitare cache permanenti.
+    // Mantiene compatibili i vecchi link a `/caduti`; il redirect resta temporaneo per evitare cache permanenti.
     Route::redirect('caduti', '/gilda#caduti')->name('guild.fallen');
 
     Route::get('caduti/{character}', [GuildController::class, 'fallenShow'])->name('fallen.show');
@@ -80,7 +83,6 @@ Route::middleware('auth')->group(function () {
     Route::post('serate/{session}/resoconto', [GameSessionController::class, 'writeRecap'])->name('sessions.recap');
     Route::post('serate/{session}/presenze', [GameSessionController::class, 'recordAttendance'])->name('sessions.attendance');
 
-
     Route::post('reazioni/{tipo}/{id}', [ReactionController::class, 'store'])->name('reactions.store');
 
     Route::get('libro-mastro', [LedgerController::class, 'index'])->name('ledger.index');
@@ -93,7 +95,7 @@ Route::middleware('auth')->group(function () {
     Route::get('news', [PostController::class, 'index'])->name('news.index');
     Route::get('news/{post}', [PostController::class, 'show'])->name('news.show');
 
-// Evita `/build`, usato dagli asset Vite in `public/build`.
+    // Evita `/build`, usato dagli asset Vite in `public/build`.
     Route::get('consigliati', [BuildController::class, 'index'])->name('builds.index');
     Route::get('consigliati/{build}', [BuildController::class, 'show'])->name('builds.show');
 
@@ -107,7 +109,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('personaggi/{character}/{sezione}', [CharacterController::class, 'section'])
         ->whereIn('sezione', array_column(
-            array_filter(App\Enums\SheetSection::cases(), fn ($s) => $s !== App\Enums\SheetSection::DEFAULT),
+            array_filter(SheetSection::cases(), fn ($s) => $s !== SheetSection::DEFAULT),
             'value',
         ))
         ->name('characters.section');
@@ -125,7 +127,7 @@ Route::middleware('auth')->group(function () {
     Route::post('richieste/svuota', [ProposalController::class, 'clear'])->name('proposals.clear');
     Route::post('richieste/{change}/archivia', [ProposalController::class, 'archive'])->name('proposals.archive');
     Route::post('richieste/{change}/ripristina', [ProposalController::class, 'restore'])->name('proposals.restore');
-// Deve restare dopo le route specifiche e limita `{sezione}` ai valori dell'enum per evitare collisioni.
+    // Deve restare dopo le route specifiche e limita `{sezione}` ai valori dell'enum per evitare collisioni.
     Route::prefix('personaggi/{character}')->name('proposals.')->group(function () {
         Route::get('modifica', [ProposalController::class, 'editForm'])->name('edit');
         Route::post('modifica', [ProposalController::class, 'submitEdit']);
