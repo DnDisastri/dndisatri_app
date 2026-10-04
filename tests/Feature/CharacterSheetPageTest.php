@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Domain\Dnd\Ability;
+use App\Livewire\CastableSpells;
+use App\Livewire\SpellBook;
 use App\Models\Character;
 use App\Models\CharacterItem;
 use App\Models\CharacterItemEffect;
@@ -15,7 +17,6 @@ function sezione(Character $character, string $quale): string
 {
     return route('characters.section', [$character, $quale]);
 }
-
 
 function suoi(Character $character): User
 {
@@ -132,7 +133,6 @@ describe('la scheda', function () {
             ->assertSee('DES 15');
     });
 
-
     it('e l\'equipaggiamento sta nello zaino, coi tre slot sempre visibili', function () {
         $character = Character::factory()->create();
         CharacterItem::factory()->for($character)->armor('Cotta di Maglia')->create();
@@ -142,9 +142,10 @@ describe('la scheda', function () {
             ->assertOk()
             ->assertSee('Equipaggiamento')
             ->assertSee('Cotta di Maglia')
-            ->assertSee('equipaggiato')
+            ->assertSee('indossata')
             ->assertSee('Scudo')
-            ->assertSee('niente');
+            ->assertSee('nessuno scudo')
+            ->assertSee('nessuna arma');
     });
 
     it('e la storia si legge in «Storia»', function () {
@@ -210,7 +211,7 @@ describe('la scheda', function () {
         CharacterSpell::factory()->for($character)->create(['name' => 'Benedizione', 'level' => 1, 'prepared' => false]);
 
         Livewire::actingAs($giocatore)
-            ->test(App\Livewire\SpellBook::class, ['character' => $character])
+            ->test(SpellBook::class, ['character' => $character])
             ->assertSee('Pronti per oggi')
             ->set('preparati', ['Cura Ferite'])
             ->assertHasNoErrors();
@@ -228,7 +229,7 @@ describe('la scheda', function () {
         CharacterSpell::factory()->for($character)->create(['name' => 'Benedizione', 'level' => 1, 'prepared' => false]);
 
         Livewire::actingAs($giocatore)
-            ->test(App\Livewire\SpellBook::class, ['character' => $character])
+            ->test(SpellBook::class, ['character' => $character])
             ->set('preparati', ['Cura Ferite', 'Benedizione'])
             ->assertHasErrors('preparazione')
             ->assertSet('preparati', []);
@@ -264,7 +265,6 @@ describe('la scheda', function () {
             ->assertSee('2/4');
     });
 
-
     it('non mostra la sezione magia a chi non lancia', function () {
         $character = Character::factory()->create(['class' => 'Barbaro', 'subclass' => null]);
 
@@ -299,15 +299,15 @@ describe('lanciare un incantesimo dal Turno', function () {
         CharacterSpell::factory()->for($character)->create(['name' => 'Armatura Magica', 'level' => 1]);
 
         Livewire::actingAs($giocatore)
-            ->test(App\Livewire\CastableSpells::class, ['character' => $character])
+            ->test(CastableSpells::class, ['character' => $character])
             ->set('aperto', true)
             ->assertSee('Tiro salvezza del bersaglio')
             ->assertSee('Onda Tonante')
-            ->assertSee('COS 15')        
-            ->assertSee('Cubo 4,5 m')    
+            ->assertSee('COS 15')
+            ->assertSee('Cubo 4,5 m')
             ->assertSee('Tiri tu per colpire')
             ->assertSee('Raggio Rovente')
-            ->assertSee('+7')       
+            ->assertSee('+7')
             ->assertSee('Nessun tiro')
             ->assertSee('Armatura Magica');
     });
@@ -321,7 +321,7 @@ describe('lanciare un incantesimo dal Turno', function () {
         CharacterSpell::factory()->for($character)->create(['name' => 'Palla di Fuoco', 'level' => 3]);
 
         Livewire::actingAs($giocatore)
-            ->test(App\Livewire\CastableSpells::class, ['character' => $character])
+            ->test(CastableSpells::class, ['character' => $character])
             ->set('aperto', true)
             ->assertSee('Dardo Incantato')
             ->assertDontSee('Palla di Fuoco')
@@ -336,13 +336,13 @@ describe('lanciare un incantesimo dal Turno', function () {
         CharacterSpell::factory()->for($character)->create(['name' => 'Dardo Incantato', 'level' => 1]);
 
         Livewire::actingAs($giocatore)
-            ->test(App\Livewire\CastableSpells::class, ['character' => $character])
+            ->test(CastableSpells::class, ['character' => $character])
             ->set('aperto', true)
             ->assertSee('Dardo Incantato')
             ->call('spend', 1)
-            ->assertSee('Dardo Incantato')   
+            ->assertSee('Dardo Incantato')
             ->call('spend', 1)
-            ->assertDontSee('Dardo Incantato') 
+            ->assertDontSee('Dardo Incantato')
             ->assertSee('niente slot');
 
         expect($character->fresh()->spell_slots_used)->toBe([1 => 2]);
@@ -357,11 +357,11 @@ describe('lanciare un incantesimo dal Turno', function () {
         $dardo = CharacterSpell::factory()->for($character)->create(['name' => 'Dardo Incantato', 'level' => 1]);
 
         Livewire::actingAs($giocatore)
-            ->test(App\Livewire\CastableSpells::class, ['character' => $character])
+            ->test(CastableSpells::class, ['character' => $character])
             ->set('aperto', true)
             ->call('cast', $dardo->id, 1, true)
-            ->assertSet('scelta', $dardo->id)   
-            ->call('castAt', 2)                
+            ->assertSet('scelta', $dardo->id)
+            ->call('castAt', 2)
             ->assertSet('scelta', null);
 
         expect($character->fresh()->spell_slots_used)->toBe([2 => 1]);
@@ -376,7 +376,7 @@ describe('lanciare un incantesimo dal Turno', function () {
         $onda = CharacterSpell::factory()->for($character)->create(['name' => 'Onda Tonante', 'level' => 1]);
 
         Livewire::actingAs($giocatore)
-            ->test(App\Livewire\CastableSpells::class, ['character' => $character])
+            ->test(CastableSpells::class, ['character' => $character])
             ->set('aperto', true)
             ->call('cast', $onda->id, 1, false)
             ->assertSet('scelta', null);
@@ -497,13 +497,12 @@ describe('la scheda di un altro', function () {
             ->assertDontSee('Prove')
             ->assertDontSee('Magia');
     });
-// Le sezioni non autorizzate devono risultare inesistenti, non soltanto nascoste dall'interfaccia.
+    // Le sezioni non autorizzate devono risultare inesistenti, non soltanto nascoste dall'interfaccia.
     it('e le altre, chiamate per indirizzo, non ci sono proprio', function (string $quale) {
         $this->actingAs($this->estraneo)
             ->get(sezione($this->pg, $quale))
             ->assertNotFound();
     })->with(['prove', 'magia']);
-
 
     it('e l\'indirizzo della scheda si apre sulla Storia', function () {
         $this->actingAs($this->estraneo)
@@ -568,7 +567,7 @@ describe('la scheda di un altro', function () {
             ->assertOk()
             ->assertSee('non è ancora stata scritta la storia');
     });
-// La vetrina pubblica contiene solo gli oggetti che il proprietario ha esplicitamente dichiarato scambiabili.
+    // La vetrina pubblica contiene solo gli oggetti che il proprietario ha esplicitamente dichiarato scambiabili.
     it('dello Zaino resta la sola vetrina', function () {
         $this->pg->items()->where('name', 'Corda di Seta')->update(['tradeable' => true]);
 
@@ -608,7 +607,6 @@ describe('la scheda di un altro', function () {
                 ->assertDontSee('250');
         }
     });
-
 
     it('resta chi è', function () {
         $this->actingAs($this->estraneo)
