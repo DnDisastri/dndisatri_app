@@ -43,9 +43,12 @@
 
         <x-panel title="Oggetti">
             <p class="mb-3 text-sm text-muted">
-                Il nome breve, la descrizione nei dettagli, il valore in mo (anche 0,5).
-                Lascia in bianco le righe che non ti servono.
+                Scrivi il nome e scegli fra i suggerimenti: catalogo, negozio e oggetti già trovati da altri
+                riempiono il resto da soli. Se non c'è, scrivilo tu: nome breve, descrizione nei dettagli,
+                valore in mo (anche 0,5). Lascia in bianco le righe che non ti servono.
             </p>
+
+            <script type="application/json" data-suggerimenti-bottino>@json($suggerimenti)</script>
 
             @error('items')
                 <p class="mb-3 text-sm text-on-danger-soft">{{ $message }}</p>
@@ -55,24 +58,44 @@
                 @for ($i = 0; $i < $massimo; $i++)
                     <div data-riga-bottino @if ($i >= $aperte) hidden @endif
                          class="border-t border-line py-3 first:border-0 first:pt-0">
-                        <div class="grid grid-cols-3 gap-2 sm:grid-cols-6">
-                            <input type="text" name="items[{{ $i }}][name]" placeholder="Nome" maxlength="100"
-                                   value="{{ old("items.$i.name") }}" aria-label="Nome dell'oggetto {{ $i + 1 }}"
-                                   class="{{ $campo }} col-span-3">
+                        <div class="grid grid-cols-6 gap-2">
+                            <div class="relative col-span-6 sm:col-span-4" data-cerca-oggetto>
+                                <input type="text" name="items[{{ $i }}][name]" placeholder="Nome (cerca)" maxlength="100"
+                                       value="{{ old("items.$i.name") }}" aria-label="Nome dell'oggetto {{ $i + 1 }}"
+                                       autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list"
+                                       data-campo="name" class="{{ $campo }}">
+                                <ul data-elenco hidden role="listbox"
+                                    class="absolute inset-x-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-md border-2 border-line bg-surface py-1 shadow-lg"></ul>
+                            </div>
                             <input type="number" name="items[{{ $i }}][qty]" placeholder="Q.tà" min="1" max="999"
                                    value="{{ old("items.$i.qty") }}" aria-label="Quantità"
-                                   class="{{ $campo }}">
-                            <input type="text" name="items[{{ $i }}][category]" placeholder="Categoria" maxlength="50"
-                                   value="{{ old("items.$i.category") }}" aria-label="Categoria"
-                                   class="{{ $campo }}">
+                                   class="{{ $campo }} col-span-2 sm:col-span-1">
                             <input type="number" name="items[{{ $i }}][value]" placeholder="Valore" min="0" step="0.01"
-                                   value="{{ old("items.$i.value") }}" aria-label="Valore in mo"
-                                   class="{{ $campo }}">
+                                   value="{{ old("items.$i.value") }}" aria-label="Valore in mo" data-campo="value"
+                                   class="{{ $campo }} col-span-4 sm:col-span-1">
+                            <select name="items[{{ $i }}][category]" aria-label="Categoria" data-campo="category"
+                                    class="{{ $campo }} col-span-6 sm:col-span-2">
+                                <option value="">Categoria</option>
+                                @foreach (\App\Models\CharacterItem::CATEGORIES as $categoria)
+                                    <option value="{{ $categoria }}" @selected(old("items.$i.category") === $categoria)>{{ $categoria }}</option>
+                                @endforeach
+                            </select>
+                            <select name="items[{{ $i }}][base]" aria-label="Che tipo di arma, armatura o scudo è" data-campo="base"
+                                    class="{{ $campo }} col-span-6 sm:col-span-4">
+                                <option value="">Tipo (armi, armature, scudi)</option>
+                                @foreach (\App\Enums\EquipmentSlot::bases() as $gruppo => $basi)
+                                    <optgroup label="{{ $gruppo }}">
+                                        @foreach ($basi as $base)
+                                            <option value="{{ $base }}" @selected(old("items.$i.base") === $base)>{{ $base }}</option>
+                                        @endforeach
+                                    </optgroup>
+                                @endforeach
+                            </select>
                             <textarea name="items[{{ $i }}][details]" rows="2" placeholder="Dettagli (facoltativo)" maxlength="1000"
-                                      aria-label="Dettagli" class="{{ $campo }} col-span-3 sm:col-span-6">{{ old("items.$i.details") }}</textarea>
+                                      aria-label="Dettagli" data-campo="details" class="{{ $campo }} col-span-6">{{ old("items.$i.details") }}</textarea>
                         </div>
 
-                        @foreach (['name', 'qty', 'category', 'value', 'details'] as $chiave)
+                        @foreach (['name', 'qty', 'category', 'value', 'base', 'details'] as $chiave)
                             @error("items.$i.$chiave")
                                 <p class="mt-1 text-sm text-on-danger-soft">{{ $message }}</p>
                             @enderror
@@ -80,6 +103,10 @@
                     </div>
                 @endfor
             </div>
+
+            <p class="mt-3 text-xs text-muted">
+                Il tipo e un eventuale bonus magico li conferma il DM quando approva.
+            </p>
 
             <div class="mt-3">
                 <div data-aggiungi-oggetto @if ($aperte >= $massimo) hidden @endif>

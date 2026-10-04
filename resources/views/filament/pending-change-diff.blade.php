@@ -100,6 +100,8 @@
                         @foreach ($record->grant_items as $item)
                             @php
                                 $extra = array_filter([
+                                    filled($item['base'] ?? null) ? 'tipo: '.$item['base'] : null,
+                                    ! empty($item['magic_bonus']) ? '+'.(int) $item['magic_bonus'] : null,
                                     $item['category'] ?? null,
                                     ! empty($item['value_cp']) ? \App\Domain\Dnd\Coins::formatValue((int) $item['value_cp']) : null,
                                 ]);
