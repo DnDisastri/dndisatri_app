@@ -37,10 +37,28 @@ class CharacterItemEffect extends Model
 
     public function describe(): string
     {
-        $sign = $this->mode === ItemEffectMode::Set
-            ? 'porta a'
-            : ($this->value >= 0 ? '+' : '');
+        return "{$this->name}: ".self::describeCopy($this->toCopy());
+    }
 
-        return "{$this->name}: {$this->ability->label()} {$sign}{$this->value}";
+    /**
+     * Quello che serve a ricrearlo su un altro oggetto: il nome segue l'oggetto.
+     *
+     * @return array{ability: string, mode: string, value: int}
+     */
+    public function toCopy(): array
+    {
+        return ['ability' => $this->ability->value, 'mode' => $this->mode->value, 'value' => (int) $this->value];
+    }
+
+    /** @param  array{ability: string, mode: string, value: int}  $copia */
+    public static function describeCopy(array $copia): string
+    {
+        $ability = Ability::from($copia['ability']);
+        $mode = ItemEffectMode::from($copia['mode']);
+        $value = (int) $copia['value'];
+
+        $sign = $mode === ItemEffectMode::Set ? 'porta a ' : ($value >= 0 ? '+' : '');
+
+        return "{$ability->label()} {$sign}{$value}";
     }
 }

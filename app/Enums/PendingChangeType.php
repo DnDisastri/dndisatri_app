@@ -18,6 +18,9 @@ enum PendingChangeType: string
     /** Oggetto magico che altera una caratteristica. */
     case ItemEffect = 'item_effect';
 
+    /** Un oggetto del giocatore in cambio di un articolo del negozio. */
+    case Barter = 'barter';
+
     public function label(): string
     {
         return match ($this) {
@@ -25,16 +28,16 @@ enum PendingChangeType: string
             self::LevelUp => 'Passaggio di livello',
             self::Loot => 'Bottino',
             self::ItemEffect => 'Oggetto magico',
+            self::Barter => 'Baratto',
         };
     }
 
     /**
-     * I bottini si applicano sommando al valore corrente, non sovrascrivendolo:
-     * è l'unico tipo che non deve mai annullare quello che è successo fra la
-     * proposta e l'approvazione.
+     * Bottini e baratti si applicano sul valore corrente, non lo sovrascrivono:
+     * non annullano quello che è successo fra la proposta e l'approvazione.
      */
     public function appliesAsDelta(): bool
     {
-        return $this === self::Loot;
+        return $this === self::Loot || $this === self::Barter;
     }
 }

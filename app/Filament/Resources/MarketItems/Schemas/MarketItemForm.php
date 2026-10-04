@@ -3,6 +3,9 @@
 namespace App\Filament\Resources\MarketItems\Schemas;
 
 use App\Domain\Dnd\Coins;
+use App\Enums\EquipmentSlot;
+use App\Models\CharacterItem;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -36,6 +39,21 @@ class MarketItemForm
                             'Oggetti Magici',
                             'Equipaggiamento',
                         ]),
+
+                    Select::make('base')
+                        ->label('Tipo')
+                        ->options(EquipmentSlot::bases())
+                        ->placeholder('Nessuno')
+                        ->helperText('Per armi, armature e scudi con un nome loro: decide CA e attacchi.'),
+
+                    TextInput::make('magic_bonus')
+                        ->label('Bonus magico')
+                        ->required()
+                        ->numeric()
+                        ->minValue(0)
+                        ->maxValue(CharacterItem::MAX_MAGIC_BONUS)
+                        ->default(0)
+                        ->prefix('+'),
 
                     // Si scrive in mo con i decimali, si salva in rame.
                     TextInput::make('price_cp')

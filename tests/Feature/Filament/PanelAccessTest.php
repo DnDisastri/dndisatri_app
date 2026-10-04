@@ -7,13 +7,14 @@ use App\Filament\Resources\Events\EventResource;
 use App\Filament\Resources\MarketItems\MarketItemResource;
 use App\Filament\Resources\Posts\PostResource;
 use App\Filament\Resources\Users\UserResource;
+use App\Models\MarketItem;
 use App\Models\User;
+
 // Filament delega l'accesso alle policy: questi test impediscono che una Resource resti aperta per una policy mancante.
 $adminOnly = [
     'richieste DM' => DmRequestResource::class,
     'news' => PostResource::class,
     'eventi' => EventResource::class,
-    'catalogo' => MarketItemResource::class,
 ];
 
 describe('le sezioni riservate agli admin', function () use ($adminOnly) {
@@ -54,6 +55,22 @@ describe('la sezione Utenti', function () {
         expect($dm->can('create', User::class))->toBeFalse()
             ->and($dm->can('update', User::factory()->player()->create()))->toBeFalse()
             ->and($dm->can('delete', User::factory()->player()->create()))->toBeFalse();
+    });
+});
+
+describe('il catalogo del negozio', function () {
+    it('si apre ai DM per il magazzino, ma non lo modificano', function () {
+        $dm = User::factory()->dm()->create();
+        $articolo = MarketItem::factory()->create();
+
+        $this->actingAs($dm)
+            ->get(MarketItemResource::getUrl('index'))
+            ->assertOk();
+
+        expect($dm->can('create', MarketItem::class))->toBeFalse()
+            ->and($dm->can('update', $articolo))->toBeFalse()
+            ->and($dm->can('delete', $articolo))->toBeFalse()
+            ->and($dm->can('putOnSale', $articolo))->toBeFalse();
     });
 });
 

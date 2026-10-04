@@ -46,15 +46,15 @@ final class LootSuggestions
 
     private function shop(): Collection
     {
-        return MarketItem::query()
+        return MarketItem::onSale()
             ->orderBy('name')
-            ->get(['name', 'category', 'price_cp', 'details'])
+            ->get(['name', 'base', 'category', 'price_cp', 'details'])
             ->map(fn (MarketItem $item) => $this->voce(
                 name: $item->name,
                 category: $item->category,
                 valueCp: (int) $item->price_cp,
                 details: $item->details,
-                base: EquipmentSlot::isBase($item->name) ? $item->name : null,
+                base: $item->base ?? (EquipmentSlot::isBase($item->name) ? $item->name : null),
                 source: 'negozio',
             ));
     }

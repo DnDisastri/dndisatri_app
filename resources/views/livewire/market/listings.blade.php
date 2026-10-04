@@ -94,6 +94,8 @@
                     <p class="text-fg">{{ $annuncio->details }}</p>
                 @endif
 
+                <x-effetti-oggetto :effetti="$annuncio->effects" />
+
                 <div class="flex items-baseline justify-between border-t border-line pt-3">
                     <span class="text-muted">Prezzo</span>
                     <strong class="text-lg text-on-accent-soft"><x-monete :valore="$annuncio->price_cp" /></strong>

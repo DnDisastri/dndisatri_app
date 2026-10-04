@@ -154,10 +154,12 @@ describe('la scheda', function () {
             'story' => 'Cresciuto fra i ghiacci, scese a valle per una promessa.',
         ])->save();
 
-        $this->actingAs(suoi($character))
+        $pagina = $this->actingAs(suoi($character))
             ->get(sezione($character, 'storia'))
             ->assertOk()
             ->assertSee('Cresciuto fra i ghiacci');
+
+        expect(substr_count($pagina->getContent(), 'Cresciuto fra i ghiacci'))->toBe(1);
 
         $vuoto = Character::factory()->create();
 

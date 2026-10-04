@@ -14,6 +14,7 @@ use App\Enums\PendingChangeType;
 use App\Exceptions\MarketException;
 use App\Models\Character;
 use App\Models\CharacterItem;
+use App\Models\MarketItem;
 use App\Models\PendingChange;
 use App\Models\User;
 use App\Notifications\RequestDecided;
@@ -72,6 +73,7 @@ final class ApprovePendingChange
                 PendingChangeType::LevelUp => $this->applyLevelUp($character, $locked),
                 PendingChangeType::Loot => $this->applyLoot($character, $locked),
                 PendingChangeType::ItemEffect => $this->applyItemEffect($character, $locked),
+                PendingChangeType::Barter => $this->applyBarter($character, $locked),
             };
 
             $locked->forceFill([
@@ -203,6 +205,61 @@ final class ApprovePendingChange
         }
 
         return $coins;
+    }
+
+    /**
+     * Dalla proposta può essere passato del tempo: l'articolo può essere finito e
+     * l'oggetto venduto. L'oggetto del giocatore entra in magazzino col suo valore
+     * come prezzo di partenza, e in vendita lo mette un DM o un admin.
+     */
+    private function applyBarter(Character $character, PendingChange $change): Coins
+    {
+        $give = $change->diff['give'] ?? [];
+        $take = $change->diff['take'] ?? [];
+
+        $wanted = MarketItem::whereKey($take['market_item_id'] ?? null)->lockForUpdate()->first();
+
+        if ($wanted === null || ! $wanted->isAvailable()) {
+            throw new RuntimeException("«{$take['name']}» non è più disponibile nel negozio: rifiuta il baratto.");
+        }
+
+        $given = $character->items()
+            ->where('name', $give['name'] ?? null)
+            ->orderByRaw('equipped_slot IS NOT NULL')
+            ->first();
+
+        if ($given === null) {
+            throw new RuntimeException("{$character->name} non ha più «{$give['name']}»: rifiuta il baratto.");
+        }
+
+        // Dall'oggetto com'è adesso: tipo e bonus possono essere stati corretti nel frattempo.
+        $copia = Character::itemCopy($given);
+
+        if ($wanted->price_cp > $copia['valueCp']) {
+            throw new RuntimeException("Ora «{$wanted->name}» costa più di quanto vale «{$given->name}»: rifiuta il baratto.");
+        }
+
+        $character->removeFromInventory($given->name);
+        $character->addToInventory(...Character::itemCopy($wanted));
+
+        if (! $wanted->is_unlimited) {
+            $wanted->decrement('stock');
+        }
+
+        $magazzino = new MarketItem([
+            'name' => $copia['name'],
+            'base' => $copia['base'],
+            'magic_bonus' => $copia['magicBonus'],
+            'effects' => $copia['effects'],
+            'category' => $copia['category'],
+            'details' => $copia['details'],
+            'price_cp' => $copia['valueCp'],
+            'is_unlimited' => false,
+            'stock' => 1,
+        ]);
+        $magazzino->forceFill(['in_storage' => true])->save();
+
+        return Coins::none();
     }
 
     /**
