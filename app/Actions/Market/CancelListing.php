@@ -7,6 +7,7 @@ namespace App\Actions\Market;
 use App\Enums\LedgerAction;
 use App\Enums\ListingStatus;
 use App\Exceptions\MarketException;
+use App\Models\Character;
 use App\Models\MarketListing;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -25,13 +26,7 @@ final class CancelListing
 
             $seller = $locked->seller()->lockForUpdate()->firstOrFail();
 
-            $seller->addToInventory(
-                name: $locked->name,
-                qty: $locked->qty,
-                category: $locked->category,
-                valueCp: $locked->unit_value_cp,
-                details: $locked->details,
-            );
+            $seller->addToInventory(...Character::itemCopy($locked), qty: $locked->qty);
 
             $locked->forceFill([
                 'status' => ListingStatus::Cancelled,

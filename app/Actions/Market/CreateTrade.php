@@ -92,6 +92,8 @@ final class CreateTrade
             $trade->items()->create([
                 'direction' => $direction,
                 'name' => $item['name'],
+                'base' => $source?->base,
+                'magic_bonus' => (int) $source?->magic_bonus,
                 'category' => $source?->category,
                 'qty' => (int) ($item['qty'] ?? 1),
                 'value_cp' => $source?->value_cp ?? 0,

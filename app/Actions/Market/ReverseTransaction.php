@@ -99,13 +99,7 @@ final class ReverseTransaction
             $this->assertHasCoins($seller, $locked->price_cp);
 
             $buyer->removeFromInventory($locked->name, $locked->qty);
-            $seller->addToInventory(
-                name: $locked->name,
-                qty: $locked->qty,
-                category: $locked->category,
-                valueCp: $locked->unit_value_cp,
-                details: $locked->details,
-            );
+            $seller->addToInventory(...Character::itemCopy($locked), qty: $locked->qty);
 
             [$sellerDelta, $buyerDelta] = $this->moveCoins($seller, $buyer, $locked->price_cp);
 
@@ -219,13 +213,7 @@ final class ReverseTransaction
     {
         foreach ($items as $item) {
             $from->removeFromInventory($item->name, $item->qty);
-            $to->addToInventory(
-                name: $item->name,
-                qty: $item->qty,
-                category: $item->category,
-                valueCp: $item->value_cp,
-                details: $item->details,
-            );
+            $to->addToInventory(...Character::itemCopy($item), qty: $item->qty);
         }
     }
 

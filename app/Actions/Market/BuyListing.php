@@ -36,13 +36,7 @@ final class BuyListing
             $paid = $purse->pay($purchaser, $locked->price_cp);
             $received = $purse->receiveValue($seller, $locked->price_cp);
 
-            $purchaser->addToInventory(
-                name: $locked->name,
-                qty: $locked->qty,
-                category: $locked->category,
-                valueCp: $locked->unit_value_cp,
-                details: $locked->details,
-            );
+            $purchaser->addToInventory(...Character::itemCopy($locked), qty: $locked->qty);
 
             $locked->forceFill([
                 'status' => ListingStatus::Sold,

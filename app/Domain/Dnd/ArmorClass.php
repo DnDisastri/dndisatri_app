@@ -19,7 +19,8 @@ final class ArmorClass
         return $effective->modifier(Ability::Dex);
     }
 
-    public static function compute(AbilityScores $effective, ?string $armor = null, ?string $shield = null): int
+    /** `$magicBonus` è la somma dei +N di armatura e scudo indossati. */
+    public static function compute(AbilityScores $effective, ?string $armor = null, ?string $shield = null, int $magicBonus = 0): int
     {
         $dex = $effective->modifier(Ability::Dex);
         $worn = $armor === null ? null : config("dnd.combat.armor.{$armor}");
@@ -33,6 +34,6 @@ final class ArmorClass
             default => 10 + $dex,
         };
 
-        return $ac + ($shield === null ? 0 : (int) config("dnd.combat.shields.{$shield}", 0));
+        return $ac + ($shield === null ? 0 : (int) config("dnd.combat.shields.{$shield}", 0)) + $magicBonus;
     }
 }

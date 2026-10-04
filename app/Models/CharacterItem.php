@@ -10,10 +10,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['character_id', 'name', 'category', 'qty', 'value_cp', 'details'])]
+#[Fillable(['character_id', 'name', 'base', 'magic_bonus', 'category', 'qty', 'value_cp', 'details'])]
 class CharacterItem extends Model
 {
     use HasFactory;
+
+    /** Le categorie fra cui si sceglie nei moduli: le stesse del negozio. */
+    public const CATEGORIES = [
+        'Armi', 'Armature', 'Pozioni', 'Pozioni Rare', 'Veleni', 'Oggetti Magici', 'Kit e Strumenti', 'Varie',
+    ];
+
+    public const MAX_MAGIC_BONUS = 3;
+
+    protected $attributes = ['magic_bonus' => 0];
 
     protected function casts(): array
     {
@@ -21,6 +30,7 @@ class CharacterItem extends Model
             'equipped_slot' => EquipmentSlot::class,
             'attuned' => 'boolean',
             'tradeable' => 'boolean',
+            'magic_bonus' => 'integer',
         ];
     }
 
@@ -38,6 +48,26 @@ class CharacterItem extends Model
     public function effects(): HasMany
     {
         return $this->hasMany(CharacterItemEffect::class);
+    }
+
+    /** Il nome con cui l'oggetto si cerca nel catalogo di combattimento. */
+    public function catalogKey(): string
+    {
+        return $this->base ?? $this->name;
+    }
+
+    public function naturalSlot(): ?EquipmentSlot
+    {
+        return EquipmentSlot::naturalFor($this->catalogKey());
+    }
+
+    /** «Armatura a Piastre +1» sotto un nome suo; null se non c'è niente da aggiungere. */
+    public function baseLabel(): ?string
+    {
+        $bonus = $this->magic_bonus > 0 ? "+{$this->magic_bonus}" : null;
+        $base = $this->base !== null && $this->base !== $this->name ? $this->base : null;
+
+        return ($base === null && $bonus === null) ? null : trim(($base ?? '').' '.($bonus ?? ''));
     }
 
     public function isEquipped(): bool

@@ -110,13 +110,7 @@ final class AcceptTrade
         foreach ($items as $item) {
             $from->removeFromInventory($item->name, $item->qty);
 
-            $to->addToInventory(
-                name: $item->name,
-                qty: $item->qty,
-                category: $item->category,
-                valueCp: $item->value_cp,
-                details: $item->details,
-            );
+            $to->addToInventory(...Character::itemCopy($item), qty: $item->qty);
         }
     }
 }

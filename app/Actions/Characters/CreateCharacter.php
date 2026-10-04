@@ -308,11 +308,12 @@ final class CreateCharacter
             $item = $character->items()
                 ->whereNull('equipped_slot')
                 ->get()
-                ->first(fn ($item) => $slot->accepts($item->name));
+                ->first(fn ($item) => $slot->accepts($item->catalogKey()));
 
-            // `equipped_slot` non è mass-assignable di proposito: equipaggiare
-            // è un'azione, non un campo di form.
-            $item?->forceFill(['equipped_slot' => $slot])->save();
+            // Da una pila di due pugnali se ne impugna uno: lo stacca EquipItem.
+            if ($item !== null) {
+                app(EquipItem::class)->equip($item, $slot);
+            }
         }
     }
 }
