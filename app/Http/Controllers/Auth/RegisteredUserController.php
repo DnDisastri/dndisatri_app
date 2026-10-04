@@ -28,28 +28,28 @@ class RegisteredUserController extends Controller
             'name' => ['required', 'string', 'min:3', 'max:255', 'unique:users,name'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'confirmed', Password::defaults()],
-        ], [], [
+            'discovery_source' => ['nullable', 'string', 'max:500'],
+            'played_before' => ['required', 'boolean'],
+        ], [
+            'played_before.required' => 'Dicci se hai già fatto sessioni con noi.',
+        ], [
             'name' => 'nome utente',
         ]);
 
-        // Nasce **in attesa**: `approved_at` resta nullo finché un amministratore
-        // non lo approva. È la porta in più contro chi si registra senza essere
-        // del gruppo — e per questo **non si fa entrare** dopo la registrazione.
+        // Nasce in attesa e non entra finché un admin non lo approva.
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
+            'discovery_source' => filled($validated['discovery_source'] ?? null) ? $validated['discovery_source'] : null,
+            'played_before' => (bool) $validated['played_before'],
         ]);
 
-        // Chi si registra è un giocatore. Gli altri ruoli si assegnano solo da
-        // codice server: `dndisastri:admin` per gli admin, l'approvazione di
-        // una richiesta per i DM. Mai da un form.
+        // Gli altri ruoli si assegnano solo da codice server, mai da un modulo.
         $user->assignRole(Role::findOrCreate(User::ROLE_PLAYER, 'web'));
 
         event(new Registered($user));
 
-        // Il badge nel pannello lo vede solo chi ci entra di sua iniziativa:
-        // senza questo avviso un iscritto può restare fuori per giorni.
         app(AnnounceForApproval::class)->handle(
             new RegistrationAwaitingApproval($user),
             ruoli: [User::ROLE_ADMIN],
