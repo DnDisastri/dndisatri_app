@@ -223,8 +223,15 @@ class Character extends Model
     // === Inventario ===
 
     /** Accorpa solo con le righe in zaino: quelle equipaggiate hanno l'indice univoco sullo slot. */
-    public function addToInventory(string $name, int $qty = 1, ?string $category = null, int $valueCp = 0, ?string $details = null): CharacterItem
-    {
+    public function addToInventory(
+        string $name,
+        int $qty = 1,
+        ?string $category = null,
+        int $valueCp = 0,
+        ?string $details = null,
+        ?string $base = null,
+        int $magicBonus = 0,
+    ): CharacterItem {
         $existing = $this->items()
             ->where('name', $name)
             ->whereNull('equipped_slot')
@@ -242,7 +249,26 @@ class Character extends Model
             'qty' => $qty,
             'value_cp' => $valueCp,
             'details' => $details,
+            'base' => $base,
+            'magic_bonus' => $magicBonus,
         ]);
+    }
+
+    /**
+     * Quello che `addToInventory` deve ricevere per ricreare l'oggetto altrove.
+     *
+     * @return array{name: string, category: ?string, valueCp: int, details: ?string, base: ?string, magicBonus: int}
+     */
+    public static function itemCopy(CharacterItem|MarketListing|TradeItem $source): array
+    {
+        return [
+            'name' => $source->name,
+            'category' => $source->category,
+            'valueCp' => (int) ($source instanceof MarketListing ? $source->unit_value_cp : $source->value_cp),
+            'details' => $source->details,
+            'base' => $source->base,
+            'magicBonus' => (int) $source->magic_bonus,
+        ];
     }
 
     /** Restituisce quanti ne ha tolti davvero. */
@@ -483,10 +509,14 @@ class Character extends Model
     /** Sempre calcolata: non esiste una colonna `ac`. */
     public function armorClass(): int
     {
+        $armatura = $this->equipped(EquipmentSlot::Armor);
+        $scudo = $this->equipped(EquipmentSlot::Shield);
+
         return ArmorClass::compute(
             $this->effectiveScores(),
-            $this->equipped(EquipmentSlot::Armor)?->name,
-            $this->equipped(EquipmentSlot::Shield)?->name,
+            $armatura?->catalogKey(),
+            $scudo?->catalogKey(),
+            (int) $armatura?->magic_bonus + (int) $scudo?->magic_bonus,
         );
     }
 
@@ -587,15 +617,15 @@ class Character extends Model
 
         return $this->items
             ->filter(fn (CharacterItem $item) => $overrides->has($item->name)
-                || config("dnd.combat.weapons.{$item->name}") !== null)
+                || EquipmentSlot::Weapon->accepts($item->catalogKey()))
             ->map(function (CharacterItem $item) use ($overrides, $scores, $proficiency) {
-                $catalog = config("dnd.combat.weapons.{$item->name}", []);
+                $catalog = config("dnd.combat.weapons.{$item->catalogKey()}", []);
                 $override = $overrides->get($item->name);
 
                 // Sulla correzione è già un Ability (cast del modello); nel catalogo è una stringa.
                 $ability = $override?->attack_ability
                     ?? Ability::from($catalog['stat'] ?? Ability::Str->value);
-                $bonus = (int) ($override->weapon_bonus ?? 0);
+                $bonus = (int) ($override?->weapon_bonus ?: $item->magic_bonus);
 
                 $attack = Checks::weaponAttack($scores, $ability, $proficiency, $bonus);
                 $damageDie = $override->damage ?? $catalog['damage'] ?? 'Vuoto';

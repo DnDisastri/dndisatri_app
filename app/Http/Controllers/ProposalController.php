@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Characters\CharacterPhoto;
+use App\Actions\Characters\LootSuggestions;
 use App\Actions\Characters\ProposeChange;
 use App\Actions\Characters\RequestLevelUp;
 use App\Domain\Dnd\Ability;
@@ -11,7 +12,9 @@ use App\Domain\Dnd\Coins;
 use App\Domain\Dnd\ItemEffectMode;
 use App\Domain\Dnd\Multiclass;
 use App\Domain\Dnd\Progression;
+use App\Enums\EquipmentSlot;
 use App\Models\Character;
+use App\Models\CharacterItem;
 use App\Models\PendingChange;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -197,7 +200,10 @@ class ProposalController extends Controller
     {
         $this->authorize('propose', $character);
 
-        return view('proposals.loot', ['character' => $character]);
+        return view('proposals.loot', [
+            'character' => $character,
+            'suggerimenti' => app(LootSuggestions::class)->handle(),
+        ]);
     }
 
     public function submitLoot(Request $request, Character $character, ProposeChange $proposals): RedirectResponse
@@ -210,7 +216,8 @@ class ProposalController extends Controller
             'items' => ['nullable', 'array', 'max:'.ProposeChange::LOOT_MAX_ITEMS],
             'items.*.name' => ['nullable', 'string', 'max:100'],
             'items.*.qty' => ['nullable', 'integer', 'min:1', 'max:999'],
-            'items.*.category' => ['nullable', 'string', 'max:50'],
+            'items.*.category' => ['nullable', Rule::in(CharacterItem::CATEGORIES)],
+            'items.*.base' => ['nullable', Rule::in(collect(EquipmentSlot::bases())->flatten()->all())],
             'items.*.value' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
             'items.*.details' => ['nullable', 'string', 'max:1000'],
             'note' => ['nullable', 'string', 'max:255'],

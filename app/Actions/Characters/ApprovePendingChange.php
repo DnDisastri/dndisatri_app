@@ -7,11 +7,13 @@ namespace App\Actions\Characters;
 use App\Actions\Market\Purse;
 use App\Domain\Dnd\ClassRules;
 use App\Domain\Dnd\Coins;
+use App\Enums\EquipmentSlot;
 use App\Enums\LedgerAction;
 use App\Enums\PendingChangeStatus;
 use App\Enums\PendingChangeType;
 use App\Exceptions\MarketException;
 use App\Models\Character;
+use App\Models\CharacterItem;
 use App\Models\PendingChange;
 use App\Models\User;
 use App\Notifications\RequestDecided;
@@ -44,13 +46,20 @@ final class ApprovePendingChange
         'hp_max', 'hp_current',
     ];
 
-    public function handle(PendingChange $change, User $reviewer, ?string $note = null): PendingChange
+    /**
+     * @param  array<int, array{base?: ?string, magic_bonus?: int|string|null}>  $itemFixes  le correzioni del DM agli oggetti del bottino, per indice
+     */
+    public function handle(PendingChange $change, User $reviewer, ?string $note = null, array $itemFixes = []): PendingChange
     {
-        return DB::transaction(function () use ($change, $reviewer, $note) {
+        return DB::transaction(function () use ($change, $reviewer, $note, $itemFixes) {
             $locked = PendingChange::whereKey($change->getKey())->lockForUpdate()->firstOrFail();
 
             if (! $locked->isPending()) {
                 throw new RuntimeException('Questa richiesta è già stata decisa.');
+            }
+
+            if ($itemFixes !== [] && $locked->type === PendingChangeType::Loot) {
+                $locked->grant_items = $this->fixItems($locked->grant_items ?? [], $itemFixes);
             }
 
             $character = Character::whereKey($locked->character_id)->lockForUpdate()->firstOrFail();
@@ -188,10 +197,39 @@ final class ApprovePendingChange
                 category: $item['category'] ?? null,
                 valueCp: (int) ($item['value_cp'] ?? 0),
                 details: $item['details'] ?? null,
+                base: EquipmentSlot::isBase($item['base'] ?? null) ? $item['base'] : null,
+                magicBonus: $this->bonus($item['magic_bonus'] ?? 0),
             );
         }
 
         return $coins;
+    }
+
+    /**
+     * Si salvano nella richiesta: lo storico mostra quello che è stato davvero dato.
+     *
+     * @param  list<array<string,mixed>>  $items
+     * @param  array<int, array<string,mixed>>  $fixes
+     * @return list<array<string,mixed>>
+     */
+    private function fixItems(array $items, array $fixes): array
+    {
+        foreach ($fixes as $indice => $fix) {
+            if (! isset($items[$indice])) {
+                continue;
+            }
+
+            $base = $fix['base'] ?? null;
+            $items[$indice]['base'] = EquipmentSlot::isBase($base) ? $base : null;
+            $items[$indice]['magic_bonus'] = $this->bonus($fix['magic_bonus'] ?? 0);
+        }
+
+        return $items;
+    }
+
+    private function bonus(mixed $value): int
+    {
+        return max(0, min(CharacterItem::MAX_MAGIC_BONUS, (int) $value));
     }
 
     /**
@@ -204,7 +242,7 @@ final class ApprovePendingChange
         $name = $effect['name'] ?? 'Oggetto magico';
 
         $item = $character->items()->where('name', $name)->first()
-            ?? $character->addToInventory(name: $name, category: 'Oggetti magici');
+            ?? $character->addToInventory(name: $name, category: 'Oggetti Magici');
 
         $character->itemEffects()->create([
             'character_item_id' => $item->getKey(),

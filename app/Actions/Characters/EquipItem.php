@@ -35,10 +35,10 @@ final class EquipItem
      */
     public function equip(CharacterItem $item, ?EquipmentSlot $slot = null): CharacterItem
     {
-        $slot ??= $this->naturalSlotFor($item->name)
+        $slot ??= $item->naturalSlot()
             ?? throw new RuntimeException("«{$item->name}» non è qualcosa che si indossa.");
 
-        if (! $slot->accepts($item->name)) {
+        if (! $slot->accepts($item->catalogKey())) {
             throw new RuntimeException("«{$item->name}» non va nello slot {$slot->label()}.");
         }
 
@@ -100,25 +100,12 @@ final class EquipItem
         return CharacterItem::create([
             'character_id' => $item->character_id,
             'name' => $item->name,
+            'base' => $item->base,
+            'magic_bonus' => (int) $item->magic_bonus,
             'category' => $item->category,
             'qty' => 1,
-            // Il valore va difeso: la colonna non ammette null, ma una riga
-            // appena creata non ha ancora letto i valori predefiniti del
-            // database, e da lì arriverebbe un null.
-            'value' => $item->value ?? 0,
+            'value_cp' => (int) $item->value_cp,
             'details' => $item->details,
         ]);
-    }
-
-    /** Lo slot naturale di un oggetto secondo i dati di gioco. */
-    private function naturalSlotFor(string $name): ?EquipmentSlot
-    {
-        foreach ([EquipmentSlot::Armor, EquipmentSlot::Shield, EquipmentSlot::Weapon] as $slot) {
-            if ($slot->accepts($name)) {
-                return $slot;
-            }
-        }
-
-        return null;
     }
 }

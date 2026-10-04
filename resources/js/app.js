@@ -335,6 +335,82 @@ if (righeBottino) {
             limite.hidden = false;
         }
     });
+
+    const fonte = document.querySelector('[data-suggerimenti-bottino]');
+    const suggerimenti = fonte ? JSON.parse(fonte.textContent) : [];
+    const MOSTRATI = 8;
+
+    // Senza accenti e maiuscole: «armatura a piastre» trova «Armatura a Piastre».
+    const normalizza = (testo) => testo.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    suggerimenti.forEach((voce) => { voce.chiave = normalizza(voce.name); });
+
+    righeBottino.querySelectorAll('[data-riga-bottino]').forEach((riga) => {
+        const box = riga.querySelector('[data-cerca-oggetto]');
+        const nome = box.querySelector('input');
+        const elenco = box.querySelector('[data-elenco]');
+        const campo = (chiave) => riga.querySelector(`[data-campo="${chiave}"]`);
+        let trovati = [];
+        let attivo = -1;
+
+        const chiudi = () => {
+            elenco.hidden = true;
+            nome.setAttribute('aria-expanded', 'false');
+            attivo = -1;
+        };
+
+        const evidenzia = () => {
+            elenco.querySelectorAll('li').forEach((li, i) => li.classList.toggle('bg-page', i === attivo));
+        };
+
+        const scegli = (voce) => {
+            nome.value = voce.name;
+            campo('category').value = voce.category ?? '';
+            campo('base').value = voce.base ?? '';
+            campo('value').value = voce.value_cp ? voce.value_cp / 100 : '';
+            campo('details').value = voce.details ?? '';
+            chiudi();
+        };
+
+        const mostra = () => {
+            const cerca = normalizza(nome.value.trim());
+            trovati = cerca.length < 2 ? [] : suggerimenti.filter((v) => v.chiave.includes(cerca)).slice(0, MOSTRATI);
+            elenco.replaceChildren(...trovati.map((voce) => {
+                const li = document.createElement('li');
+                li.setAttribute('role', 'option');
+                li.className = 'flex cursor-pointer items-baseline justify-between gap-2 px-3 py-1.5 text-sm text-fg hover:bg-page';
+                const etichetta = document.createElement('span');
+                etichetta.textContent = voce.name;
+                const origine = document.createElement('span');
+                origine.className = 'text-xs text-muted';
+                origine.textContent = voce.source;
+                li.append(etichetta, origine);
+                // `mousedown` precede il `blur` del campo, che chiuderebbe l'elenco prima del clic.
+                li.addEventListener('mousedown', (evento) => { evento.preventDefault(); scegli(voce); });
+                return li;
+            }));
+            attivo = -1;
+            elenco.hidden = trovati.length === 0;
+            nome.setAttribute('aria-expanded', String(!elenco.hidden));
+        };
+
+        nome.addEventListener('input', mostra);
+        nome.addEventListener('blur', chiudi);
+        nome.addEventListener('keydown', (evento) => {
+            if (elenco.hidden) return;
+
+            if (evento.key === 'ArrowDown' || evento.key === 'ArrowUp') {
+                evento.preventDefault();
+                const passo = evento.key === 'ArrowDown' ? 1 : -1;
+                attivo = (attivo + passo + trovati.length) % trovati.length;
+                evidenzia();
+            } else if (evento.key === 'Enter' && attivo >= 0) {
+                evento.preventDefault();
+                scegli(trovati[attivo]);
+            } else if (evento.key === 'Escape') {
+                chiudi();
+            }
+        });
+    });
 }
 
 // Conferma prima dei moduli `data-conferma`

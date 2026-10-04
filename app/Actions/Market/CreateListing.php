@@ -45,6 +45,8 @@ final class CreateListing
             $listing = MarketListing::create([
                 'seller_character_id' => $character->getKey(),
                 'name' => $itemName,
+                'base' => $source?->base,
+                'magic_bonus' => (int) $source?->magic_bonus,
                 'category' => $source?->category,
                 'qty' => $qty,
                 'price_cp' => $priceCp,
