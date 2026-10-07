@@ -7,12 +7,8 @@ namespace App\Enums;
 use App\Models\Character;
 
 /**
- * Le sezioni della scheda: divise per «cosa hai in mano» (si tira per colpire,
- * una prova, si lancia, si apre lo zaino), non per la scheda di carta.
- *
- * I punti ferita non stanno qui: sono nell'intestazione, su tutte le sezioni
- * (prendere danni è la cosa più frequente della serata). Il valore del caso è
- * il pezzo di indirizzo.
+ * Le sezioni della scheda, per «cosa stai facendo» e non come la scheda di carta.
+ * I PF stanno nell'intestazione. Il valore del caso è il pezzo di indirizzo.
  */
 enum SheetSection: string
 {
@@ -51,12 +47,8 @@ enum SheetSection: string
     }
 
     /**
-     * Se la sezione è affare del solo giocatore.
-     *
-     * La scheda di un altro si riduce togliendo sezioni: quello che non si deve
-     * vedere non si disegna e non si carica. A chi passa restano Storia e Zaino,
-     * e dello Zaino la sola vetrina (gli oggetti segnati «Scambierei»); il resto
-     * e l'oro li filtra il controllore caricando la relazione.
+     * Se la sezione è solo del giocatore. A chi passa restano Storia e Zaino, e
+     * dello Zaino la sola vetrina (la filtra il controller).
      */
     public function isPrivate(): bool
     {
@@ -67,10 +59,7 @@ enum SheetSection: string
     public const PUBBLICHE = [self::Story, self::Pack];
 
     /**
-     * Le relazioni che servono a questa sezione. `preventLazyLoading` fa da
-     * guardia: una dimenticanza qui rompe la pagina invece di generare una
-     * query per riga. `classes` e `itemEffects` ci sono sempre (intestazione e
-     * punteggi efficaci).
+     * Le relazioni della sezione; con `preventLazyLoading` una mancanza rompe la pagina.
      *
      * @return list<string>
      */
@@ -89,9 +78,8 @@ enum SheetSection: string
     }
 
     /**
-     * Le sezioni che questo personaggio mostra a questo lettore: `$tutte`
-     * sceglie tutte o le sole pubbliche, `fitsFor` toglie quelle che il
-     * personaggio non ha. La prima è quella che si apre entrando.
+     * Le sezioni per questo lettore (tutte o le pubbliche), senza quelle che il
+     * personaggio non ha. La prima si apre entrando.
      *
      * @param  bool  $tutte  se il lettore ha diritto alle sezioni private (`viewFullSheet`)
      * @return list<self>

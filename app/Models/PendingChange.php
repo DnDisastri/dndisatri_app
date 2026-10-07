@@ -174,6 +174,7 @@ class PendingChange extends Model
             'race' => 'Specie',
             'background' => 'Background',
             'story' => 'Storia',
+            'private_story' => 'Storia privata',
             'photo_path' => 'Foto',
             'level' => 'Livello',
             'hit_die' => 'Dado vita',

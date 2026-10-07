@@ -246,10 +246,30 @@ const sfogliabile = (scheda, tab) => {
         }
     };
 
-    const segna = () => {
+    const barra = tab[0]?.parentElement;
+
+    // La pill segue il dito; la barra scorre per tenerla a vista.
+    const segnaPill = () => {
         const i = indice();
 
         tab.forEach((t, j) => t.toggleAttribute('aria-current', j === i));
+
+        if (barra && tab[i] && barra.scrollWidth > barra.clientWidth) {
+            const b = barra.getBoundingClientRect();
+            const t = tab[i].getBoundingClientRect();
+            barra.scrollTo({ left: barra.scrollLeft + t.left - b.left - (b.width - t.width) / 2, behavior: 'smooth' });
+        }
+    };
+
+    // Altezza e indirizzo solo a scorrimento finito: cambiarli a metà gesto fa saltare la pagina.
+    let ultima = indice();
+    const assesta = () => {
+        const i = indice();
+        segnaPill();
+        adattaAltezza();
+
+        if (i === ultima) return;
+        ultima = i;
 
         // L'indirizzo segue la sezione: un refresh riapre dove si era.
         if (tab[i]?.dataset.url) {
@@ -260,16 +280,24 @@ const sfogliabile = (scheda, tab) => {
             document.title = tab[i].dataset.titolo;
         }
 
-        adattaAltezza();
+        // Se si era scesi in una sezione lunga, si riparte dall'inizio della nuova.
+        const alto = (barra ?? scheda).getBoundingClientRect().top;
+        if (alto < 0) {
+            window.scrollBy({ top: alto - 16 });
+        }
     };
 
     let attesa = null;
+    let fine = null;
     scheda.addEventListener('scroll', () => {
+        clearTimeout(fine);
+        fine = setTimeout(assesta, 150);
+
         if (attesa) return;
 
         attesa = requestAnimationFrame(() => {
             attesa = null;
-            segna();
+            segnaPill();
         });
     }, { passive: true });
 
@@ -296,12 +324,18 @@ const sfogliabile = (scheda, tab) => {
     const partenza = Math.max(0, tab.findIndex((t) => t.hasAttribute('aria-current')));
     scheda.style.transitionProperty = 'none';
     scheda.scrollLeft = partenza * passo();
+    ultima = partenza;
     adattaAltezza();
     requestAnimationFrame(() => { scheda.style.transitionProperty = ''; });
 
     // Cambiando larghezza, la posizione in pixel non vale più: si riallinea.
+    // Sul telefono `resize` scatta anche quando compare o sparisce la barra del browser: lì si ignora.
+    let larghezza = scheda.clientWidth;
     window.addEventListener('resize', () => {
-        scheda.scrollLeft = indice() * passo();
+        if (scheda.clientWidth === larghezza) return;
+
+        larghezza = scheda.clientWidth;
+        scheda.scrollLeft = ultima * passo();
         adattaAltezza();
     });
 };

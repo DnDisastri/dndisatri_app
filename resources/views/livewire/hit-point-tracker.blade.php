@@ -40,24 +40,23 @@
 
     {{-- Calcolati, mai letti da una colonna. Due o quattro per riga in base al contenitore. --}}
     <div class="@container mt-3">
+    {{-- Iniziativa e competenza in coppia: su due colonne finiscono sulla stessa riga. --}}
     <div class="grid grid-cols-2 gap-2 @md:grid-cols-4">
-        <div class="{{ $tile }}">
-            <span class="block text-lg font-bold text-fg">{{ $character->armorClass() }}</span>
-            <span class="block text-xs text-muted">CA</span>
-        </div>
-        <div class="{{ $tile }}">
-            <span class="block text-lg font-bold text-fg">{{ Ability::format($character->initiative()) }}</span>
-            <span class="block text-xs text-muted">Iniz.</span>
-        </div>
-        {{-- La «m» sta sulla sigla: sul numero «7,5 m» andrebbe a capo. --}}
-        <div class="{{ $tile }}">
-            <span class="block text-lg font-bold text-fg">{{ rtrim(rtrim(number_format($character->speed, 1, ',', ''), '0'), ',') }}</span>
-            <span class="block text-xs text-muted">m · Vel.</span>
-        </div>
-        <div class="{{ $tile }}">
-            <span class="block text-lg font-bold text-fg">{{ Ability::format($character->proficiencyBonus()) }}</span>
-            <span class="block text-xs text-muted">Comp.</span>
-        </div>
+        {{-- La «m» della velocità sta sulla sigla: sul numero «7,5 m» andrebbe a capo. --}}
+        @foreach ([
+            [App\Enums\Icon::ArmorClass, $character->armorClass(), 'CA'],
+            [App\Enums\Icon::Speed, rtrim(rtrim(number_format($character->speed, 1, ',', ''), '0'), ','), 'm · Vel.'],
+            [App\Enums\Icon::Initiative, Ability::format($character->initiative()), 'Iniz.'],
+            [App\Enums\Icon::ProficiencyBonus, Ability::format($character->proficiencyBonus()), 'Comp.'],
+        ] as [$icona, $valore, $sigla])
+            <div class="{{ $tile }}">
+                <span class="flex items-center justify-center gap-1.5 text-lg font-bold text-fg">
+                    <x-icona :is="$icona" class="h-5 w-5 shrink-0 text-muted" />
+                    {{ $valore }}
+                </span>
+                <span class="block text-xs text-muted">{{ $sigla }}</span>
+            </div>
+        @endforeach
     </div>
     </div>
 
@@ -92,7 +91,7 @@
                 @if ($character->death_save_successes >= 3)
                     <p class="mt-2 text-sm text-muted">Stabile: incosciente, ma fuori pericolo.</p>
                 @elseif ($character->death_save_failures >= 3)
-                    <p class="mt-2 text-sm text-on-danger-soft">Tre fallimenti: la fine è nelle mani del DM.</p>
+                    <p class="mt-2 text-sm text-on-danger-soft">Tre fallimenti: la fine è nelle mani del dungeon master.</p>
                 @endif
             </div>
         @endif
@@ -215,7 +214,7 @@
         </x-modal>
     @endif
 
-    {{-- Un riposo cancella lo stato della serata e non si annulla:
+    {{-- Un riposo cancella lo stato della sessione e non si annulla:
          la conferma dice cosa torna indietro, con i numeri attuali. --}}
     @if ($conferma)
         @php $tipo = App\Enums\RestType::from($conferma); @endphp

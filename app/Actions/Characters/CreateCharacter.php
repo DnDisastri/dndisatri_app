@@ -17,21 +17,11 @@ use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 /**
- * Crea un personaggio dalle scelte della procedura guidata.
+ * Crea un personaggio dalle scelte della procedura guidata (§5.8 del brief).
  *
- * Il flusso è quello collaudato in due anni d'uso (§5.8 del brief) e non va
- * riprogettato: classe, specie, point buy, background, abilità,
- * equipaggiamento, incantesimi.
- *
- * Alcune cose non sono scegliibili e vengono da qui:
- *
- * - il livello è **sempre 1**;
- * - i punti ferita al primo livello sono il dado vita **pieno** più il
- *   modificatore di Costituzione, non la media;
- * - i tiri salvezza competenti li decide la classe;
- * - l'oro iniziale lo decide il background;
- * - il primo oggetto valido per ogni slot viene **indossato da solo**, così la
- *   classe armatura è giusta fin dalla prima apertura della scheda.
+ * Decide da sé: livello 1, PF con il dado vita pieno più Costituzione, tiri
+ * salvezza dalla classe, monete dal background, e il primo oggetto valido per
+ * slot già indossato, così la CA è giusta da subito.
  */
 final class CreateCharacter
 {
@@ -57,6 +47,7 @@ final class CreateCharacter
         ?string $subspecies = null,
         array $backgroundSkills = [],
         ?int $pack = null,
+        ?string $privateStory = null,
     ): Character {
         $this->validate($name, $class, $species, $background, $boughtScores, $skills, $spells);
         $this->validateBackgroundSkills($background, $backgroundSkills);
@@ -70,7 +61,7 @@ final class CreateCharacter
         return DB::transaction(function () use (
             $owner, $name, $class, $species, $background, $subclass, $story,
             $scores, $abilityScores, $hitDie, $skills, $spells, $equipmentChoices, $sottorazza,
-            $backgroundSkills, $pack
+            $backgroundSkills, $pack, $privateStory
         ) {
             $character = Character::create([
                 'user_id' => $owner->getKey(),
@@ -83,6 +74,7 @@ final class CreateCharacter
                 // Quello che gli altri leggeranno di lui. Alla creazione si
                 // scrive liberamente: è dopo che le modifiche passano da un DM.
                 'story' => $story,
+                'private_story' => $privateStory,
                 'level' => 1,
                 'hit_die' => $hitDie,
                 ...$scores,
@@ -181,16 +173,7 @@ final class CreateCharacter
         }
     }
 
-    /**
-     * Le abilità della classe più le due del background.
-     *
-     * @param  list<string>  $chosen
-     * @return array<string,string>
-     */
-    /**
-     * Quante abilità lascia scegliere il background. Zero per i tredici del
-     * manuale, che le danno fisse.
-     */
+    /** Quante abilità lascia scegliere il background: zero per quelli del manuale. */
     public static function freeSkillsFor(?string $background): int
     {
         return (int) config("dnd.backgrounds.list.{$background}.free_skills", 0);
@@ -248,11 +231,8 @@ final class CreateCharacter
     }
 
     /**
-     * L'equipaggiamento iniziale: quello fisso della classe, le opzioni
-     * scelte fra le alternative A/B, e il kit del background.
-     *
-     * Se una scelta non viene fatta si prende la prima opzione, che è quella
-     * «standard» dei manuali.
+     * L'equipaggiamento iniziale: fisso di classe, scelte A/B (senza scelta,
+     * la prima) e kit del background.
      *
      * @param  array<int,int>  $choices  indice della scelta => indice dell'opzione
      */

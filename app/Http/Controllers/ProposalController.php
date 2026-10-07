@@ -100,6 +100,7 @@ class ProposalController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'background' => ['nullable', 'string', 'max:255'],
             'story' => ['nullable', 'string', 'max:2000'],
+            'private_story' => ['nullable', 'string', 'max:5000'],
             'species_traits' => ['nullable', 'string'],
             'class_features' => ['nullable', 'string'],
             'subclass_features' => ['nullable', 'string'],
@@ -230,7 +231,7 @@ class ProposalController extends Controller
 
         if ($coins->value() > ProposeChange::LOOT_MAX_CP) {
             throw ValidationException::withMessages([
-                'coins' => 'Al massimo '.Coins::formatValue(ProposeChange::LOOT_MAX_CP).' di monete per richiesta: per somme più alte chiedi al DM.',
+                'coins' => 'Al massimo '.Coins::formatValue(ProposeChange::LOOT_MAX_CP).' di monete per richiesta: per somme più alte chiedi a un dungeon master.',
             ]);
         }
 

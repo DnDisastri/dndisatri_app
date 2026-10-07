@@ -12,6 +12,13 @@
 @endif
 
 @if ($completa)
+    @if (filled($character->private_story))
+        <x-panel title="Storia privata">
+            <p class="mb-2 text-xs text-muted">La leggono solo il giocatore e i dungeon master.</p>
+            <p class="text-sm text-fg">{!! nl2br(e($character->private_story)) !!}</p>
+        </x-panel>
+    @endif
+
     @if ($character->feats->isNotEmpty())
         <x-panel title="Talenti" :icon="\App\Enums\Icon::Talents">
             <ul class="space-y-2 text-sm">
@@ -68,6 +75,6 @@
     @if (blank($character->story))
         <x-empty>Di questo personaggio non è ancora stata scritta la storia.</x-empty>
     @endif
-@elseif (blank($character->story) && $character->feats->isEmpty() && $testi->isEmpty())
+@elseif (blank($character->story) && blank($character->private_story) && $character->feats->isEmpty() && $testi->isEmpty())
     <x-empty>Di questo personaggio non è ancora stato scritto niente.</x-empty>
 @endif

@@ -62,7 +62,17 @@
                     <textarea id="storia" wire:model.live="story" rows="3"
                               placeholder="Chi è, in due righe."
                               class="w-full rounded-md border border-line bg-page px-3 py-2 text-fg placeholder:text-muted focus:border-active focus:outline-none"></textarea>
-                    <p class="mt-1 text-xs text-muted">È l'unico testo pubblico: gli altri vedono questo, non i tuoi numeri.</p>
+                    <p class="mt-1 text-xs text-muted">La leggono gli altri giocatori dalla Gilda: è l'unica parte della scheda pensata per essere letta da fuori.</p>
+                </div>
+
+                <div>
+                    <label for="storia-privata" class="mb-1 block text-sm font-medium text-fg">
+                        La sua storia privata <span class="font-normal text-muted">(facoltativa)</span>
+                    </label>
+                    <textarea id="storia-privata" wire:model.blur="privateStory" rows="3" maxlength="5000"
+                              placeholder="Segreti, passato nascosto, quello che non racconta."
+                              class="w-full rounded-md border border-line bg-page px-3 py-2 text-fg placeholder:text-muted focus:border-active focus:outline-none"></textarea>
+                    <p class="mt-1 text-xs text-muted">La leggono solo i dungeon master, gli altri giocatori no.</p>
                 </div>
 
                 <div>

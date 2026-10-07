@@ -5,9 +5,9 @@
 @endphp
 
 {{-- `z-30`: un menù appena aperto le passa sopra. Il padding in basso rispetta
-     la barra dei gesti di iPhone e iPad. --}}
-<nav class="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-6 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden" aria-label="{{ $etichetta }}">
-    <div class="pointer-events-auto mx-auto flex w-full max-w-xl items-center gap-3">
+     la barra dei gesti di iPhone e iPad. Sotto i 360px tutto si stringe, o non entra. --}}
+<nav class="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] min-[360px]:px-6 lg:hidden" aria-label="{{ $etichetta }}">
+    <div class="pointer-events-auto mx-auto flex w-full max-w-xl items-center gap-2 min-[360px]:gap-3">
 
         @foreach ([$barra['sinistra'], null, $barra['destra']] as $gruppo)
             @if ($gruppo === null)
@@ -17,7 +17,7 @@
                    title="{{ $centro['nome'] }}" aria-label="{{ $centro['nome'] }}"
                    @if ($centro['attiva']) aria-current="page" @endif
                    @class([
-                       'flex h-16 w-16 shrink-0 items-center justify-center rounded-full shadow-lg shadow-black/20 transition',
+                       'flex h-14 w-14 shrink-0 items-center min-[360px]:h-16 min-[360px]:w-16 justify-center rounded-full shadow-lg shadow-black/20 transition',
                        'bg-active text-on-active' => $centro['attiva'],
                        'bg-primary text-on-primary-soft hover:text-on-primary' => $centro['href'] && ! $centro['attiva'],
                        'bg-off text-off-fg cursor-default' => ! $centro['href'],
@@ -33,7 +33,7 @@
                            @if ($voce['attiva']) aria-current="page" @endif
                            @class([
                                // `shrink-0`: su uno schermo stretto il cerchio attivo diventerebbe un ovale.
-                               'flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition',
+                               'flex h-11 w-11 shrink-0 items-center min-[360px]:h-12 min-[360px]:w-12 justify-center rounded-full transition',
                                'bg-active text-on-active' => $voce['attiva'],
                                'text-on-primary-soft hover:text-on-primary' => $voce['href'] && ! $voce['attiva'],
                                'text-on-primary-soft opacity-40 cursor-default' => ! $voce['href'],

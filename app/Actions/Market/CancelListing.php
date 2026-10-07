@@ -26,7 +26,11 @@ final class CancelListing
 
             $seller = $locked->seller()->lockForUpdate()->firstOrFail();
 
-            $seller->addToInventory(...Character::itemCopy($locked), qty: $locked->qty);
+            $item = $seller->addToInventory(...Character::itemCopy($locked), qty: $locked->qty);
+
+            if ($locked->seller_notes !== null && $item->notes === null) {
+                $item->forceFill(['notes' => $locked->seller_notes])->save();
+            }
 
             $locked->forceFill([
                 'status' => ListingStatus::Cancelled,

@@ -28,6 +28,17 @@ class Shop extends Component
 
     public string $cerca = '';
 
+    /** Una delle chiavi di ORDINI; un valore manomesso ricade sulla categoria. */
+    public string $ordine = 'categoria';
+
+    public const ORDINI = [
+        'categoria' => 'Categoria',
+        'prezzo' => 'Prezzo ↑',
+        '-prezzo' => 'Prezzo ↓',
+        'nome' => 'Nome A-Z',
+        '-nome' => 'Nome Z-A',
+    ];
+
     public ?int $offerta = null;
 
     /** L'articolo da aprire arriva dall'indirizzo: si apre solo se esiste. */
@@ -146,7 +157,14 @@ class Shop extends Component
                     ->orWhere('category', 'like', $parola)
                     ->orWhere('details', 'like', $parola));
             })
-            ->orderBy('category')->orderBy('name')->get();
+            ->tap(fn ($query) => match ($this->ordine) {
+                'prezzo' => $query->orderBy('price_cp')->orderBy('name'),
+                '-prezzo' => $query->orderByDesc('price_cp')->orderBy('name'),
+                'nome' => $query->orderBy('name'),
+                '-nome' => $query->orderByDesc('name'),
+                default => $query->orderBy('category')->orderBy('name'),
+            })
+            ->get();
         $preferiti = $character?->favoriteItems->pluck('id') ?? collect();
 
         [$stellati, $resto] = $items->partition(fn (MarketItem $item) => $preferiti->contains($item->getKey()));

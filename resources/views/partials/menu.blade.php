@@ -33,14 +33,15 @@
 <div @class([$stacco, 'px-4 py-3' => ! $laterale, 'px-3' => $laterale])>
     <p class="mb-2 text-xs uppercase tracking-wide text-muted">Tema</p>
 
-    <div class="flex gap-1" role="group" aria-label="Tema">
+    {{-- Tre colonne uguali che si stringono: nella tendina del telefono lo spazio è poco. --}}
+    <div class="grid grid-cols-3 gap-1" role="group" aria-label="Tema">
         @foreach ([
             'auto' => ['Auto', \App\Enums\Icon::ThemeAuto],
             'light' => ['Chiaro', \App\Enums\Icon::ThemeLight],
             'dark' => ['Scuro', \App\Enums\Icon::ThemeDark],
         ] as $valore => [$etichetta, $icona])
             <button type="button" data-tema="{{ $valore }}" aria-pressed="false"
-                    class="flex flex-1 items-center justify-center gap-1 rounded-full border border-line px-2 py-1.5
+                    class="flex min-w-0 items-center justify-center gap-1 rounded-full border border-line px-1.5 py-1.5
                            text-xs font-semibold text-fg transition hover:border-active
                            aria-pressed:border-active aria-pressed:bg-active aria-pressed:text-on-active">
                 <x-icona :is="$icona" class="h-3.5 w-3.5 shrink-0" />

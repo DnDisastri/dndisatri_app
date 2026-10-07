@@ -580,7 +580,7 @@ describe('la scheda di un altro', function () {
             ->assertSee('Corda di Seta')
             ->assertDontSee('Pugnale')
             ->assertDontSee('Equipaggiamento')
-            ->assertDontSee('Scambierei');
+            ->assertDontSee('Mettilo in vetrina');
     });
 
     it('e se non ha messo niente in vetrina, lo dice — e non invita a proporre il nulla', function () {
@@ -674,7 +674,7 @@ describe('la Gilda', function () {
             ->assertDontSee('Hall of Fallen Heroes');
     });
 
-    it('mostra foto, nome e livello, e non i numeri della serata', function () {
+    it('mostra foto, nome e livello, e non i numeri della sessione', function () {
         $character = Character::factory()->create([
             'name' => 'Grommash', 'level' => 3, 'hp_current' => 7, 'hp_max' => 38,
         ]);

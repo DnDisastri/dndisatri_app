@@ -77,7 +77,7 @@
             </nav>
 
             <div id="sheet-slider"
-                class="flex gap-6 snap-x snap-mandatory overflow-x-auto transition-[height] duration-200
+                class="flex gap-6 snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain transition-[height] duration-200
                        [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 @foreach ($sezioni as $voce)
                     <div class="w-full shrink-0 snap-center snap-always self-start space-y-4">

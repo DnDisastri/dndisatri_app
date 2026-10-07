@@ -2,7 +2,14 @@
 @section('title', \App\Http\Controllers\MarketController::SEZIONI[$sezione].' · Mercato')
 
 @section('content')
-@php $sezioni = \App\Http\Controllers\MarketController::SEZIONI; @endphp
+@php
+    $sezioni = \App\Http\Controllers\MarketController::SEZIONI;
+    $icone = [
+        'market.shop' => \App\Enums\Icon::Shop,
+        'market.listings' => \App\Enums\Icon::Listings,
+        'market.trades' => \App\Enums\Icon::Trades,
+    ];
+@endphp
 
 <x-pagina class="space-y-4">
     <h2 class="flex items-center gap-2 text-2xl text-fg">
@@ -15,15 +22,17 @@
         @foreach ($sezioni as $rotta => $nome)
             <button type="button" data-market-tab data-url="{{ route($rotta) }}" data-titolo="{{ $nome }} · Mercato"
                 @if ($rotta === $sezione) aria-current="page" @endif
-                class="flex-1 whitespace-nowrap rounded-full px-3 py-2 text-center font-medium text-muted
+                class="flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 py-2 font-medium text-muted
                        transition hover:text-fg aria-[current]:bg-primary aria-[current]:text-on-primary">
+                {{-- Sotto i 360px le icone non entrano: resta solo il nome. --}}
+                <x-icona :is="$icone[$rotta]" class="hidden h-4 w-4 shrink-0 min-[360px]:block" />
                 {{ $nome }}
             </button>
         @endforeach
     </nav>
 
     <div id="market-slider"
-        class="flex gap-6 snap-x snap-mandatory overflow-x-auto transition-[height] duration-200
+        class="flex gap-6 snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain transition-[height] duration-200
                [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div class="w-full shrink-0 snap-center snap-always self-start">
             <livewire:market.shop />

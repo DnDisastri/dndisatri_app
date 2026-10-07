@@ -3,23 +3,24 @@
 {{-- Le linguette stanno nella pagina (market/index). --}}
 <div class="mb-5">
     @if ($character)
-        <x-card padding="sm" class="flex flex-wrap items-center justify-between gap-2">
-            <div class="text-sm">
+        {{-- Con un nome lungo va a capo il nome: le monete restano su una riga. --}}
+        <x-card padding="sm" class="flex items-center justify-between gap-2">
+            <div class="min-w-0 flex-1 text-sm">
+                <span class="block text-xs text-muted">stai comprando come</span>
                 {{-- La tendina solo con più personaggi: un DM può averne diversi. --}}
                 @if ($characters && $characters->count() > 1)
                     <select wire:model.live="characterId"
-                            class="rounded-md border border-line bg-page px-2 py-1 text-sm font-semibold text-fg">
+                            class="w-full max-w-full rounded-md border border-line bg-page px-2 py-1 text-sm font-semibold text-fg">
                         @foreach ($characters as $option)
                             <option value="{{ $option->id }}">{{ $option->name }}</option>
                         @endforeach
                     </select>
                 @else
-                    <strong class="text-fg">{{ $character->name }}</strong>
+                    <strong class="block break-words text-fg">{{ $character->name }}</strong>
                 @endif
-                <span class="block text-xs text-muted">stai comprando come</span>
             </div>
 
-            <x-badge tone="accent" size="md"><x-monete :borsa="$character->coins()" /></x-badge>
+            <x-borsa :borsa="$character->coins()" compatta class="shrink-0" />
         </x-card>
     @else
         <x-note>Serve un personaggio in salute per vendere o comprare.</x-note>

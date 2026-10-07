@@ -16,16 +16,8 @@ use InvalidArgumentException;
 use Livewire\Component;
 
 /**
- * La creazione guidata del personaggio.
- *
- * L'ordine dei passi è quello del brief (§5.8) e **non va riprogettato**: è
- * collaudato in due anni d'uso. Ogni passo dipende dai precedenti — la specie
- * cambia i punteggi, la classe decide quante abilità si scelgono, i punteggi
- * decidono quanti incantesimi si preparano.
- *
- * Qui c'è la logica dell'interfaccia; le regole stanno in `App\Domain\Dnd` e
- * la creazione vera in `CreateCharacter`, che rivalida tutto: quello che si
- * vede a schermo è una comodità, non una difesa.
+ * La creazione guidata del personaggio, nell'ordine del brief (§5.8): ogni passo
+ * dipende dai precedenti. Qui c'è solo l'interfaccia; `CreateCharacter` rivalida tutto.
  */
 class CharacterWizard extends Component
 {
@@ -50,6 +42,8 @@ class CharacterWizard extends Component
 
     /** Chi è, in due righe: è la parte che vedranno gli altri giocatori. */
     public string $story = '';
+
+    public string $privateStory = '';
 
     // Passo 2
     public string $species = '';
@@ -101,12 +95,8 @@ class CharacterWizard extends Component
     }
 
     /**
-     * Riempie il modulo con una build consigliata.
-     *
-     * `wizardState()` restituisce **solo le caselle che la build sa riempire**:
-     * quelle assenti non si toccano, o cancellerebbero i valori di partenza (i
-     * punteggi del point buy su tutti). Una build **completa** porta dritti al
-     * riepilogo; una incompleta lascia dal primo passo, con quel che sa già.
+     * Riempie il modulo con una build consigliata, solo nelle caselle che conosce.
+     * Completa porta al riepilogo; incompleta riparte dal primo passo.
      */
     private function applyBuild(string $slug): void
     {
@@ -386,6 +376,7 @@ class CharacterWizard extends Component
                 subspecies: filled($this->subspecies) ? $this->subspecies : null,
                 backgroundSkills: array_values(array_filter($this->backgroundSkills)),
                 pack: $this->pack,
+                privateStory: filled($this->privateStory) ? mb_substr($this->privateStory, 0, 5000) : null,
             );
         } catch (InvalidArgumentException $e) {
             $this->addError('creazione', $e->getMessage());
@@ -446,13 +437,7 @@ class CharacterWizard extends Component
     }
 
     /**
-     * Gli incantesimi che si possono imparare **al primo livello**, divisi fra
-     * trucchetti e incantesimi di 1º.
-     *
-     * La lista di classe arriva fino ai livelli alti, ma qui si crea sempre a
-     * livello 1: gli unici slot che si hanno sono di 1º, e non si conosce un
-     * incantesimo per uno slot che non c'è. Per questo il gruppo dei non
-     * trucchetti si ferma al livello 1.
+     * Gli incantesimi imparabili al primo livello: trucchetti e incantesimi di 1º.
      */
     public function spellOptions(): array
     {

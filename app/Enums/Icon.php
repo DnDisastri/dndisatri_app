@@ -73,6 +73,9 @@ enum Icon: string implements Icona, ScalableIcon
     case Guild = 'guild';
     case Fallen = 'fallen';
     case ArmorClass = 'armor-class';
+    case Speed = 'speed';
+    case Initiative = 'initiative';
+    case ProficiencyBonus = 'proficiency-bonus';
     case HitPoints = 'hit-points';
     case Gold = 'gold';
     case Proficient = 'proficient';
@@ -167,6 +170,9 @@ enum Icon: string implements Icona, ScalableIcon
 
             self::Guild => Phosphor::ShieldCheckered,
             self::ArmorClass => Phosphor::Shield,
+            self::Speed => Phosphor::SneakerMove,
+            self::Initiative => Phosphor::Lightning,
+            self::ProficiencyBonus => Phosphor::GraduationCap,
             self::Fallen => Phosphor::Skull,
             self::HitPoints => Phosphor::Heart,
             self::Gold => Phosphor::Coin,

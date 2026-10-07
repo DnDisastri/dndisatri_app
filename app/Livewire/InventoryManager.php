@@ -37,6 +37,10 @@ class InventoryManager extends Component
     /** @var array{name: string, category: ?string, base: ?string, magic_bonus: int|string, details: ?string} */
     public array $modifica = ['name' => '', 'category' => null, 'base' => null, 'magic_bonus' => 0, 'details' => null];
 
+    public ?int $notaId = null;
+
+    public string $nota = '';
+
     public function mount(Character $character): void
     {
         $this->characterId = $character->getKey();
@@ -163,6 +167,37 @@ class InventoryManager extends Component
         ])->save();
 
         $this->modificaId = null;
+    }
+
+    /** Il ricordo del giocatore: è suo, e non passa a chi riceve l'oggetto. */
+    public function apriNota(int $itemId): void
+    {
+        $character = Character::findOrFail($this->characterId);
+        $this->authorize('manageTradeable', $character);
+
+        $item = $character->items()->whereKey($itemId)->firstOrFail();
+
+        $this->notaId = $item->getKey();
+        $this->nota = (string) $item->notes;
+        $this->resetErrorBag();
+    }
+
+    public function chiudiNota(): void
+    {
+        $this->notaId = null;
+    }
+
+    public function salvaNota(): void
+    {
+        $this->validate(['nota' => ['nullable', 'string', 'max:2000']]);
+
+        $this->run(
+            (int) $this->notaId,
+            fn (CharacterItem $item) => $item->forceFill(['notes' => trim($this->nota) ?: null])->save(),
+            ability: 'manageTradeable',
+        );
+
+        $this->notaId = null;
     }
 
     public function equip(int $itemId): void
