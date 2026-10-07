@@ -44,7 +44,7 @@
             </summary>
 
             {{-- z-10 basta all'interno dello stacking context dell'header. --}}
-            <nav class="absolute right-0 z-10 mt-2 w-52 overflow-hidden rounded-xl border border-line bg-surface shadow-lg shadow-black/10">
+            <nav class="absolute right-0 z-10 mt-2 w-60 overflow-hidden rounded-xl border border-line bg-surface shadow-lg shadow-black/10">
                 <p class="border-b border-line px-4 py-3 text-sm text-muted">
                     {{ auth()->user()->name }}
                 </p>

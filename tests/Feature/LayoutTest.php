@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Models\Character;
 use App\Models\User;
 use Illuminate\Support\Str;
-
 
 it('serve i caratteri a chi non è ancora entrato', function () {
     $risposta = $this->get(route('login'));
@@ -65,8 +65,8 @@ it('non accende niente sulle pagine fuori dalla barra', function () {
 });
 // La voce Eroi rappresenta i propri personaggi: visitare la scheda di un altro non deve attivarla.
 it('e nemmeno sulla scheda di un altro', function () {
-    $mio = App\Models\Character::factory()->create();
-    $altrui = App\Models\Character::factory()->create();
+    $mio = Character::factory()->create();
+    $altrui = Character::factory()->create();
 
     $barra = fn (string $html) => Str::of($html)
         ->after('Navigazione principale')->before('</nav>')->toString();
@@ -92,7 +92,7 @@ it('tiene le cinque voci in tre blocchi', function () {
     $barra = Str::of($html)->after('Navigazione principale')->before('</nav>')->toString();
 
     expect(substr_count($barra, 'rounded-full bg-primary p-1.5'))->toBe(2)
-        ->and(substr_count($barra, 'h-16 w-16'))->toBe(1);
+        ->and(substr_count($barra, 'min-[360px]:h-16 min-[360px]:w-16'))->toBe(1);
 });
 
 // Il tema viene applicato inline prima del primo rendering per evitare un lampo del tema sbagliato.
@@ -135,7 +135,7 @@ it('su desktop mette le voci della barra e il menù nella barra laterale', funct
         ->toContain('data-tema="dark"');
 });
 
-// Il DM ha Gilda e Scrivania nella barra: il menù non le ripete.
+// Il DM ha Gilda e Pannello nella barra: il menù non le ripete.
 it('non ripete nel menù del DM le voci che ha già nella barra', function () {
     $html = $this->actingAs(User::factory()->dm()->create())->get('/')->getContent();
 
