@@ -1,12 +1,12 @@
-@props(['tavolo'])
+@props(['eroi'])
 {{-- La vista DM mostra PF, CA e oro, dati volutamente omessi dalle card pubbliche della Gilda. --}}
-@if ($tavolo->isEmpty())
-    <x-empty>Nessuno si è ancora seduto a questo tavolo.</x-empty>
+@if ($eroi->isEmpty())
+    <x-empty>Ancora nessun eroe: nessuno si è prenotato e nessuno ha giocato questa campagna.</x-empty>
 @else
-    {{-- Colonne in base al contenitore: pagina intera in Regia, mezza colonna nella serata. --}}
+    {{-- Colonne in base al contenitore: pagina intera nell'Area Master, mezza colonna nella sessione. --}}
     <div class="@container">
     <div class="grid grid-cols-1 gap-3 @md:grid-cols-2">
-        @foreach ($tavolo as $pg)
+        @foreach ($eroi as $pg)
             @php
                 $max = $pg->effectiveHpMax();
                 $cur = max(0, (int) $pg->hp_current);

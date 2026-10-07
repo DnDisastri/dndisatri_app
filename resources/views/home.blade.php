@@ -97,7 +97,7 @@
     <div class="space-y-10 lg:grid lg:grid-cols-2 lg:gap-8 lg:space-y-0">
         <section>
             <h3 class="font-display mb-3 flex items-center gap-2 text-lg font-normal text-fg">
-                <x-icona :is="\App\Enums\Icon::Sessions" class="h-5 w-5" /> I prossimi tavoli
+                <x-icona :is="\App\Enums\Icon::Sessions" class="h-5 w-5" /> Le prossime sessioni
             </h3>
 
             <div class="space-y-2">
@@ -108,6 +108,16 @@
                         <span>
                             <span class="block font-semibold text-fg">{{ $session->campaign?->title }}</span>
                             <span class="block text-sm text-muted">{{ $session->displayTitle() }}</span>
+                            @php $mio = $session->seatOf(auth()->user()); @endphp
+                            <span class="mt-1 block text-xs text-muted">
+                                @if ($mio?->isActive())
+                                    <x-badge tone="own">{{ $mio->mine() }}</x-badge>
+                                @elseif ($session->isFull())
+                                    Posti esauriti, c'è la lista d'attesa
+                                @else
+                                    {{ $session->freeSlots() === 1 ? '1 posto libero' : $session->freeSlots().' posti liberi' }}
+                                @endif
+                            </span>
                         </span>
                         <span class="shrink-0 text-right text-sm text-muted">
                             {{ $session->played_at->translatedFormat('j M') }}<br>
@@ -115,7 +125,7 @@
                         </span>
                     </x-card>
                 @empty
-                    <x-empty>Nessun tavolo in programma.</x-empty>
+                    <x-empty>Nessuna sessione in programma.</x-empty>
                 @endforelse
             </div>
 

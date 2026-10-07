@@ -2,15 +2,14 @@
 
 namespace App\Policies;
 
+use App\Enums\SeatStatus;
 use App\Models\Campaign;
 use App\Models\GameSession;
 use App\Models\User;
 
 /**
- * Le sessioni le organizza il DM del tavolo, più gli admin.
- *
- * I recap invece li legge **tutto il gruppo**: il mondo è condiviso e le
- * vicende di un tavolo interessano anche gli altri.
+ * Le sessioni le crea e modifica il DM della campagna, o un admin. Condurle
+ * (posti, ospiti, presenze, resoconto) lo può qualsiasi DM. Le leggono tutti.
  */
 class GameSessionPolicy
 {
@@ -40,18 +39,59 @@ class GameSessionPolicy
     }
 
     /**
-     * Scrivere il resoconto. Resta possibile anche su una campagna conclusa:
-     * i recap si scrivono dopo, e a volte molto dopo.
+     * Scrivere il resoconto: qualsiasi DM, perché chi copre un collega deve poter
+     * chiudere la sessione. Resta possibile anche su una campagna conclusa: i recap
+     * si scrivono dopo, e a volte molto dopo.
      */
     public function writeRecap(User $user, GameSession $session): bool
     {
-        return $this->runsTheTable($user, $session->campaign);
+        return $user->isAdmin() || $user->isDm();
     }
 
-    /** Segnare i presenti a fine serata. */
+    /** Segnare i presenti e dare le ricompense di fine sessione: come il resoconto. */
     public function recordAttendance(User $user, GameSession $session): bool
     {
-        return $this->runsTheTable($user, $session->campaign);
+        return $user->isAdmin() || $user->isDm();
+    }
+
+    /** Prenotarsi: chi non conduce quella campagna, finché la sessione non comincia. */
+    public function book(User $user, GameSession $session): bool
+    {
+        return $session->acceptsBookings()
+            && $session->campaign?->dm_id !== $user->getKey()
+            && ! $session->hasParticipant($user);
+    }
+
+    public function withdraw(User $user, GameSession $session): bool
+    {
+        return $session->acceptsBookings() && $session->hasParticipant($user);
+    }
+
+    /** Confermare i posti e chiamare dall'attesa: qualsiasi DM, come chiudere la sessione. */
+    public function confirmPlayers(User $user, GameSession $session): bool
+    {
+        return ($user->isAdmin() || $user->isDm())
+            && $session->acceptsBookings()
+            && $session->bookings()->where('status', SeatStatus::Booked->value)->exists();
+    }
+
+    public function promote(User $user, GameSession $session): bool
+    {
+        return ($user->isAdmin() || $user->isDm())
+            && $session->acceptsBookings()
+            && ! $session->isFull();
+    }
+
+    /** Un ospite senza account, prenotato fuori dall'app: qualsiasi DM, in qualsiasi campagna. */
+    public function addGuest(User $user, GameSession $session): bool
+    {
+        return ($user->isAdmin() || $user->isDm()) && $session->acceptsBookings();
+    }
+
+    /** Togliere un ospite o collegarlo all'account con cui si è registrato. */
+    public function manageGuests(User $user, GameSession $session): bool
+    {
+        return $user->isAdmin() || $user->isDm();
     }
 
     public function delete(User $user, GameSession $session): bool

@@ -5,7 +5,7 @@ namespace Database\Seeders;
 use App\Enums\ListingStatus;
 use App\Enums\PendingChangeStatus;
 use App\Enums\QuestDifficulty;
-use App\Enums\QuestSeatStatus;
+use App\Enums\SeatStatus;
 use App\Enums\TradeStatus;
 use App\Models\Campaign;
 use App\Models\Character;
@@ -72,13 +72,17 @@ class DemoSeeder extends Seeder
         Trade::query()->delete();
         MarketListing::query()->delete();
 
-        // I caduti puntano a una serata: si sganciano prima di cancellarla.
+        // I caduti puntano a una sessione: si sganciano prima di cancellarla.
         Character::query()->update(['died_in_session_id' => null]);
 
-        GameSession::query()->each(fn (GameSession $s) => $s->attendees()->detach());
+        Quest::query()->each(fn (Quest $q) => $q->interested()->detach());
+
+        GameSession::query()->each(function (GameSession $s) {
+            $s->attendees()->detach();
+            $s->players()->detach();
+        });
         GameSession::query()->delete();
 
-        Quest::query()->each(fn (Quest $q) => $q->participants()->detach());
         Quest::query()->delete();
 
         Map::query()->delete();
@@ -185,7 +189,7 @@ class DemoSeeder extends Seeder
         return Campaign::orderBy('id')->get();
     }
 
-    /** Due serate future la stessa sera: è il caso dei «prossimi tavoli» al plurale in Home. */
+    /** Due sessioni future la stessa sera: è il caso delle «prossime sessioni» al plurale in Home. */
     private function sessioni($campagne, $personaggi)
     {
         $seraProssima = now()->addDays(6)->setTime(21, 0);
@@ -197,7 +201,7 @@ class DemoSeeder extends Seeder
                 $sessione = GameSession::create([
                     'campaign_id' => $campagna->getKey(),
                     'number' => $numero++,
-                    'title' => $this->titoloSerata($indice, $settimaneFa),
+                    'title' => $this->titoloSessione($indice, $settimaneFa),
                     'played_at' => now()->subWeeks($settimaneFa)->setTime(21, 0),
                     'recap' => $this->resoconto($indice, $settimaneFa),
                     'recap_written_by' => $campagna->dm_id,
@@ -213,19 +217,31 @@ class DemoSeeder extends Seeder
             }
 
             if ($campagna->isActive()) {
-                // Senza titolo: una serata da giocare non ha ancora un nome.
-                GameSession::create([
+                // Senza titolo: una sessione da giocare non ha ancora un nome.
+                $prossima = GameSession::create([
                     'campaign_id' => $campagna->getKey(),
                     'number' => $numero,
                     'played_at' => $seraProssima,
+                    'min_players' => 3,
+                    'max_players' => 4,
                 ]);
+
+                // Quattro posti presi e uno in attesa: un personaggio per giocatore.
+                foreach ($personaggi->unique('user_id')->take(5)->values() as $i => $pg) {
+                    $prossima->players()->attach($pg->user_id, [
+                        'character_id' => $pg->getKey(),
+                        'status' => ($i < 4 ? SeatStatus::Booked : SeatStatus::Waiting)->value,
+                        // Sfalsati di un minuto: la lista d'attesa ha un ordine.
+                        'joined_at' => now()->subMinutes(10 - $i),
+                    ]);
+                }
             }
         }
 
         return GameSession::past()->orderByDesc('played_at')->get();
     }
 
-    private function titoloSerata(int $campagna, int $settimane): string
+    private function titoloSessione(int $campagna, int $settimane): string
     {
         return [
             [5 => 'Il pozzo', 3 => 'La porta murata', 1 => 'Quello che c\'era sotto'],
@@ -255,7 +271,7 @@ class DemoSeeder extends Seeder
         ][$campagna % 3][$settimane];
     }
 
-    /** Incarichi: uno al completo, uno con posto, uno completato, uno abbandonato. */
+    /** Quest: una in sessione, una in attesa di sessione, una completata, una abbandonata. */
     private function incarichi($campagne, $giocatori): void
     {
         foreach ($campagne as $campagna) {
@@ -278,28 +294,26 @@ class DemoSeeder extends Seeder
                 continue;
             }
 
-            $conPosto = Quest::factory()->inCampaign($campagna)->slots(5)->create([
+            // Una già messa nella prossima sessione, una che aspetta: tutte e due con qualche interessato.
+            $inSessione = Quest::factory()->inCampaign($campagna)->create([
                 'title' => 'Scortare la carovana fino al guado',
                 'slug' => 'carovana-guado-'.$campagna->getKey(),
                 'rewards' => '200 mo e una pozione di cura',
                 'difficulty' => QuestDifficulty::Media,
                 'setting' => 'Strada bassa, due giorni di cammino',
-                'min_participants' => 3,
             ]);
-            $this->prenota($conPosto, $giocatori->take(2), QuestSeatStatus::Booked);
+            $this->interessa($inSessione, $giocatori->take(2));
+            $inSessione->forceFill([
+                'game_session_id' => GameSession::where('campaign_id', $campagna->getKey())->upcoming()->value('id'),
+            ])->save();
 
-            $pieno = Quest::factory()->inCampaign($campagna)->slots(2)->create([
+            $inAttesa = Quest::factory()->inCampaign($campagna)->create([
                 'title' => 'Scendere di nuovo nel pozzo',
                 'slug' => 'di-nuovo-nel-pozzo-'.$campagna->getKey(),
                 'rewards' => 'Quello che si trova',
                 'difficulty' => QuestDifficulty::Difficile,
-                'min_participants' => 2,
             ]);
-            $this->prenota($pieno, $giocatori->take(2), QuestSeatStatus::Confirmed);
-            $this->prenota($pieno, $giocatori->slice(2, 2), QuestSeatStatus::Waiting);
-
-            // La serata dichiarata sta sulla quest, indipendente dai posti confermati.
-            $pieno->forceFill(['night_confirmed_at' => now()->subDay()])->save();
+            $this->interessa($inAttesa, $giocatori->take(4));
 
             Quest::factory()->inCampaign($campagna)->completed()->create([
                 'title' => 'Consegnare la lettera sigillata',
@@ -312,16 +326,10 @@ class DemoSeeder extends Seeder
         }
     }
 
-    /** Prenota una fila di giocatori a una quest, tutti nello stesso stato. */
-    private function prenota(Quest $quest, $giocatori, QuestSeatStatus $stato): void
+    private function interessa(Quest $quest, $giocatori): void
     {
-        foreach ($giocatori as $indice => $giocatore) {
-            $quest->participants()->attach($giocatore, [
-                'status' => $stato->value,
-                // Sfalsati di un minuto: la lista d'attesa ha un ordine.
-                'joined_at' => now()->subMinutes(10 - $indice),
-                'decided_at' => $stato === QuestSeatStatus::Confirmed ? now() : null,
-            ]);
+        foreach ($giocatori->values() as $indice => $giocatore) {
+            $quest->interested()->attach($giocatore, ['joined_at' => now()->subMinutes(10 - $indice)]);
         }
     }
 
@@ -345,7 +353,7 @@ class DemoSeeder extends Seeder
         ]);
     }
 
-    /** Un caduto legato alla serata in cui è morto. */
+    /** Un caduto legato alla sessione in cui è morto. */
     private function caduto(User $giocatore, ?GameSession $sessione): void
     {
         if (Character::where('name', 'Corvo')->exists()) {
@@ -373,7 +381,7 @@ class DemoSeeder extends Seeder
     {
         $definizioni = [
             ['Torneo di una notte', now()->addDays(9)->setTime(20, 30), 'Sala grande della gilda',
-                'Sei tavoli, un\'ora e mezza ciascuno, un vincitore. Portate i dadi che vi portano fortuna.'],
+                'Sei partite, un\'ora e mezza ciascuna, un vincitore. Portate i dadi che vi portano fortuna.'],
             ['One-shot: La Locanda Chiusa', now()->addWeeks(3)->setTime(21, 0), 'Da Marta',
                 'Livello 3, personaggi pregenerati. Serve solo presentarsi.'],
             ['Cena di fine season', now()->addWeeks(5)->setTime(20, 0), 'Trattoria del Ponte',
@@ -458,7 +466,7 @@ class DemoSeeder extends Seeder
             'author_id' => $autore?->getKey(),
             'title' => 'La season 2 è cominciata',
             'slug' => 'season-2',
-            'excerpt' => 'Due tavoli aperti, iscrizioni agli incarichi da stasera.',
+            'excerpt' => 'Due sessioni in programma, prenotazioni aperte da stasera.',
             'cover_path' => Placeholder::make('news', 'La season 2 è cominciata'),
             'published_at' => now()->subDays(3),
         ]);

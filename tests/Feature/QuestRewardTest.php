@@ -78,8 +78,6 @@ describe('il modulo del dungeon master', function () {
                 'reward_coins' => [],
                 'reward_items' => [],
                 'rewards' => null,
-                'min_participants' => 3,
-                'max_participants' => 5,
             ])
             ->call('create')
             ->assertHasFormErrors(['reward_coins.pp']);
@@ -97,8 +95,6 @@ describe('il modulo del dungeon master', function () {
                 'slug' => 'con-oro',
                 'description' => 'Una quest che paga in monete.',
                 'reward_coins' => ['gp' => 150, 'sp' => 5],
-                'min_participants' => 3,
-                'max_participants' => 5,
             ])
             ->call('create')
             ->assertHasNoFormErrors();

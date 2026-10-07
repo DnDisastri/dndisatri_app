@@ -4,33 +4,26 @@ namespace App\Livewire;
 
 use App\Actions\Characters\AdjustHitPoints;
 use App\Enums\Condition;
+use App\Enums\EncounterStatus;
 use App\Models\Character;
-use App\Models\GameSession;
+use App\Models\Encounter;
 use App\Models\Monster;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 /**
- * Il tracker di combattimento: l'iniziativa, i punti ferita, le condizioni, il
- * turno e il round — tutto quello che il DM tiene sotto mano mentre si combatte.
+ * Il tracker di combattimento: iniziativa, PF, condizioni, turno e round.
  *
- * Il principio è uno solo, e decide tutto: **cosa è reale**.
+ * - Eroe: legge e scrive i PF veri della scheda (`AdjustHitPoints`).
+ * - Mostro e ospite: PF e CA vivono solo nel json `combatants`.
  *
- * - Una riga **eroe** non ha PF suoi: legge quelli veri della scheda, e il
- *   danno che gli fai qui li scrive **davvero** (`AdjustHitPoints`, lo stesso
- *   della scheda) — il giocatore li vede calare sul suo telefono.
- * - Una riga **mostro** è effimera: PF e CA vivono con lo scontro, nel json
- *   della serata (`initiative`), e non toccano niente di condiviso.
- *
- * L'ordine è per iniziativa, dal più alto. Il turno si segue con un **id
- * stabile**, non con un indice: così riordinando la fila il puntatore non
- * scivola su un altro combattente.
+ * Il turno segue un id stabile, non un indice: riordinando la fila non scivola.
  */
 class CombatTracker extends Component
 {
     #[Locked]
-    public int $sessionId;
+    public int $encounterId;
 
     public int $round = 1;
 
@@ -65,17 +58,14 @@ class CombatTracker extends Component
     /** Quale mostro ha lo statblock esteso aperto nel modale. */
     public ?string $statblockAperto = null;
 
-    public function mount(GameSession $session): void
+    public function mount(Encounter $encounter): void
     {
         $this->assicuraDm();
 
-        $this->sessionId = $session->getKey();
-
-        $dati = $session->initiative ?? [];
-        $this->round = (int) ($dati['round'] ?? 1);
-        $this->turnoId = $dati['turnoId'] ?? null;
-        // `ordine` è la vecchia forma (solo iniziativa): si legge lo stesso.
-        $this->combattenti = $this->normalizza($dati['combattenti'] ?? $dati['ordine'] ?? []);
+        $this->encounterId = $encounter->getKey();
+        $this->round = (int) $encounter->round;
+        $this->turnoId = $encounter->turn_id;
+        $this->combattenti = $this->normalizza($encounter->combatants ?? []);
     }
 
     private function assicuraDm(): void
@@ -83,9 +73,24 @@ class CombatTracker extends Component
         abort_unless(auth()->user()?->isDm() ?? false, 403);
     }
 
-    private function sessione(): GameSession
+    private function scontro(): Encounter
     {
-        return GameSession::findOrFail($this->sessionId);
+        return Encounter::findOrFail($this->encounterId);
+    }
+
+    /** Si può riaprire: a volte il combattimento riprende dopo una pausa. */
+    public function concludi(): void
+    {
+        $this->assicuraDm();
+
+        $this->scontro()->forceFill(['status' => EncounterStatus::Ended, 'ended_at' => now()])->save();
+    }
+
+    public function riapri(): void
+    {
+        $this->assicuraDm();
+
+        $this->scontro()->forceFill(['status' => EncounterStatus::Running, 'ended_at' => null])->save();
     }
 
     /**
@@ -99,7 +104,7 @@ class CombatTracker extends Component
     {
         return array_values(array_map(fn (array $c) => [
             'id' => $c['id'] ?? (string) Str::uuid(),
-            'tipo' => in_array($c['tipo'] ?? null, ['pg', 'mostro'], true)
+            'tipo' => in_array($c['tipo'] ?? null, ['pg', 'mostro', 'ospite'], true)
                 ? $c['tipo']
                 : (($c['pg'] ?? false) ? 'pg' : 'mostro'),
             'nome' => mb_substr((string) ($c['nome'] ?? 'Vuoto'), 0, 80),
@@ -109,7 +114,7 @@ class CombatTracker extends Component
             'hpMax' => isset($c['hpMax']) ? (int) $c['hpMax'] : null,
             'ac' => isset($c['ac']) ? (int) $c['ac'] : null,
             // Lo statblock del mostro, quando viene dal bestiario: viaggia con
-            // la serata, così il modale esteso funziona anche senza ripescarlo.
+            // la sessione, così il modale esteso funziona anche senza ripescarlo.
             'speed' => isset($c['speed']) ? mb_substr((string) $c['speed'], 0, 40) : null,
             'attacks' => array_values($c['attacks'] ?? []),
             'traits' => isset($c['traits']) ? (string) $c['traits'] : null,
@@ -125,16 +130,28 @@ class CombatTracker extends Component
     // === Comporre la fila ===
 
     /**
-     * Mette in fila gli eroi del tavolo, a iniziativa zero: al DM resta da
-     * scrivere solo i tiri. Chi c'è già non entra due volte.
+     * Mette in fila gli eroi a iniziativa zero: i prenotati della sessione collegata,
+     * altrimenti i presenti, altrimenti chi ha giocato la campagna. Poi gli ospiti.
      */
-    public function popolaDalTavolo(): void
+    public function aggiungiEroi(): void
     {
         $this->assicuraDm();
 
         $giàDentro = collect($this->combattenti)->pluck('characterId')->filter()->all();
 
-        foreach ($this->sessione()->campaign->roster() as $pg) {
+        $scontro = $this->scontro();
+        $sessione = $scontro->session;
+        $eroi = $sessione?->bookedCharacters() ?? collect();
+
+        if ($eroi->isEmpty() && $sessione !== null) {
+            $eroi = $sessione->playedCharacters()->alive()->orderBy('name')->get();
+        }
+
+        if ($eroi->isEmpty()) {
+            $eroi = $scontro->campaign->roster();
+        }
+
+        foreach ($eroi as $pg) {
             if (in_array($pg->id, $giàDentro, true)) {
                 continue;
             }
@@ -145,6 +162,29 @@ class CombatTracker extends Component
                 'nome' => $pg->name,
                 'iniziativa' => 0,
                 'characterId' => $pg->id,
+                'hp' => null,
+                'hpMax' => null,
+                'ac' => null,
+                'condizioni' => [],
+            ];
+        }
+
+        // Gli ospiti della sessione non hanno una scheda: PF e CA li scrive il DM, come per un mostro.
+        $giàOspiti = collect($this->combattenti)->where('tipo', 'ospite')->pluck('nome')->all();
+
+        foreach ($sessione?->bookings()->holdingSeat()->whereNull('user_id')->get() ?? [] as $ospite) {
+            $nome = $ospite->guest_character ?: $ospite->guest_name;
+
+            if (in_array($nome, $giàOspiti, true)) {
+                continue;
+            }
+
+            $this->combattenti[] = [
+                'id' => (string) Str::uuid(),
+                'tipo' => 'ospite',
+                'nome' => $nome,
+                'iniziativa' => 0,
+                'characterId' => null,
                 'hp' => null,
                 'hpMax' => null,
                 'ac' => null,
@@ -199,13 +239,13 @@ class CombatTracker extends Component
         $this->riordinaEpersiste();
     }
 
-    /** Pesca un mostro dal bestiario: lo copia nella serata, PF a pieno. */
+    /** Pesca un mostro dal bestiario: lo copia nel combattimento, PF a pieno. */
     public function aggiungiDalBestiario(int $monsterId): void
     {
         $this->assicuraDm();
 
-        // Pubblico o della campagna di questa serata: gli altri non si pescano.
-        $monster = Monster::usableInCampaign($this->sessione()->campaign_id)
+        // Pubblico o della campagna di questo combattimento: gli altri non si pescano.
+        $monster = Monster::usableInCampaign($this->scontro()->campaign_id)
             ->whereKey($monsterId)
             ->first();
 
@@ -409,6 +449,17 @@ class CombatTracker extends Component
         if (preg_match('/^combattenti\.\d+\.iniziativa$/', $name)) {
             $this->riordinaEpersiste();
         }
+
+        // PF massimi e CA dell'ospite, scritti a mano: i PF attuali partono pieni.
+        if (preg_match('/^combattenti\.(\d+)\.(hpMax|ac)$/', $name, $m) && ($this->combattenti[$m[1]]['tipo'] ?? null) === 'ospite') {
+            $this->assicuraDm();
+            $c = &$this->combattenti[$m[1]];
+            $c['hpMax'] = max(0, min(999, (int) $c['hpMax']));
+            $c['ac'] = $c['ac'] === null || $c['ac'] === '' ? null : max(0, min(40, (int) $c['ac']));
+            $c['hp'] = $c['hp'] === null ? $c['hpMax'] : min((int) $c['hp'], $c['hpMax']);
+            unset($c);
+            $this->persiste();
+        }
     }
 
     private function riordinaEpersiste(): void
@@ -438,12 +489,16 @@ class CombatTracker extends Component
         // quello che si salva dev'essere della forma giusta (R4).
         $this->combattenti = $this->normalizza($this->combattenti);
 
-        $this->sessione()->forceFill([
-            'initiative' => [
-                'round' => $this->round,
-                'turnoId' => $this->turnoId,
-                'combattenti' => $this->combattenti,
-            ],
+        $scontro = $this->scontro();
+
+        $scontro->forceFill([
+            'round' => $this->round,
+            'turn_id' => $this->turnoId,
+            'combatants' => $this->combattenti,
+            // Il primo turno lo mette in corso: preparare non è ancora combattere.
+            'status' => $scontro->status === EncounterStatus::Prepared && $this->turnoId !== null
+                ? EncounterStatus::Running
+                : $scontro->status,
         ])->save();
     }
 
@@ -460,11 +515,12 @@ class CombatTracker extends Component
         // Il bestiario da pescare: cerca solo col pannello aperto e qualcosa scritto.
         $mostriTrovati = ($this->mostraAggiungiMostro && trim($this->cercaMostro) !== '')
             ? Monster::search(trim($this->cercaMostro))
-                ->usableInCampaign($this->sessione()->campaign_id)
+                ->usableInCampaign($this->scontro()->campaign_id)
                 ->orderBy('name')->limit(8)->get()
             : collect();
 
         return view('livewire.combat-tracker', [
+            'scontro' => $this->scontro(),
             'personaggi' => $personaggi,
             'condizioniDisponibili' => Condition::elenco(),
             'mostriTrovati' => $mostriTrovati,

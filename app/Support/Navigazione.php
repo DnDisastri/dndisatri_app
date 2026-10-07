@@ -27,13 +27,13 @@ final class Navigazione
             return [
                 'sinistra' => [
                     self::voce('Campagne', 'campaigns.index', Icon::Campaigns),
-                    self::voce('Serate', 'sessions.index', Icon::Sessions),
+                    self::voce('Sessioni', 'sessions.index', Icon::Sessions),
                 ],
-                'centro' => self::voce('Regia', 'dm.home', Icon::DmRequests),
+                'centro' => self::voce('Area Master', 'dm.home', Icon::DmRequests, ['dm.home', 'dm.npcs', 'encounters.*']),
                 'destra' => [
                     self::voce('Gilda', 'guild.index', Icon::Guild, ['guild.*', 'fallen.*']),
                     // Link esterno all'app: non si accende mai.
-                    ['nome' => 'Scrivania', 'href' => '/admin', 'icona' => Icon::Panel, 'attiva' => false],
+                    ['nome' => 'Pannello', 'href' => '/admin', 'icona' => Icon::Panel, 'attiva' => false],
                 ],
             ];
         }
@@ -73,6 +73,10 @@ final class Navigazione
             self::voce('Chi siamo', 'about', Icon::General),
             self::voce('Segnala un problema', 'bug-reports.create', Icon::BugReports),
         ];
+
+        if ($utente->isDm()) {
+            array_unshift($voci, self::voce('Manuale', 'dm.manual', Icon::Manual, ['dm.manual']));
+        }
 
         if ($utente->isDm() || $utente->isAdmin()) {
             $voci[] = ['nome' => 'Pannello', 'href' => '/admin', 'icona' => Icon::Panel, 'attiva' => false];

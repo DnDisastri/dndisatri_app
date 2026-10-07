@@ -447,6 +447,40 @@ if (righeBottino) {
     });
 }
 
+// Listino del Manuale: ricerca e categoria senza ricaricare
+
+const listino = document.querySelector('[data-listino]');
+
+if (listino) {
+    const cerca = listino.querySelector('[data-listino-cerca]');
+    const categoria = listino.querySelector('[data-listino-categoria]');
+    const vuoto = listino.querySelector('[data-listino-vuoto]');
+
+    const filtra = () => {
+        const testo = cerca.value.trim().toLowerCase();
+        let visibili = 0;
+
+        listino.querySelectorAll('[data-listino-gruppo]').forEach((gruppo) => {
+            const nelGruppo = !categoria.value || gruppo.dataset.listinoGruppo === categoria.value;
+            let qui = 0;
+
+            gruppo.querySelectorAll('[data-listino-voce]').forEach((voce) => {
+                const mostra = nelGruppo && voce.dataset.listinoVoce.includes(testo);
+                voce.hidden = !mostra;
+                if (mostra) qui++;
+            });
+
+            gruppo.hidden = qui === 0;
+            visibili += qui;
+        });
+
+        vuoto.hidden = visibili > 0;
+    };
+
+    cerca.addEventListener('input', filtra);
+    categoria.addEventListener('change', filtra);
+}
+
 // Conferma prima dei moduli `data-conferma`
 
 const conferma = document.getElementById('conferma');

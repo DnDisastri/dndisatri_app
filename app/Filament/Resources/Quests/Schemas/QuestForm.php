@@ -49,7 +49,7 @@ class QuestForm
                         ->required()
                         ->maxLength(255)
                         ->unique(ignoreRecord: true)
-                        ->helperText('Si scrive da solo dal titolo. Modificalo solo se vuoi: compare nel link dell\'incarico.'),
+                        ->helperText('Si scrive da solo dal titolo. Modificalo solo se vuoi: compare nel link della quest.'),
 
                     Textarea::make('description')
                         ->label('Descrizione')
@@ -94,28 +94,7 @@ class QuestForm
                 ])
                 ->columns(2),
 
-            Section::make('Quanti giocatori')
-                ->description('Il minimo dice se la serata sta in piedi; non impedisce niente, la decisione resta tua.')
-                ->schema([
-                    TextInput::make('min_participants')
-                        ->label('Minimo')
-                        ->numeric()
-                        ->minValue(1)
-                        ->required()
-                        ->default(3)
-                        ->helperText('Sotto questo numero il tavolo probabilmente non vale la serata.'),
-
-                    TextInput::make('max_participants')
-                        ->label('Massimo')
-                        ->numeric()
-                        ->minValue(1)
-                        ->required()
-                        ->default(5)
-                        ->helperText('I posti veri. Chi arriva dopo entra in lista d\'attesa.'),
-                ])
-                ->columns(2),
-
-            // `completed_at`, `closed_at` e `night_confirmed_at` passano dalle azioni di dominio, mai da un modulo.
+            // `completed_at`, `closed_at` e la sessione passano dalle azioni di dominio: la sessione si sceglie dalla pagina della quest, che avvisa gli interessati.
         ])->columns(1);
     }
 }

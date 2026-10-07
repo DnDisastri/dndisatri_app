@@ -27,7 +27,6 @@ class QuestFactory extends Factory
             'rewards' => null,
             'difficulty' => fake()->randomElement(QuestDifficulty::cases()),
             'type' => QuestType::Campaign,
-            'max_participants' => 4,
             'completed_at' => null,
             'closed_at' => null,
         ];
@@ -36,11 +35,6 @@ class QuestFactory extends Factory
     public function inCampaign(Campaign $campaign): static
     {
         return $this->state(fn () => ['campaign_id' => $campaign->getKey()]);
-    }
-
-    public function slots(int $max): static
-    {
-        return $this->state(fn () => ['max_participants' => $max]);
     }
 
     /** Andata a buon fine. */

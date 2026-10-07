@@ -5,12 +5,9 @@
 
 @php
     use App\Enums\Icon;
-    use App\Enums\QuestSeatStatus;
 
     $campagna = $quest->campaign;
-    $conduce = auth()->user()->can('conclude', $quest)
-        || auth()->user()->can('confirmNight', $quest)
-        || auth()->user()->can('promote', $quest);
+    $conduce = auth()->user()->can('conclude', $quest) || auth()->user()->can('schedule', $quest);
 @endphp
 
 <x-pagina class="space-y-6">
@@ -132,145 +129,71 @@
 
     <div class="space-y-6">
     <x-panel>
-        <div class="flex items-baseline justify-between gap-3">
-            <h3 class="flex items-center gap-2 text-lg font-semibold text-fg">
-                <x-icona :is="Icon::Characters" class="h-5 w-5" /> Chi c'è
-            </h3>
+        <h3 class="flex items-center gap-2 text-lg font-semibold text-fg">
+            <x-icona :is="Icon::Sessions" class="h-5 w-5" /> Quando si gioca
+        </h3>
 
-            <p class="text-sm text-muted">
-                {{ $quest->participantCount() }} / {{ $quest->max_participants }} posti
+        @if ($quest->isScheduled())
+            <p class="mt-2 text-sm text-fg">
+                Nella sessione di {{ $quest->session->played_at->translatedFormat('l j F, H:i') }}.
             </p>
-        </div>
+            <x-button size="sm" class="mt-3" :href="route('sessions.show', $quest->session)">Vai alla sessione e prenotati</x-button>
+        @elseif ($quest->isActive())
+            <p class="mt-2 text-sm text-muted">
+                Il DM non l'ha ancora messa in una sessione. Se ti interessa, segnala: quando la mette, ti arriva un avviso.
+            </p>
+        @endif
 
-{{-- Il minimo è informativo: indica se la serata è sostenibile, ma la conferma resta una decisione del DM. --}}
         @if ($quest->isActive())
-            <p class="mt-1 text-sm">
-                @if ($quest->isNightConfirmed())
-                    <span class="font-semibold text-fg">La serata si fa.</span>
-                    <span class="text-muted">I posti sono confermati.</span>
-                @elseif ($quest->missingToMinimum() > 0)
-                    <span class="text-muted">
-{{-- Singolare e plurale sono gestiti esplicitamente perché l'inflector di Laravel è orientato all'inglese. --}}
-                        @if ($quest->missingToMinimum() === 1)
-                            Manca 1 giocatore.
-                        @else
-                            Mancano {{ $quest->missingToMinimum() }} giocatori.
-                        @endif
-                    </span>
-                @else
-                    <span class="text-muted">Si può fare: manca solo che il dungeon master lo dica.</span>
-                @endif
-            </p>
-        @endif
-
-        @if ($seatHolders->isNotEmpty())
-            <ul class="mt-3 space-y-1">
-                @foreach ($seatHolders as $partecipante)
-                    <li class="flex items-center justify-between gap-3 text-sm">
-                        <span class="text-fg">{{ $partecipante->name }}</span>
-                        <span class="text-xs text-muted">
-                            {{ QuestSeatStatus::from($partecipante->pivot->status)->label() }}
-                        </span>
-                    </li>
-                @endforeach
-            </ul>
-        @else
-            <p class="mt-3 text-sm italic text-muted">Ancora nessuno.</p>
-        @endif
-{{-- La lista d'attesa resta separata dai partecipanti perché non occupa posti. --}}
-        @if ($waiting->isNotEmpty())
-            <div class="mt-4 border-t border-line pt-3">
-                <p class="text-xs uppercase tracking-wide text-muted">
-                    In lista d'attesa, in ordine di arrivo
+            <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
+                <p class="text-sm text-muted">
+                    {{ $interessati->count() === 1 ? 'Interessa a 1 giocatore' : 'Interessa a '.$interessati->count().' giocatori' }}
                 </p>
-                <ol class="mt-2 space-y-1">
-                    @foreach ($waiting as $inFila)
-                        <li class="text-sm text-muted">{{ $loop->iteration }}. {{ $inFila->name }}</li>
-                    @endforeach
-                </ol>
-            </div>
-        @endif
-    </x-panel>
 
-    @if ($quest->isActive())
-        <x-panel>
-            @if ($mioPosto?->takesSeat())
-{{-- `mine()` formula lo stato in seconda persona; `label()` resta per gli altri partecipanti. --}}
-                <p class="text-sm font-semibold text-fg">{{ $mioPosto->mine() }}</p>
-                <p class="mt-1 text-sm text-muted">
-                    @if ($mioPosto === QuestSeatStatus::Confirmed)
-                        Il posto è tuo: ci vediamo al tavolo.
-                    @else
-                        Il posto è tuo quando il dungeon master conferma che la serata si fa.
-                    @endif
-                </p>
-            @elseif ($mioPosto === QuestSeatStatus::Waiting)
-                <p class="text-sm font-semibold text-on-accent-soft">Sei in lista d'attesa</p>
-                <p class="mt-1 text-sm text-muted">
-                    Se qualcuno si tira indietro, il dungeon master ti chiama.
-                </p>
-            @endif
-
-            <div class="mt-3 flex flex-wrap gap-2">
-                @can('withdraw', $quest)
-                    <form method="POST" action="{{ route('quests.withdraw', $quest) }}">
+                @can('interest', $quest)
+                    <form method="POST" action="{{ route('quests.interest', $quest) }}">
                         @csrf
-                        <x-button variant="quiet">Mi tiro indietro</x-button>
-                    </form>
-                @endcan
-
-                @can('book', $quest)
-                    <form method="POST" action="{{ route('quests.book', $quest) }}">
-                        @csrf
-
-                        <x-button>
-                            {{ $quest->isFull() ? 'Entro in lista d\'attesa' : 'Voglio partecipare' }}
+                        <x-button :variant="$miInteressa ? 'quiet' : 'primary'" size="sm">
+                            {{ $miInteressa ? 'Non mi interessa più' : 'Mi interessa' }}
                         </x-button>
                     </form>
                 @endcan
             </div>
-        </x-panel>
-    @endif
+
+            @if ($interessati->isNotEmpty())
+                <p class="mt-2 text-sm text-fg">{{ $interessati->pluck('name')->join(', ', ' e ') }}</p>
+            @endif
+        @endif
+    </x-panel>
 
     @if ($conduce && $quest->isActive())
 {{-- Usa `ring` invece di una seconda classe `border-*` per evitare conflitti di precedenza nel CSS compilato. --}}
         <x-panel class="ring-1 ring-active">
             <h3 class="text-lg font-semibold text-fg">Conduci tu</h3>
 
-            @can('confirmNight', $quest)
-                <form method="POST" action="{{ route('quests.confirm-night', $quest) }}" class="mt-3">
+            @can('schedule', $quest)
+                <form method="POST" action="{{ route('quests.schedule', $quest) }}" class="mt-3">
                     @csrf
-                    <x-button>La serata si fa</x-button>
-                    <span class="ml-2 text-xs text-muted">
-                        Tutti i prenotati ricevono la notifica che il posto è confermato.
-                        @unless ($quest->hasMinimum())
-                            Siete sotto il minimo di {{ $quest->min_participants }}.
-                        @endunless
-                    </span>
-                </form>
-            @endcan
+                    <label for="game_session_id" class="text-xs uppercase tracking-wide text-muted">In quale sessione si gioca</label>
 
-            @can('promote', $quest)
-                @if ($waiting->isNotEmpty())
-                    <form method="POST" action="{{ route('quests.promote', $quest) }}"
-                          class="mt-4 border-t border-line pt-3">
-                        @csrf
-                        <label for="user_id" class="text-xs uppercase tracking-wide text-muted">
-                            Chiama dall'attesa
-                        </label>
-
+                    @if ($sessioni->isEmpty() && ! $quest->isScheduled())
+                        <p class="mt-1 text-sm text-muted">Nessuna sessione in programma per questa campagna: creala dal Pannello.</p>
+                    @else
                         <div class="mt-2 flex flex-wrap items-center gap-2">
-                            <select name="user_id" id="user_id" required
-                                    class="rounded-md border border-line bg-surface px-3 py-2 text-sm text-fg">
-                                @foreach ($waiting as $inFila)
-                                    <option value="{{ $inFila->id }}">{{ $inFila->name }}</option>
+                            <select name="game_session_id" id="game_session_id"
+                                    class="min-w-0 max-w-full flex-1 rounded-md border border-line bg-surface px-3 py-2 text-sm text-fg">
+                                <option value="">Non ancora</option>
+                                @foreach ($sessioni as $sessione)
+                                    <option value="{{ $sessione->id }}" @selected($quest->game_session_id === $sessione->id)>
+                                        {{ $sessione->played_at->translatedFormat('D j F, H:i') }}{{ filled($sessione->title) ? ' · '.$sessione->title : '' }}
+                                    </option>
                                 @endforeach
                             </select>
-
-                            <x-button variant="quiet">Fallo entrare</x-button>
+                            <x-button variant="secondary">Salva</x-button>
                         </div>
-                    </form>
-                @endif
+                        <p class="mt-1 text-xs text-muted">Chi l'ha segnata con «Mi interessa» riceve un avviso.</p>
+                    @endif
+                </form>
             @endcan
 {{-- La conclusione è irreversibile; il form resta dietro `<details>` per ridurre attivazioni accidentali. --}}
             @can('conclude', $quest)

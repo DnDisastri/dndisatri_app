@@ -71,21 +71,23 @@ describe('il recap', function () {
         expect($session->fresh()->hasRecap())->toBeFalse();
     });
 
-    it('lo leggono tutti, anche chi gioca a un altro tavolo', function () {
+    it('lo leggono tutti, anche chi gioca in un\x27altra campagna', function () {
         $session = GameSession::factory()->create();
 
         expect(User::factory()->player()->create()->can('view', $session))->toBeTrue()
             ->and(User::factory()->dm()->create()->can('view', $session))->toBeTrue();
     });
 
-    it('lo scrivono il DM di quel tavolo e gli admin, non gli altri DM', function () {
+    it('lo scrivono qualsiasi DM e gli admin, non i giocatori', function () {
         $owner = User::factory()->dm()->create();
         $session = GameSession::factory()->inCampaign(Campaign::factory()->runBy($owner)->create())->create();
 
         expect($owner->can('writeRecap', $session))->toBeTrue()
             ->and(User::factory()->admin()->create()->can('writeRecap', $session))->toBeTrue()
-            ->and(User::factory()->dm()->create()->can('writeRecap', $session))->toBeFalse()
-            ->and(User::factory()->player()->create()->can('writeRecap', $session))->toBeFalse();
+            ->and(User::factory()->dm()->create()->can('writeRecap', $session))->toBeTrue()
+            ->and(User::factory()->dm()->create()->can('recordAttendance', $session))->toBeTrue()
+            ->and(User::factory()->player()->create()->can('writeRecap', $session))->toBeFalse()
+            ->and(User::factory()->player()->create()->can('recordAttendance', $session))->toBeFalse();
     });
 
     it('si può scrivere anche a campagna conclusa', function () {
@@ -158,7 +160,7 @@ describe('le presenze', function () {
             ->toThrow(InvalidArgumentException::class, 'non è di quel giocatore');
     });
 
-    it('le segna il DM del tavolo, non i giocatori', function () {
+    it('le segna il DM della campagna, non i giocatori', function () {
         $owner = User::factory()->dm()->create();
         $session = GameSession::factory()->inCampaign(Campaign::factory()->runBy($owner)->create())->create();
 
@@ -175,7 +177,7 @@ describe('il capogilda', function () {
         expect($quest->load('campaign')->questGiver())->toBe('Ser Baldrico');
     });
 
-    it('vale per tutte le quest del tavolo, senza copie da allineare', function () {
+    it('vale per tutte le quest della campagna, senza copie da allineare', function () {
         $campaign = Campaign::factory()->create(['quest_giver' => 'Ser Baldrico']);
         Quest::factory()->inCampaign($campaign)->count(3)->create();
 
@@ -197,7 +199,7 @@ describe('le sessioni e la campagna', function () {
         expect(GameSession::count())->toBe(0);
     });
 
-    it('le crea il DM del tavolo, e solo se la campagna è aperta', function () {
+    it('le crea il DM della campagna, e solo se la campagna è aperta', function () {
         $owner = User::factory()->dm()->create();
         $active = Campaign::factory()->runBy($owner)->create();
         $ended = Campaign::factory()->runBy($owner)->ended()->create();

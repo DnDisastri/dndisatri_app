@@ -33,6 +33,7 @@ enum Icon: string implements Icona, ScalableIcon
     // Menu utente.
     case Profile = 'profile';
     case Faq = 'faq';
+    case Manual = 'manual';
     case Install = 'install';
     case Panel = 'panel';
     case Logout = 'logout';
@@ -135,6 +136,7 @@ enum Icon: string implements Icona, ScalableIcon
 
             self::Profile => Phosphor::UserCircle,
             self::Faq => Phosphor::Info,
+            self::Manual => Phosphor::BookOpenText,
             self::Install => Phosphor::DownloadSimple,
             self::Panel => Phosphor::SlidersHorizontal,
             self::Logout => Phosphor::SignOut,

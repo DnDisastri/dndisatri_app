@@ -19,7 +19,7 @@ class CampaignForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Il tavolo')
+            Section::make('La campagna')
                 ->schema([
                     Grid::make(3)
                         ->columnSpanFull()
@@ -50,6 +50,16 @@ class CampaignForm
                                 // Default: la stagione più alta già esistente.
                                 ->default(fn () => max(Campaign::seasons() ?: [1]))
                                 ->helperText('Serve a raggruppare le campagne nell\'elenco.'),
+
+                            TextInput::make('price_modifier')
+                                ->label('Prezzi del Manuale')
+                                ->numeric()
+                                ->required()
+                                ->default(0)
+                                ->minValue(Campaign::PRICE_MODIFIER_MIN)
+                                ->maxValue(Campaign::PRICE_MODIFIER_MAX)
+                                ->suffix('%')
+                                ->helperText('Rincara o sconta il listino del Manuale per questa campagna, da -50 a +100. L\'Emporio non cambia.'),
                         ]),
 
                     FileUpload::make('cover_path')
@@ -123,7 +133,7 @@ class CampaignForm
                 ->columns(2),
 
             Section::make('Il capogilda')
-                ->description('Il personaggio che affida le quest, e che di fatto fa succedere le serate. Vale per tutte le quest del tavolo.')
+                ->description('Il personaggio che affida le quest, e che di fatto fa succedere le sessioni. Vale per tutte le quest della campagna.')
                 ->schema([
                     TextInput::make('quest_giver')
                         ->label('Nome')

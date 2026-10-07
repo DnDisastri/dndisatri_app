@@ -11,7 +11,7 @@ use Illuminate\View\View;
 
 class HomeController extends Controller
 {
-    /** La Home: novità, campagne, tavoli, quest e news del gruppo. */
+    /** La Home: novità, campagne, sessioni, quest e news del gruppo. */
     public function index(): View
     {
         // Ospiti e utenti condividono `/`: due rotte sullo stesso indirizzo non si possono dichiarare.
@@ -37,13 +37,11 @@ class HomeController extends Controller
 
         $quests = Quest::query()
             ->active()
-            ->withCount('participants')
-            ->with('campaign')
+            ->withCount('interested')
+            ->with(['campaign', 'session'])
             ->latest('id')
-            ->get()
-            // Posti liberi in PHP: `freeSlots()` è già la regola, non si duplica in SQL.
-            ->filter(fn (Quest $quest) => ! $quest->isFull())
-            ->take(3);
+            ->limit(3)
+            ->get();
 
         $posts = Post::published()->limit(3)->get();
 
@@ -88,8 +86,8 @@ class HomeController extends Controller
         return $file;
     }
 
-    /** Una frase tipo «Due eventi in arrivo e tre incarichi aperti». */
-    private function novita(int $eventi, int $tavoli, int $incarichi): string
+    /** Una frase tipo «Due eventi in arrivo e tre quest aperte». */
+    private function novita(int $eventi, int $sessioni, int $incarichi): string
     {
         $pezzi = [];
 
@@ -97,8 +95,8 @@ class HomeController extends Controller
             $pezzi[] = $eventi === 1 ? 'un evento in arrivo' : "{$eventi} eventi in arrivo";
         }
 
-        if ($tavoli > 0) {
-            $pezzi[] = $tavoli === 1 ? 'un tavolo in programma' : "{$tavoli} tavoli in programma";
+        if ($sessioni > 0) {
+            $pezzi[] = $sessioni === 1 ? 'una sessione in programma' : "{$sessioni} sessioni in programma";
         }
 
         if ($incarichi > 0) {
