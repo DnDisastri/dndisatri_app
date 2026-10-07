@@ -35,7 +35,7 @@ use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
 #[Fillable([
-    'user_id', 'name', 'class', 'subclass', 'race', 'subrace', 'background', 'story',
+    'user_id', 'name', 'class', 'subclass', 'race', 'subrace', 'background', 'story', 'private_story',
     'level', 'hit_die', 'str', 'dex', 'con', 'int', 'wis', 'cha',
     'speed', 'hp_max', 'hp_current', 'hp_temp', 'pp', 'gp', 'sp', 'cp',
     'death_save_successes', 'death_save_failures',

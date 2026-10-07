@@ -35,6 +35,10 @@
                         Un ritratto del personaggio. Anche questa la vede un dungeon master
                         prima che compaia in Gilda.
                     </p>
+                    <p class="mb-1 text-xs text-muted">
+                        Meglio quadrata, almeno 400 × 400 px: viene mostrata in un riquadro e
+                        i bordi di una foto rettangolare restano tagliati. JPG, PNG o WebP, fino a 4 MB.
+                    </p>
                     <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp"
                            class="w-full rounded-md border-2 border-line bg-surface px-3 py-2 text-sm text-fg
                                   file:mr-3 file:rounded file:border-0 file:bg-surface file:px-3 file:py-1
@@ -46,7 +50,7 @@
                 <x-field name="background" label="Background" :value="$character->background" />
 
                 <div>
-                    <label for="story" class="mb-1 block text-sm font-medium text-fg">Storia</label>
+                    <label for="story" class="mb-1 block text-sm font-medium text-fg">Storia pubblica</label>
                     <p class="mb-1 text-xs text-muted">
                         Chi è il tuo personaggio, in breve. La leggono gli altri giocatori dalla
                         Gilda: è l'unica parte della scheda pensata per essere letta da fuori.
@@ -54,6 +58,19 @@
                     <textarea id="story" name="story" rows="4" maxlength="2000"
                               class="w-full rounded-md border-2 border-line bg-surface px-3 py-2 text-fg focus:border-active focus:outline-none">{{ old('story', $character->story) }}</textarea>
                     @error('story')
+                        <p class="mt-1 text-sm text-on-danger-soft">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div>
+                    <label for="private_story" class="mb-1 block text-sm font-medium text-fg">Storia privata</label>
+                    <p class="mb-1 text-xs text-muted">
+                        Segreti, passato nascosto, quello che il tuo personaggio non racconta.
+                        La leggono solo i dungeon master, gli altri giocatori no.
+                    </p>
+                    <textarea id="private_story" name="private_story" rows="4" maxlength="5000"
+                              class="w-full rounded-md border-2 border-line bg-surface px-3 py-2 text-fg focus:border-active focus:outline-none">{{ old('private_story', $character->private_story) }}</textarea>
+                    @error('private_story')
                         <p class="mt-1 text-sm text-on-danger-soft">{{ $message }}</p>
                     @enderror
                 </div>

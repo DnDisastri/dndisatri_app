@@ -38,7 +38,7 @@ final class ApprovePendingChange
         'speed', 'hp_max', 'hp_current', 'hp_temp',
         'saving_throws', 'skills', 'spell_ability',
         'species_traits', 'class_features', 'subclass_features', 'background_feature', 'notes',
-        'story', 'photo_path',
+        'story', 'private_story', 'photo_path',
     ];
 
     private const LEVEL_UP = [
@@ -220,7 +220,7 @@ final class ApprovePendingChange
         $wanted = MarketItem::whereKey($take['market_item_id'] ?? null)->lockForUpdate()->first();
 
         if ($wanted === null || ! $wanted->isAvailable()) {
-            throw new RuntimeException("«{$take['name']}» non è più disponibile nel negozio: rifiuta il baratto.");
+            throw new RuntimeException("«{$take['name']}» non è più disponibile nell'Emporio: rifiuta il baratto.");
         }
 
         $given = $character->items()

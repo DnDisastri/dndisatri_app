@@ -30,9 +30,18 @@ describe('un personaggio appena creato', function () {
             ->and($character->hit_die)->toBe(10);
     });
 
+    it('tiene storia pubblica e privata', function () {
+        $character = creaGuerriero(User::factory()->player()->create(), [
+            'story' => 'Soldato in congedo.',
+            'privateStory' => 'Ha disertato prima dell\'ultima battaglia.',
+        ]);
+
+        expect($character->story)->toBe('Soldato in congedo.')
+            ->and($character->private_story)->toBe('Ha disertato prima dell\'ultima battaglia.');
+    });
+
     it('somma i bonus di specie ai punteggi comprati', function () {
         $character = creaGuerriero(User::factory()->player()->create());
-
 
         expect($character->str)->toBe(17)
             ->and($character->con)->toBe(15)
@@ -50,7 +59,7 @@ describe('un personaggio appena creato', function () {
         $character = creaGuerriero(User::factory()->player()->create());
 
         expect($character->saving_throws)->toBe(['str' => true, 'con' => true])
-            ->and($character->savingThrow(Ability::Str))->toBe(5); 
+            ->and($character->savingThrow(Ability::Str))->toBe(5);
     });
 
     it('unisce le abilità della classe a quelle del background', function () {
@@ -85,7 +94,7 @@ describe('equipaggiamento iniziale', function () {
         expect($character->equipped(EquipmentSlot::Armor)->name)->toBe('Cotta di Maglia')
             ->and($character->equipped(EquipmentSlot::Shield)->name)->toBe('Scudo')
             ->and($character->equipped(EquipmentSlot::Weapon)->name)->toBe('Spada Lunga')
-            ->and($character->armorClass())->toBe(18); 
+            ->and($character->armorClass())->toBe(18);
     });
 });
 
