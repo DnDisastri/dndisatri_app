@@ -1,10 +1,8 @@
 <div>
-    <p class="mb-4 text-sm text-muted">
-        Benvenuto nel negozio della gilda! Trova equipaggiamento, strumenti e oggetti utili per affrontare al meglio le tue prossime quest.
-    </p>
+    <x-intro :page="\App\Enums\IntroPage::Shop" class="mb-4" />
     <x-market-nav :character="$character" :characters="$this->myCharacters()" :esito="$esito" />
 
-    <x-market-search placeholder="Cerca nel negozio">
+    <x-market-search placeholder="Cerca nell'Emporio">
         <select wire:model.live="ordine" aria-label="Ordina" title="Ordina"
                 class="shrink-0 rounded-xl border border-line bg-surface px-2 py-2 text-sm text-fg focus:border-active focus:outline-none">
             @foreach (\App\Livewire\Market\Shop::ORDINI as $valore => $etichetta)
@@ -17,7 +15,7 @@
     @php
         $sezioni = $preferiti->isEmpty()
             ? [null => $items]
-            : ['I tuoi preferiti' => $preferiti, 'Tutto il negozio' => $items];
+            : ['I tuoi preferiti' => $preferiti, 'Tutto l\'Emporio' => $items];
     @endphp
 
     @foreach ($sezioni as $titolo => $elenco)
@@ -57,7 +55,7 @@
                     @if ($cerca !== '')
                         Niente che somigli a «{{ $cerca }}».
                     @elseif ($preferiti->isEmpty())
-                        Il negozio è vuoto.
+                        L'Emporio è vuoto.
                     @else
                         Non c'è altro oltre ai tuoi preferiti.
                     @endif
@@ -109,7 +107,7 @@
 
                 @if ($character)
                     @if (! $oggetto->isAvailable())
-                        <x-note>Esaurito. Tornerà quando il capogilda rifornisce il negozio.</x-note>
+                        <x-note>Esaurito. Tornerà quando il capogilda rifornisce l'Emporio.</x-note>
                     @else
                         {{-- Totale solo se più d'uno, quanto manca solo se manca.
                              Il pulsante resta premibile anche senza soldi: la riga spiega perché. --}}
@@ -141,7 +139,7 @@
                                 </p>
                             @else
                                 <p class="text-xs text-muted">
-                                    Dai un tuo oggetto che vale almeno il prezzo; non c'è resto. Lo approva un DM.
+                                    Dai un tuo oggetto che vale almeno il prezzo; non c'è resto. Lo approva un dungeon master.
                                 </p>
                                 <select wire:model="offerta" aria-label="Oggetto da offrire"
                                         class="w-full rounded-md border border-line bg-page px-2 py-2 text-fg">

@@ -47,9 +47,7 @@
             <h3 class="mb-1 flex items-center justify-center gap-2 text-center text-xl text-fg">
                 Hall of Fallen Heroes <x-icona :is="\App\Enums\Icon::Fallen" class="h-6 w-6" />
             </h3>
-            <p class="mb-6 text-center text-sm italic text-muted">
-                «In memoria di coloro che hanno dato tutto per la causa…»
-            </p>
+            <p class="mb-6 text-center text-sm italic text-muted">{!! nl2br(e(\App\Enums\IntroPage::Fallen->text())) !!}</p>
 
             <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                 @foreach ($fallen as $character)

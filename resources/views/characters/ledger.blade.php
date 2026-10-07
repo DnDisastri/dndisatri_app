@@ -7,11 +7,7 @@
     </h2>
 
     @if ($filtrabile && $tutti)
-        <p class="mb-6 text-sm text-muted">
-            Ogni movimento di tutti i personaggi: bottini, acquisti, vendite,
-            scambi, cambi di monete e le monete date dai dungeon master. È da qui
-            che si capisce dove è finito qualcosa.
-        </p>
+        <x-intro :page="\App\Enums\IntroPage::Ledger" class="mb-6" />
     @else
         <p class="mb-6 text-sm text-muted">
             Ogni movimento di {{ $character->name }}: bottini, acquisti, vendite,

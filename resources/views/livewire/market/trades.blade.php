@@ -1,7 +1,5 @@
 <div>
-    <p class="mb-4 text-sm text-muted">
-        Gestisci le tue richieste di scambio, controlla le offerte ricevute e segui gli scambi in corso.
-    </p>
+    <x-intro :page="\App\Enums\IntroPage::Trades" class="mb-4" />
     <x-market-nav :character="$character" :characters="$this->myCharacters()" :esito="$esito" />
 
     <div class="xl:grid xl:grid-cols-2 xl:items-start xl:gap-8">
@@ -206,7 +204,7 @@
             {{-- Il pulsante dice se parte una proposta o una richiesta. --}}
             @if ($chiedo !== '')
                 <p class="mt-4 text-center text-xs text-muted">
-                    Se ce l'ha, ti manderà lui la proposta da confermare.
+                    Se ce l'ha, sarà l'altro giocatore a mandarti la proposta da confermare.
                 </p>
             @endif
 
@@ -254,7 +252,7 @@
                 @enderror
 
                 <p class="text-center text-xs text-muted">
-                    Parte una proposta: la roba si muove quando lui conferma.
+                    Parte una proposta: lo scambio avviene quando l'altro giocatore conferma.
                 </p>
 
                 <x-button full type="button" wire:click="accettaRichiesta">Manda la proposta</x-button>

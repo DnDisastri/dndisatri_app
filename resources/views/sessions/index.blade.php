@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Calendario')
+@section('title', 'Sessioni')
 
 @section('content')
 
@@ -17,9 +17,9 @@
 
     <div>
         <h2 class="flex items-center gap-2 text-2xl text-fg">
-            <x-icona :is="Icon::Sessions" class="h-7 w-7" /> Calendario
+            <x-icona :is="Icon::Sessions" class="h-7 w-7" /> Sessioni
         </h2>
-        <p class="mt-1 text-sm text-muted">Quando si gioca, tavolo per tavolo.</p>
+        <x-intro :page="\App\Enums\IntroPage::Sessions" class="mt-1" />
     </div>
 
     <div class="space-y-6 lg:grid lg:grid-cols-5 lg:items-start lg:gap-8 lg:space-y-0">
@@ -55,7 +55,7 @@
 
                 @if ($quelGiorno->isNotEmpty())
                     <a href="#g-{{ $giorno->toDateString() }}"
-                       title="{{ $quelGiorno->count() }} {{ $quelGiorno->count() === 1 ? 'serata' : 'serate' }}"
+                       title="{{ $quelGiorno->count() }} {{ $quelGiorno->count() === 1 ? 'sessione' : 'sessioni' }}"
                        @class([
                            'flex aspect-square items-center justify-center rounded-lg text-sm font-bold transition',
                            'bg-active text-on-active hover:opacity-90',
@@ -73,10 +73,10 @@
 
     <section class="lg:col-span-3">
         <h3 class="mb-3 font-display text-lg font-normal capitalize text-fg">
-            Le serate di {{ $mese->translatedFormat('F') }}
+            Le sessioni di {{ $mese->translatedFormat('F') }}
         </h3>
 
-{{-- Solo la prima serata del giorno riceve l'ancora, così ogni `id` resta univoco. --}}
+{{-- Solo la prima sessione del giorno riceve l'ancora, così ogni `id` resta univoco. --}}
         @php $ancorati = []; @endphp
 
         <div class="space-y-2">
@@ -104,7 +104,7 @@
                     </span>
                 </x-card>
             @empty
-                <x-empty>Nessuna serata in questo mese.</x-empty>
+                <x-empty>Nessuna sessione in questo mese.</x-empty>
             @endforelse
         </div>
     </section>

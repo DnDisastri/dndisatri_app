@@ -9,7 +9,7 @@
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="Icon::News" class="h-7 w-7" /> News
     </h2>
-    <p class="mb-6 text-sm text-muted">Gli annunci della gilda, dal più recente.</p>
+    <x-intro :page="\App\Enums\IntroPage::News" class="mb-6" />
 
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         @forelse ($posts as $post)

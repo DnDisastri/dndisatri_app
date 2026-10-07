@@ -14,10 +14,7 @@
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="\App\Enums\Icon::Ledger" class="h-7 w-7" /> Libro Mastro
     </h2>
-    <p class="mb-6 text-sm text-muted">
-        La memoria del gruppo: le quest concluse, le serate giocate e chi
-        non è tornato.
-    </p>
+    <x-intro :page="\App\Enums\IntroPage::Chronicle" class="mb-6" />
 
     @if (count($seasons) > 1)
         <div class="mb-3 flex flex-wrap gap-2">
@@ -64,12 +61,12 @@
 
         <section id="serate" class="scroll-mt-8">
             <h3 class="mb-3 flex items-center gap-2 text-lg font-semibold text-fg">
-                <x-icona :is="\App\Enums\Icon::Sessions" class="h-5 w-5" /> Le serate giocate
+                <x-icona :is="\App\Enums\Icon::Sessions" class="h-5 w-5" /> Le sessioni giocate
             </h3>
 
             <div class="space-y-3">
                 @forelse ($sessions as $session)
-{{-- Il Libro Mastro mostra solo un'anteprima; `da=libro-mastro` conserva l'origine nella pagina della serata. --}}
+{{-- Il Libro Mastro mostra solo un'anteprima; `da=libro-mastro` conserva l'origine nella pagina della sessione. --}}
                     <x-card :href="route('sessions.show', ['session' => $session, 'da' => 'libro-mastro'])" class="group">
                         <p class="text-xs uppercase tracking-wide text-muted">{{ $session->campaign?->title }}</p>
                         <p class="mt-1 font-semibold text-fg">{{ $session->displayTitle() }}</p>
@@ -83,10 +80,10 @@
                         @endif
                     </x-card>
                 @empty
-                    <x-empty>Nessuna serata con un resoconto, qui.</x-empty>
+                    <x-empty>Nessuna sessione con un resoconto, qui.</x-empty>
                 @endforelse
             </div>
-            <x-paginazione :pagine="$sessions->fragment('serate')" etichetta="Pagine delle serate giocate" />
+            <x-paginazione :pagine="$sessions->fragment('serate')" etichetta="Pagine delle sessioni giocate" />
         </section>
 
         <section id="quest" class="scroll-mt-8">

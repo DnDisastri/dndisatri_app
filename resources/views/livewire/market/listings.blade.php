@@ -1,7 +1,5 @@
 <div>
-    <p class="mb-4 text-sm text-muted">
-        Fai affari con i tuoi compagni di gilda: esplora gli oggetti offerti in scambio e cogli le migliori occasioni per ottenere ciò che ti serve.
-    </p>
+    <x-intro :page="\App\Enums\IntroPage::Listings" class="mb-4" />
 
     <x-market-nav :character="$character" :characters="$this->myCharacters()" :esito="$esito" />
 
