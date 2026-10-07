@@ -3,14 +3,7 @@
         @php $borsa = $character->coins(); @endphp
 
         <div class="mb-1 flex flex-wrap items-center justify-between gap-2">
-            <dl class="grid grid-cols-4 gap-2">
-                @foreach (\App\Domain\Dnd\Coin::descending() as $moneta)
-                    <div class="rounded-md border border-line bg-page px-2 py-1 text-center">
-                        <dt class="text-xs text-muted" title="{{ $moneta->label() }}">{{ $moneta->abbreviation() }}</dt>
-                        <dd class="font-bold text-fg">{{ number_format($borsa->get($moneta), 0, ',', '.') }}</dd>
-                    </div>
-                @endforeach
-            </dl>
+            <x-borsa :borsa="$borsa" />
 
             @if ($canManage)
                 <x-button type="button" variant="quiet" size="sm" wire:click="apriCambio">Cambia monete</x-button>
@@ -110,7 +103,14 @@
                                     'border-primary text-primary' => $item->tradeable,
                                     'border-line/40 text-muted' => ! $item->tradeable,
                                 ])>
-                            {{ $item->tradeable ? 'Ritira' : 'Scambierei' }}
+                            {{ $item->tradeable ? 'Ritira' : 'Scambio' }}
+                        </button>
+                    @endif
+
+                    @if ($canShowcase)
+                        <button type="button" wire:click="apriNota({{ $item->id }})"
+                                class="rounded border border-line/40 px-2 py-0.5 text-xs text-muted hover:bg-page">
+                            Nota
                         </button>
                     @endif
 
@@ -121,6 +121,10 @@
                         </button>
                     @endif
                 </span>
+
+                @if (filled($item->notes))
+                    <p class="basis-full whitespace-pre-line break-words text-xs italic text-muted">{{ $item->notes }}</p>
+                @endif
             </div>
         @empty
             <p class="text-sm text-muted">Lo zaino è vuoto.</p>
@@ -181,6 +185,22 @@
                 </label>
 
                 <x-button full type="submit">Salva</x-button>
+            </form>
+        </x-modal>
+    @endif
+
+    @if ($notaId)
+        <x-modal title="Nota sull'oggetto" close="chiudiNota">
+            <form wire:submit="salvaNota" class="space-y-3 text-left text-sm">
+                <label class="block">
+                    <span class="mb-1 block text-muted">Da dove viene, cosa ti ricorda</span>
+                    <textarea rows="4" maxlength="2000" wire:model="nota"
+                              class="w-full rounded-md border border-line bg-page px-2 py-2 text-fg"></textarea>
+                    @error('nota') <span class="mt-1 block text-on-danger-soft">{{ $message }}</span> @enderror
+                </label>
+                <p class="text-xs text-muted">La nota resta tua: se l'oggetto passa a qualcun altro, non la riceve.</p>
+
+                <x-button full type="submit">Salva la nota</x-button>
             </form>
         </x-modal>
     @endif

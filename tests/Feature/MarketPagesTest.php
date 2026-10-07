@@ -175,7 +175,7 @@ describe('il riquadro di dettaglio', function () {
     it('ogni indirizzo apre la pagina sulla sua sezione', function (string $rotta, string $nome) {
         $html = $this->actingAs(giocatoreCon()->user)->get(route($rotta))->assertOk()->getContent();
 
-        expect($html)->toMatch('/data-url="'.preg_quote(route($rotta), '/').'"[^>]*aria-current="page"[^>]*>\s*'.$nome.'/')
+        expect($html)->toMatch('/data-url="'.preg_quote(route($rotta), '/').'"[^>]*aria-current="page"[^>]*>(?:(?!<\/button>).)*'.$nome.'/s')
             ->and($html)->toContain("<title>{$nome} · Mercato</title>");
     })->with([
         ['market.shop', 'Emporio'],

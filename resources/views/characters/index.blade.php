@@ -62,8 +62,22 @@
                                     <x-icona :is="\App\Enums\Icon::HitPoints" class="h-4 w-4" />
                                     {{ $character->hp_current }}/{{ $character->effectiveHpMax() }}
                                 </span>
-                                <span class="flex items-center gap-1" title="Borsa">
-                                    <x-icona :is="\App\Enums\Icon::Gold" class="h-4 w-4" /> <x-monete :borsa="$character->coins()" />
+                                {{-- Solo platino e oro, la borsa completa sta nello zaino; senza nessuno dei due, quello che c'è. --}}
+                                @php
+                                    $borsa = $character->coins();
+                                    $platino = $borsa->get(\App\Domain\Dnd\Coin::Platinum);
+                                    $oro = $borsa->get(\App\Domain\Dnd\Coin::Gold);
+                                @endphp
+                                <span class="flex items-center gap-1 whitespace-nowrap" title="Le monete complete sono nello zaino">
+                                    <x-icona :is="\App\Enums\Icon::Gold" class="h-4 w-4" />
+                                    @if ($platino > 0 || $oro > 0)
+                                        @if ($platino > 0)
+                                            {{ number_format($platino, 0, ',', '.') }} mp
+                                        @endif
+                                        {{ number_format($oro, 0, ',', '.') }} mo
+                                    @else
+                                        {{ $borsa->format() }}
+                                    @endif
                                 </span>
                             </p>
 

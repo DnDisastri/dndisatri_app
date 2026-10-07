@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
-    'seller_character_id', 'name', 'base', 'magic_bonus', 'effects', 'category', 'qty', 'price_cp', 'unit_value_cp', 'details',
+    'seller_character_id', 'name', 'base', 'magic_bonus', 'effects', 'category', 'qty', 'price_cp', 'unit_value_cp', 'details', 'seller_notes',
 ])]
 class MarketListing extends Model
 {

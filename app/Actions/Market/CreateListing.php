@@ -54,6 +54,7 @@ final class CreateListing
                 'price_cp' => $priceCp,
                 'unit_value_cp' => $copia['valueCp'] ?? 0,
                 'details' => $copia['details'] ?? null,
+                'seller_notes' => $source?->notes,
             ]);
 
             $character->recordInLedger(
