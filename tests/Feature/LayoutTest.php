@@ -109,24 +109,6 @@ it('applica il tema salvato prima di dipingere, in tutte e due i layout', functi
         ->assertSee('document.documentElement.dataset.theme', false);
 });
 
-it('accende il pallino sull\'icona dell\'app solo con notifiche da leggere', function () {
-    $user = User::factory()->player()->create();
-
-    $this->actingAs($user)->get('/')->assertSee('data-notifiche="0"', false);
-
-    $user->notifications()->create([
-        'id' => (string) Str::uuid(),
-        'type' => 'test',
-        'data' => [],
-    ]);
-
-    $this->actingAs($user)->get('/')->assertSee('data-notifiche="1"', false);
-});
-
-it('spegne il pallino da disconnessi', function () {
-    $this->get(route('login'))->assertSee('data-notifiche="0"', false);
-});
-
 it('offre i tre stati del tema nel menù', function () {
     $pagina = $this->actingAs(User::factory()->player()->create())->get('/')->assertOk();
 
