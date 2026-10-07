@@ -7,7 +7,9 @@
     @include('partials.testa')
 </head>
 {{-- `lg:pl-64` lascia il posto alla barra laterale, che è fissa. --}}
-<body @class(['min-h-screen flex flex-col antialiased', 'lg:pl-64' => auth()->check()])>
+{{-- `data-notifiche`: il pallino sull'icona dell'app, acceso o spento in app.js. --}}
+<body @class(['min-h-screen flex flex-col antialiased', 'lg:pl-64' => auth()->check()])
+      data-notifiche="{{ auth()->user()?->unreadNotifications()->exists() ? 1 : 0 }}">
     @auth
         @include('partials.header')
         @include('partials.barra-laterale')

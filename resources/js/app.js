@@ -504,6 +504,12 @@ if ('serviceWorker' in navigator) {
     });
 }
 
+// Pallino sull'icona dell'app installata: senza numero, si aggiorna a ogni pagina aperta (niente push).
+
+if ('setAppBadge' in navigator && document.body.dataset.notifiche !== undefined) {
+    (document.body.dataset.notifiche === '1' ? navigator.setAppBadge() : navigator.clearAppBadge()).catch(() => {});
+}
+
 // «Installa» compare solo dopo `beforeinstallprompt`, che iOS non manda.
 let promptInstalla = null;
 

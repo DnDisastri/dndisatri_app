@@ -3,7 +3,8 @@
 <head>
     @include('partials.testa')
 </head>
-<body class="min-h-screen antialiased bg-page lg:grid lg:grid-cols-2">
+{{-- Da disconnessi il pallino sull'icona dell'app si spegne. --}}
+<body class="min-h-screen antialiased bg-page lg:grid lg:grid-cols-2" data-notifiche="0">
     <aside class="hidden flex-col items-center justify-center gap-5 bg-primary p-12 text-center lg:flex">
         @if (file_exists(public_path('logo.png')))
             <img src="{{ asset('logo.png') }}" alt="" class="h-28 w-28 rounded-card object-cover">
