@@ -105,6 +105,24 @@ describe('cercare nel mercato', function () {
             ->assertSee('Niente che somigli a «balestra»');
     });
 
+    it('e ordina l\'Emporio per prezzo o per nome', function (string $ordine, array $attesi) {
+        MarketItem::factory()->create(['name' => 'Corda', 'category' => 'Avventura', 'price_cp' => 100]);
+        MarketItem::factory()->create(['name' => 'Ascia', 'category' => 'Armi', 'price_cp' => 500]);
+        MarketItem::factory()->create(['name' => 'Borraccia', 'category' => 'Avventura', 'price_cp' => 20]);
+
+        Livewire::actingAs(giocatoreCon()->user)
+            ->test(Shop::class)
+            ->set('ordine', $ordine)
+            ->assertSeeInOrder($attesi);
+    })->with([
+        'categoria' => ['categoria', ['Ascia', 'Borraccia', 'Corda']],
+        'prezzo crescente' => ['prezzo', ['Borraccia', 'Corda', 'Ascia']],
+        'prezzo decrescente' => ['-prezzo', ['Ascia', 'Corda', 'Borraccia']],
+        'nome A-Z' => ['nome', ['Ascia', 'Borraccia', 'Corda']],
+        'nome Z-A' => ['-nome', ['Corda', 'Borraccia', 'Ascia']],
+        'valore manomesso' => ['drop table', ['Ascia', 'Borraccia', 'Corda']],
+    ]);
+
     it('anche fra gli annunci', function () {
         $venditore = giocatoreCon();
         $venditore->addToInventory('Spada Lunga', valueCp: 1500);
