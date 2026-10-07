@@ -15,7 +15,7 @@ class MapForm
     {
         return $schema->components([
             Section::make('La mappa')
-                ->description("L'immagine e a quale tavolo appartiene.")
+                ->description("L'immagine e la campagna a cui appartiene.")
                 ->columns(2)
                 ->schema([
                     TextInput::make('title')

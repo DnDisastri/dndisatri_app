@@ -24,8 +24,7 @@
         <x-note tone="danger">
             <span class="font-semibold">Sei sotto richiamo.</span>
             Mettere in vendita, comprare da un annuncio, proporre uno scambio e
-            accettarne uno passano dal via libera di un dungeon master prima di
-            succedere davvero. Il negozio della gilda resta libero.
+            accettarne uno passano dal via libera di un dungeon master. L'Emporio resta libero.
         </x-note>
     @else
         <x-note>
@@ -56,11 +55,11 @@
                 </x-inset>
 
                 <p class="mt-3 text-xs text-muted">
-                    Chiesta {{ $azione->created_at->diffForHumans() }}. Aspetta che un DM la guardi.
+                    Chiesta {{ $azione->created_at->diffForHumans() }}. Aspetta che un dungeon master la guardi.
                 </p>
             </x-card>
         @empty
-            <x-empty>Non hai niente in attesa. Quello che chiedi al mercato compare qui finché un DM non decide.</x-empty>
+            <x-empty>Non hai niente in attesa. Quello che chiedi al mercato compare qui finché un dungeon master non decide.</x-empty>
         @endforelse
     </section>
     @if ($decise->isNotEmpty())

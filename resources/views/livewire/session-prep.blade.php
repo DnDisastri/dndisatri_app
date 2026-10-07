@@ -3,7 +3,7 @@
          suo tracker, accanto a questi. --}}
     <x-panel title="Appunti">
         <p class="-mt-1 mb-2 text-xs text-muted">
-            Solo tuoi: i giocatori non li vedono. Non è il resoconto — quello viene dopo, e lo leggono loro.
+            Solo tuoi: i giocatori non li vedono. Non è il resoconto: quello viene dopo, e lo leggono loro.
         </p>
 
         <textarea wire:model.blur="note" rows="8" maxlength="20000"

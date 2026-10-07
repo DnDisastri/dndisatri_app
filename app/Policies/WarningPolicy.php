@@ -6,11 +6,7 @@ use App\Models\User;
 use App\Models\Warning;
 
 /**
- * I richiami li danno e li tolgono DM e admin (D13).
- *
- * Lo **storico** — quante volte, per quanto tempo — lo vedono anch'essi tutti e
- * due: è una scelta esplicita del gruppo, perché è chi conduce le serate ad
- * avere bisogno di quel dato, non chi amministra gli account.
+ * I richiami e il loro storico: DM e admin (D13).
  */
 class WarningPolicy
 {

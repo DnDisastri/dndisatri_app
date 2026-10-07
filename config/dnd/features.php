@@ -1,20 +1,12 @@
 <?php
 
 /*
- * I privilegi di classe: che cosa sa fare un personaggio, livello per livello.
- *
- * Serve alla sezione «Armi» della scheda, che prima elencava solo le armi. Un
- * giocatore che al tavolo si chiede «e io cosa posso fare?» non ha il manuale
- * aperto: ha il telefono in mano.
+ * I privilegi di classe, livello per livello, per la sezione Turno della scheda.
  *
  * DA DOVE VIENE
- * Regole del 2014, che sono quelle che gioca il gruppo: i privilegi e i livelli
- * vengono dal System Reference Document 5.1, che è in inglese. I nomi italiani
- * vengono dal System Reference Document 5.2.1 in italiano, che è dell'edizione
- * successiva ma traduce quasi tutti gli stessi privilegi: così «Reckless Attack»
- * si chiama qui «Attacco irruento» come sul manuale che avete in mano, e non
- * come sarebbe venuto a me. Dove il privilegio del 2014 non esiste più nel 2024
- * il nome l'ho tradotto io, ed è segnalato riga per riga con «nome mio».
+ * Regole 2014 dal SRD 5.1 (in inglese); nomi italiani dal SRD 5.2.1 italiano.
+ * Dove il privilegio 2014 non esiste nel 2024 il nome è tradotto da noi
+ * («nome mio»).
  *
  * ATTRIBUZIONE (richiesta dalla licenza, non facoltativa)
  * Quest'opera include materiale tratto dal System Reference Document 5.1
@@ -31,17 +23,11 @@
  * disponibile all'indirizzo https://creativecommons.org/licenses/by/4.0/legalcode.
  *
  * COSA NON C'È, DI PROPOSITO
- * - «Aumento dei punteggi di caratteristica» ai livelli 4, 8, 12, 16 e 19: non
- *   è una cosa che si fa in combattimento, ed è già il mestiere della proposta
- *   di salita di livello.
- * - «Incantesimi»: ha una sezione tutta sua, e ripeterlo qui sarebbe rumore.
- * - La riga che dice «scegli una sottoclasse»: la sottoclasse si vede da sé,
- *   nell'intestazione della scheda, e i suoi privilegi stanno più sotto.
+ * Aumento dei punteggi (sta nella salita di livello), Incantesimi (ha la sua
+ * sezione), «scegli una sottoclasse» (si vede nell'intestazione).
  *
  * IL CAMPO «costo»
- * 'azione' | 'bonus' | 'reazione' | 'passivo'. Passivo non vuol dire inutile:
- * vuol dire che ce l'hai sempre e non devi spendere niente per usarlo. È la
- * distinzione che serve al tavolo, quando il turno è tuo e devi decidere.
+ * 'azione' | 'bonus' | 'reazione' | 'passivo' (sempre attivo, non costa niente).
  */
 
 return [
@@ -725,20 +711,12 @@ return [
     ],
 
     /*
-     * I privilegi delle sottoclassi.
+     * I privilegi delle sottoclassi. Le chiavi sono i nomi esatti di
+     * config/dnd/subclasses.php, o la scheda non trova niente.
      *
-     * Le chiavi sono i nomi esatti di config/dnd/subclasses.php: se non
-     * combaciano, la scheda non trova niente e non dice niente.
-     *
-     * Qui c'è la parte scomoda. Il SRD — tutti e due — contiene **una sola
-     * sottoclasse per classe**, per scelta di Wizards: dodici su centotto. Le
-     * altre novantasei sono nei manuali, e di quelle si possono scrivere
-     * riassunti originali ma non copiare il testo.
-     *
-     * Una sottoclasse senza privilegi scritti qui non rompe niente: la scheda
-     * mostra la riga che c'è già in subclasses.php e dice che i privilegi non
-     * sono ancora stati scritti. Meglio un buco dichiarato di una cosa
-     * inventata che sembra vera.
+     * Il SRD ha una sola sottoclasse per classe; le altre sono riassunti
+     * nostri. Una sottoclasse che manca qui non rompe niente: la scheda dice
+     * che i privilegi non sono ancora scritti.
      */
     'sottoclassi' => [
 
@@ -1118,15 +1096,8 @@ return [
         ],
 
         /*
-         * Da qui in giù: le sottoclassi che nel SRD non ci sono.
-         *
-         * Sono riassunti originali scritti da noi, non testo del manuale.
-         * Per adesso ci sono i **primi due scaglioni** di ogni sottoclasse —
-         * quelli a cui i personaggi arrivano davvero — e il resto si aggiunge
-         * quando qualcuno ci arriva.
-         *
-         * `da_controllare` segna le voci di cui non siamo sicuri: la scheda le
-         * mostra con un avviso, invece di farle passare per verificate.
+         * Da qui in giù: sottoclassi fuori dal SRD, riassunti nostri, per ora
+         * solo i primi due scaglioni. `da_controllare` mostra un avviso in scheda.
          */
 
         'Cammino del Totem Guerriero' => [

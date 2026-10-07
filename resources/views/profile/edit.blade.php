@@ -12,8 +12,7 @@
             <span class="font-semibold">Sei sotto richiamo</span> dal
             {{ $activeWarning->created_at->translatedFormat('j F Y') }}.
             Mettere in vendita, comprare da un annuncio, proporre uno scambio e
-            accettarne uno passano dal via libera di un dungeon master. Il
-            negozio della gilda resta libero.
+            accettarne uno passano dal via libera di un dungeon master. L'Emporio resta libero.
             <a href="{{ route('market.supervision') }}" class="mt-1 inline-block font-semibold underline">
                 Le tue azioni in attesa →
             </a>

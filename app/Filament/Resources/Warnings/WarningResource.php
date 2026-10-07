@@ -12,20 +12,8 @@ use Filament\Tables\Table;
 use UnitEnum;
 
 /**
- * I richiami (M21, M22, M23).
- *
- * La logica c'era da un pezzo — darne uno, toglierlo, lo storico, il controllo
- * sulle azioni di mercato — e **non c'era nessuna pagina da cui premere**. Un
- * richiamo si poteva dare soltanto dal database, e chi lo prendeva sarebbe
- * rimasto sotto controllo per sempre, perché nessuno aveva il modo di
- * toglierglielo. Non era una funzione mancante: era un difetto.
- *
- * Sta nel pannello e non al tavolo perché non è roba da mezzo della serata: è
- * un provvedimento che si prende a mente fredda.
- *
- * Non c'è una pagina di dettaglio. Un richiamo è tre cose — chi, perché,
- * quando — e stanno tutte nella riga: aprirne una quarta pagina per rileggere
- * le stesse tre sarebbe un passaggio in più per niente.
+ * I richiami (M21, M22, M23): darli, toglierli, lo storico.
+ * Niente pagina di dettaglio: chi, perché e quando stanno già nella riga.
  */
 class WarningResource extends Resource
 {
@@ -33,14 +21,8 @@ class WarningResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Icon::Warnings;
 
-    /*
-     * Sotto «Tavoli» e non sotto «Amministrazione»: i richiami li danno e li
-     * tolgono anche i DM, ed è una scelta esplicita del gruppo — è chi conduce
-     * le serate ad aver bisogno di quel dato, non chi amministra gli account.
-     * In «Amministrazione» un DM non guarda, perché quasi tutto lì dentro non
-     * è affar suo.
-     */
-    protected static string|UnitEnum|null $navigationGroup = 'Tavoli';
+    // In «Gestione»: i richiami li danno e li tolgono anche i DM.
+    protected static string|UnitEnum|null $navigationGroup = 'Gestione';
 
     protected static ?string $modelLabel = 'richiamo';
 

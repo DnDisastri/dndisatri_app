@@ -19,7 +19,7 @@ class CampaignsTable
             ->defaultSort('created_at', 'desc')
             ->columns([
                 TextColumn::make('title')
-                    ->label('Tavolo')
+                    ->label('Campagna')
                     ->searchable()
                     ->sortable()
                     ->weight('bold')
@@ -72,7 +72,7 @@ class CampaignsTable
                     ->icon(Icon::Archive)
                     ->color('warning')
                     ->requiresConfirmation()
-                    ->modalHeading('Concludere il tavolo?')
+                    ->modalHeading('Concludere la campagna?')
                     ->modalDescription('Non si potrà più riaprire, né aggiungerci quest o sessioni.')
                     ->visible(fn (Campaign $record) => auth()->user()->can('end', $record))
                     ->action(function (Campaign $record) {
@@ -84,7 +84,7 @@ class CampaignsTable
                             ->send();
                     }),
             ])
-            ->emptyStateHeading('Nessun tavolo')
+            ->emptyStateHeading('Nessuna campagna')
             ->emptyStateDescription('Crea una campagna per cominciare a organizzare quest e sessioni.')
             ->modifyQueryUsing(fn ($query) => $query->with('dm'));
     }

@@ -6,7 +6,6 @@ use App\Models\Campaign;
 use App\Models\Quest;
 use App\Models\User;
 
-
 describe('la sua scheda', function () {
     it('ha nome, ritratto e descrizione', function () {
         $campaign = Campaign::factory()->create([
@@ -32,7 +31,7 @@ describe('la sua scheda', function () {
         expect(Campaign::factory()->create(['quest_giver' => null])->hasQuestGiver())->toBeFalse();
     });
 });
-// Il capogilda vive sulla campagna: tutte le quest dello stesso tavolo leggono quindi gli stessi dati.
+// Il capogilda vive sulla campagna: tutte le quest della stessa campagna leggono quindi gli stessi dati.
 describe('il legame con le quest', function () {
     it('le quest lo leggono dalla campagna, non ne tengono una copia', function () {
         $campaign = Campaign::factory()->create(['quest_giver' => 'Maestra Ilva']);
@@ -46,7 +45,7 @@ describe('il legame con le quest', function () {
     });
 });
 
-describe('due tavoli, due capigilda', function () {
+describe('due campagne, due capigilda', function () {
     it('lo stesso DM può averne uno diverso per ogni campagna', function () {
         $dm = User::factory()->dm()->create();
 
@@ -57,8 +56,8 @@ describe('due tavoli, due capigilda', function () {
             ->and($corte->fresh()->quest_giver)->toBe('Siniscalco Reale');
     });
 
-// Lo stesso NPC in campagne diverse è duplicato nei dati e può quindi divergere tra i tavoli.
-    it('ma uno che torna in un tavolo nuovo è una copia, e le due possono divergere', function () {
+    // Lo stesso NPC in campagne diverse è duplicato nei dati e può quindi divergere tra le campagne.
+    it('ma uno che torna in una campagna nuova è una copia, e le due possono divergere', function () {
 
         $prima = Campaign::factory()->create([
             'quest_giver' => 'Maestra Ilva',

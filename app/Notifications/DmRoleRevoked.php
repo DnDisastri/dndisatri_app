@@ -7,12 +7,8 @@ namespace App\Notifications;
 use App\Enums\NotificationCategory;
 
 /**
- * «Non sei più un dungeon master».
- *
- * Perdere dei poteri senza che nessuno lo dica è peggio che perderli: il
- * giocatore troverebbe la regia sparita dal menù e penserebbe a un guasto.
- * Non dice il motivo, che è una conversazione fra persone e non una riga
- * dentro una notifica.
+ * «Non sei più un dungeon master», così l'Area Master sparita non sembra un guasto.
+ * Il motivo non c'è: se ne parla di persona.
  */
 final class DmRoleRevoked extends InAppNotification
 {

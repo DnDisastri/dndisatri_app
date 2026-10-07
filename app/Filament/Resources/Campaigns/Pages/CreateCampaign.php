@@ -13,10 +13,8 @@ class CreateCampaign extends CreateRecord
     {
         $data['created_by'] = auth()->id();
 
-        // Il campo del DM è disabilitato per chi non è admin, e i campi
-        // disabilitati non arrivano dal browser: qui si chiude il buco,
-        // perché altrimenti un DM potrebbe aprire un tavolo intestato ad altri
-        // manomettendo la richiesta.
+        // Il campo è disabilitato per chi non è admin, ma la richiesta si manomette:
+        // senza questo un DM aprirebbe una campagna intestata a un altro.
         if (! auth()->user()->isAdmin()) {
             $data['dm_id'] = auth()->id();
         }

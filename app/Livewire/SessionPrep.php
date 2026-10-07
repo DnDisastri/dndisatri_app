@@ -7,15 +7,8 @@ use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 /**
- * Gli appunti privati del DM per la serata.
- *
- * Il foglio davanti allo schermo: i promemoria di chi conduce, che nessun
- * giocatore vede. Non è il resoconto — quello lo leggono loro e viene dopo. Si
- * salvano sulla serata (`dm_notes`), così la sera prima e al tavolo sono lo
- * stesso foglio.
- *
- * L'iniziativa e i punti ferita del combattimento vivono in `CombatTracker`,
- * accanto a questi appunti nella stessa pagina.
+ * Gli appunti privati del DM sulla sessione (`dm_notes`): i giocatori non li
+ * vedono, e non sono il resoconto.
  */
 class SessionPrep extends Component
 {

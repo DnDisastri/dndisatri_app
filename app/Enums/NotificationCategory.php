@@ -12,6 +12,7 @@ use App\Models\User;
  */
 enum NotificationCategory: string
 {
+    // Il valore è salvato nelle preferenze dei giocatori: non si rinomina.
     case Table = 'tavolo';
     case Requests = 'richieste';
     case Approvals = 'approvazioni';
@@ -22,7 +23,7 @@ enum NotificationCategory: string
     public function label(): string
     {
         return match ($this) {
-            self::Table => 'Gioco al tavolo',
+            self::Table => 'Sessioni e quest',
             self::Requests => 'Le mie richieste',
             self::Approvals => 'Da approvare',
             self::Market => 'Mercato',
@@ -34,7 +35,7 @@ enum NotificationCategory: string
     public function description(): string
     {
         return match ($this) {
-            self::Table => 'Eventi, sessioni programmate, posto confermato a un incarico.',
+            self::Table => 'Eventi, sessioni programmate, posto confermato in una quest.',
             self::Requests => 'Proposte approvate o rifiutate.',
             self::Approvals => 'Richieste dei giocatori, azioni sotto richiamo, nuovi iscritti e segnalazioni che aspettano una decisione.',
             self::Market => 'Scambi proposti, annunci venduti, transazioni annullate.',

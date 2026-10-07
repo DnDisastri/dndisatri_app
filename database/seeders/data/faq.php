@@ -9,56 +9,56 @@ return [
     [
         'category' => null,
         'question' => "Cos'è questa app?",
-        'answer' => "È lo spazio della gilda: qui trovi i tuoi personaggi, le storie a cui puoi partecipare, quando si gioca, il mercato e la cronaca del gruppo. La barra in basso porta alle cinque destinazioni principali; il menù in alto a destra al resto (Gilda, Build consigliate, le tue richieste, il profilo e questa guida).",
+        'answer' => 'È lo spazio della gilda: qui trovi i tuoi personaggi, le storie a cui puoi partecipare, quando si gioca, il mercato e la cronaca del gruppo. La barra in basso porta alle cinque destinazioni principali; il menù in alto a destra al resto (Gilda, Build consigliate, le tue richieste, il profilo e questa guida).',
     ],
     [
         'category' => null,
         'question' => 'Da dove comincio?',
-        'answer' => "Crea il tuo primo eroe dalla sezione Eroi, poi guarda gli Incarichi aperti: sono le storie a cui puoi prenotarti. La Home riassume cosa c'è di nuovo ogni volta che entri.",
+        'answer' => "Crea il tuo primo eroe dalla sezione Eroi, poi guarda le prossime sessioni, dove ti prenoti, e le Quest aperte. La Home riassume cosa c'è di nuovo ogni volta che entri.",
     ],
 
     [
         'category' => 'Eroi',
         'question' => 'Come creo un personaggio?',
-        'answer' => "Vai su Eroi (il cerchio al centro della barra) e scegli Nuovo eroe. Una procedura guidata ti accompagna passo passo: razza, classe, caratteristiche ed equipaggiamento.",
+        'answer' => 'Vai su Eroi (il cerchio al centro della barra) e scegli Crea il tuo personaggio. Una procedura guidata ti accompagna passo passo: razza, classe, caratteristiche ed equipaggiamento.',
     ],
     [
         'category' => 'Eroi',
         'question' => 'Cosa trovo nella scheda?',
-        'answer' => "Tutto il personaggio, diviso in sezioni: caratteristiche, abilità, attacchi, incantesimi, privilegi, equipaggiamento e la sua storia. Dalla scheda apri anche il suo registro, dove restano segnate le cose che gli succedono.",
+        'answer' => 'Tutto il personaggio, diviso in sezioni: caratteristiche, abilità, attacchi, incantesimi, privilegi, equipaggiamento e la sua storia. Dalla scheda apri anche il suo registro, dove restano segnate le cose che gli succedono.',
     ],
     [
         'category' => 'Eroi',
         'question' => 'Posso cambiare la scheda dopo?',
-        'answer' => "Le modifiche importanti (salire di livello, aggiungere bottino, un oggetto magico, correggere la scheda) passano da una richiesta che chi conduce approva. Le trovi come pulsanti sulla scheda, e lo stato in Le mie richieste, nel menù in alto.",
+        'answer' => 'Le modifiche importanti (salire di livello, aggiungere bottino, un oggetto magico, correggere la scheda) passano da una richiesta che approva un dungeon master. Le trovi come pulsanti sulla scheda, e lo stato in Le mie richieste, nel menù in alto.',
     ],
 
     [
-        'category' => 'Incarichi',
-        'question' => "Cos'è un incarico?",
-        'answer' => "È una storia aperta a cui puoi partecipare, con un numero di posti. Nella pagina Incarichi vedi quelli disponibili, la difficoltà e quanti posti restano liberi.",
+        'category' => 'Quest',
+        'question' => "Cos'è una quest?",
+        'answer' => 'È una storia da giocare dentro una campagna. Nella pagina Quest vedi quelle aperte e la difficoltà. Se una ti piace tocca Mi interessa: quando il dungeon master la mette in una sessione ti arriva un avviso, e per giocarla ti prenoti alla sessione.',
     ],
     [
-        'category' => 'Incarichi',
+        'category' => 'Quest',
         'question' => 'Come mi prenoto?',
-        'answer' => "Apri l'incarico e usa Prenotati con uno dei tuoi eroi, se ci sono posti liberi. Puoi ritirarti finché la serata non viene fissata. Quando chi conduce chiama i partecipanti e sceglie la data, ricevi una notifica.",
+        'answer' => "Ti prenoti alla sessione, non alla quest: apri la sessione, scegli con quale eroe vieni e tocca Mi prenoto. Se i posti sono finiti entri in lista d'attesa. Puoi tirarti indietro fino all'inizio. Quando il dungeon master conferma la sessione, ricevi una notifica.",
     ],
 
     [
-        'category' => 'Serate',
+        'category' => 'Sessioni',
         'question' => 'Dove vedo quando si gioca?',
-        'answer' => "Nella sezione Serate: le prossime in programma e quelle già giocate, ognuna legata alla sua campagna o al suo incarico.",
+        'answer' => 'Nella sezione Sessioni: le prossime in programma e quelle già giocate, ognuna con la sua campagna, i posti e le quest che ci si giocano.',
     ],
     [
-        'category' => 'Serate',
+        'category' => 'Sessioni',
         'question' => "Cos'è il resoconto?",
-        'answer' => "Dopo una serata resta il racconto di cosa è successo e chi c'era, così chi non c'era recupera e chi c'era ricorda.",
+        'answer' => "Dopo una sessione resta il racconto di cosa è successo e chi c'era, così chi non c'era recupera e chi c'era ricorda.",
     ],
 
     [
         'category' => 'Campagne',
         'question' => "Cos'è una campagna?",
-        'answer' => "Una storia lunga, fatta di più serate. Nella pagina Campagne vedi quelle in corso; aprendone una trovi di cosa parla, chi la conduce e chi ci gioca.",
+        'answer' => 'Una storia lunga, fatta di più sessioni. Nella pagina Campagne vedi quelle in corso; aprendone una trovi di cosa parla, chi la conduce e chi ci gioca.',
     ],
 
     [
@@ -69,7 +69,7 @@ return [
     [
         'category' => 'Mercato',
         'question' => 'Come funziona uno scambio?',
-        'answer' => "Proponi uno scambio all'altro giocatore, che può accettarlo o rifiutarlo. Finché è in sospeso lo ritrovi tra i tuoi scambi, e chi conduce tiene d'occhio i passaggi importanti.",
+        'answer' => "Proponi uno scambio all'altro giocatore, che può accettarlo o rifiutarlo. Finché è in sospeso lo ritrovi tra i tuoi scambi, e i dungeon master tengono d'occhio i passaggi importanti.",
     ],
 
     [
@@ -80,11 +80,11 @@ return [
     [
         'category' => 'Il resto',
         'question' => 'Eventi e News, che differenza c\'è?',
-        'answer' => "Gli Eventi sono cose che succederanno (una data da segnare); le News sono gli annunci della gilda, dal più recente. A entrambi puoi lasciare una reazione.",
+        'answer' => 'Gli Eventi sono cose che succederanno (una data da segnare); le News sono gli annunci della gilda, dal più recente. A entrambi puoi lasciare una reazione.',
     ],
     [
         'category' => 'Il resto',
         'question' => 'Dove trovo notifiche, profilo e Gilda?',
-        'answer' => "Le notifiche sono la campanella in alto. Dal menù accanto apri il tuo profilo (dove cambi anche la password), la Gilda con i suoi eroi e i caduti, e questa guida.",
+        'answer' => 'Le notifiche sono la campanella in alto. Dal menù accanto apri il tuo profilo (dove cambi anche la password), la Gilda con i suoi eroi e i caduti, e questa guida.',
     ],
 ];

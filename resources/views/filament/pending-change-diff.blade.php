@@ -134,11 +134,11 @@
             ]));
         @endphp
         <div style="display:flex;flex-direction:column;gap:.5rem;">
-            <div style="{{ $etichetta }}">Baratto col negozio</div>
+            <div style="{{ $etichetta }}">Baratto con l'Emporio</div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                 <div>
-                    <div style="{{ $etichetta }}">Dà al negozio</div>
+                    <div style="{{ $etichetta }}">Dà all'Emporio</div>
                     <div style="font-weight:600;">{{ $dà['name'] ?? '?' }}</div>
                     <div style="color:#6b7280;">
                         vale {{ \App\Domain\Dnd\Coins::formatValue((int) ($dà['valueCp'] ?? 0)) }}
@@ -150,7 +150,7 @@
                     @if (! empty($dà['effects']))
                         <div style="color:#7c3aed;">
                             Effetto magico: {{ collect($dà['effects'])->map(fn ($e) => \App\Models\CharacterItemEffect::describeCopy($e))->join(', ') }}
-                            (passa al negozio con l'oggetto)
+                            (passa all'Emporio con l'oggetto)
                         </div>
                     @endif
                 </div>
@@ -166,7 +166,7 @@
                     $articolo = \App\Models\MarketItem::find($prende['market_item_id'] ?? null);
                     $haAncora = $character?->ownsItem($dà['name'] ?? '') ?? false;
                     $problemi = array_filter([
-                        $articolo === null || ! $articolo->isAvailable() ? 'l\'articolo non è più disponibile nel negozio' : null,
+                        $articolo === null || ! $articolo->isAvailable() ? 'l\'articolo non è più disponibile nell\'Emporio' : null,
                         $articolo && $articolo->price_cp > (int) ($dà['valueCp'] ?? 0) ? 'l\'articolo ora costa più di quanto vale l\'oggetto' : null,
                         ! $haAncora ? 'il personaggio non ha più l\'oggetto offerto' : null,
                     ]);
@@ -177,7 +177,7 @@
                     </p>
                 @else
                     <p style="color:#6b7280;">
-                        Approvando, l'oggetto del giocatore entra nel magazzino del negozio, non visibile,
+                        Approvando, l'oggetto del giocatore entra nel magazzino dell'Emporio, non visibile,
                         finché un DM o un admin non lo mette in vendita.
                     </p>
                 @endif

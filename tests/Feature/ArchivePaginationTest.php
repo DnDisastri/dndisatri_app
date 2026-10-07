@@ -6,8 +6,8 @@ use App\Models\Campaign;
 use App\Models\GameSession;
 use App\Models\User;
 
-// Gli archivi crescono a ogni serata: il Libro Mastro li divide in pagine.
-it('divide in pagine le serate del Libro Mastro', function () {
+// Gli archivi crescono a ogni sessione: il Libro Mastro li divide in pagine.
+it('divide in pagine le sessioni del Libro Mastro', function () {
     $campagna = Campaign::factory()->create();
 
     foreach (range(1, 8) as $i) {
@@ -30,7 +30,7 @@ it('divide in pagine le serate del Libro Mastro', function () {
         ->assertSee('Più recenti');
 });
 
-it('mostra solo le ultime serate nella campagna e rimanda al Libro Mastro', function () {
+it('mostra solo le ultime sessioni nella campagna e rimanda al Libro Mastro', function () {
     $campagna = Campaign::factory()->create();
 
     foreach (range(1, 8) as $i) {

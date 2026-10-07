@@ -25,7 +25,7 @@ class SubraceResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Icon::Guild;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Tavoli';
+    protected static string|UnitEnum|null $navigationGroup = 'Gestione';
 
     protected static ?string $navigationLabel = 'Sottorazze';
 

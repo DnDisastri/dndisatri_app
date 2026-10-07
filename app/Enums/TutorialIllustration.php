@@ -22,7 +22,7 @@ enum TutorialIllustration: string
             self::Menu => 'Il menù in alto',
             self::Hero => 'Creazione eroe',
             self::Sheet => 'La scheda del personaggio',
-            self::Quest => "Card dell'incarico",
+            self::Quest => 'Card della quest',
             self::Market => 'Le linguette del mercato',
             self::Closing => 'Chiusura (cerchio eroe)',
         };

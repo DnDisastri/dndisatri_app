@@ -12,7 +12,7 @@ use App\Models\Map;
 use App\Models\Quest;
 use App\Models\User;
 
-// I DM accedono alle risorse dei tavoli, ma le operazioni restano limitate dalle relative policy.
+// I DM accedono alle risorse delle campagne, ma le operazioni restano limitate dalle relative policy.
 $tableSections = [
     'campagne' => CampaignResource::class,
     'quest' => QuestResource::class,
@@ -20,7 +20,7 @@ $tableSections = [
     'mappe' => MapResource::class,
 ];
 
-describe('le sezioni dei tavoli', function () use ($tableSections) {
+describe('le sezioni delle campagne', function () use ($tableSections) {
     it('si aprono per i DM', function (string $resource) {
         $this->actingAs(User::factory()->dm()->create())
             ->get($resource::getUrl('index'))
@@ -70,8 +70,8 @@ describe('le campagne', function () {
 });
 
 describe('quest e sessioni', function () {
-    it('le può creare chiunque conduca, e il tavolo si sceglie nel modulo', function () {
-// Filament verifica il permesso di creazione prima che esista una campagna specifica.
+    it('le può creare chiunque conduca, e la campagna si sceglie nel modulo', function () {
+        // Filament verifica il permesso di creazione prima che esista una campagna specifica.
         $dm = User::factory()->dm()->create();
 
         expect($dm->can('create', Quest::class))->toBeTrue()
@@ -79,7 +79,7 @@ describe('quest e sessioni', function () {
             ->and(User::factory()->player()->create()->can('create', Quest::class))->toBeFalse();
     });
 
-    it('ma su un tavolo altrui no', function () {
+    it('ma su una campagna altrui no', function () {
         $dm = User::factory()->dm()->create();
         $altrui = Campaign::factory()->create();
 
@@ -87,7 +87,7 @@ describe('quest e sessioni', function () {
             ->and($dm->can('create', [GameSession::class, $altrui]))->toBeFalse();
     });
 
-    it('si aprono in modifica per il DM del tavolo', function () {
+    it('si aprono in modifica per il DM della campagna', function () {
         $owner = User::factory()->dm()->create();
         $campaign = Campaign::factory()->runBy($owner)->create();
         $quest = Quest::factory()->inCampaign($campaign)->create();
@@ -107,7 +107,7 @@ describe('le mappe', function () {
             ->assertOk();
     });
 
-    it('una di un tavolo solo il suo DM', function () {
+    it('una di una campagna solo il suo DM', function () {
         $map = Map::factory()->forCampaign(Campaign::factory()->create())->create();
 
         $this->actingAs(User::factory()->dm()->create())

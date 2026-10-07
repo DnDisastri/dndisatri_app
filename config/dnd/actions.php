@@ -1,15 +1,8 @@
 <?php
 
 /*
- * Quello che può fare chiunque, nel proprio turno.
- *
- * Non è un privilegio di nessuna classe: è il regolamento. Sta qui perché è la
- * parte che al tavolo non sa nessuno — si impara che si può schivare, o
- * disingaggiare, dopo mesi che si gioca, di solito guardando qualcun altro
- * farlo. Un giocatore nuovo che apre la scheda sul telefono deve poterlo
- * leggere senza chiedere.
- *
- * L'ordine non è alfabetico ed è voluto: prima quelle che si usano davvero.
+ * Le azioni che può fare chiunque nel proprio turno (regolamento, non classe).
+ * In ordine d'uso, non alfabetico.
  *
  * Attribuzione: le regole vengono dal System Reference Document 5.1 di Wizards
  * of the Coast LLC — la dichiarazione completa è in testa a features.php, che

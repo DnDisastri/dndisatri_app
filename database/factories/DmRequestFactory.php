@@ -16,7 +16,7 @@ class DmRequestFactory extends Factory
     {
         return [
             'user_id' => User::factory()->player(),
-            'message' => 'Vorrei condurre un tavolo per il gruppo.',
+            'message' => 'Vorrei condurre una campagna per il gruppo.',
             'status' => PendingChangeStatus::Pending,
         ];
     }

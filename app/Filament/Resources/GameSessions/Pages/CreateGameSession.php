@@ -20,7 +20,7 @@ class CreateGameSession extends CreateRecord
     /** @var list<array{user_id: int, character_id: int|null}> */
     private array $presenze = [];
 
-    // L'autore della serata è chi la sta fissando. recap e presenze non sono
+    // L'autore della sessione è chi la sta fissando. recap e presenze non sono
     // mass-assignable: si tengono da parte e si salvano dopo con le loro azioni.
     protected function mutateFormDataBeforeCreate(array $data): array
     {
@@ -35,8 +35,7 @@ class CreateGameSession extends CreateRecord
 
     protected function afterCreate(): void
     {
-        // Un tavolo nuovo e futuro è una novità per i giocatori; uno inserito
-        // già concluso (con il resoconto) no.
+        // Si avvisa solo per una sessione futura, non per una inserita a posteriori.
         if ($this->record->isUpcoming()) {
             app(AnnounceToPlayers::class)->handle($this->record, new GameSessionScheduled($this->record), auth()->user());
         }

@@ -55,7 +55,7 @@ final class LootSuggestions
                 valueCp: (int) $item->price_cp,
                 details: $item->details,
                 base: $item->base ?? (EquipmentSlot::isBase($item->name) ? $item->name : null),
-                source: 'negozio',
+                source: 'Emporio',
             ));
     }
 

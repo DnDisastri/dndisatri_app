@@ -8,7 +8,7 @@ use App\Models\GameSession;
 use App\Models\User;
 
 /**
- * Scrive o corregge il resoconto di una serata.
+ * Scrive o corregge il resoconto di una sessione.
  *
  * Passa da un'azione perché il recap porta con sé chi l'ha scritto e quando:
  * sono campi non mass-assignable, così non esiste modo di aggiornare il testo

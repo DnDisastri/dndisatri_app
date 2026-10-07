@@ -8,14 +8,8 @@ use App\Models\Character;
 use RuntimeException;
 
 /**
- * Consuma e recupera gli slot incantesimo.
- *
- * Non passa dalla bacheca: è lo stato di una serata, non una modifica alla
- * scheda. Nella vecchia applicazione era così, ed è giusto — far approvare a
- * un DM ogni Dardo Incantato sarebbe insostenibile.
- *
- * La chiave è il livello dello slot, o `pact` per il Warlock, che ha un solo
- * gruppo di slot tutti dello stesso livello.
+ * Consuma e recupera gli slot incantesimo, senza approvazione. La chiave è il
+ * livello dello slot, o `pact` per la riserva del Warlock.
  */
 final class SpendSpellSlot
 {
@@ -55,13 +49,7 @@ final class SpendSpellSlot
 
     private function availableAt(Character $character, int|string $slot): int
     {
-        /*
-         * La chiave `pact` si misura sulla riserva da patto, sempre — anche su
-         * un Warlock multiclasse, dove `spellSlots()` sono i normali e il patto
-         * vive a parte. Prima si guardava solo `spellSlots()`: uno Stregone 2 /
-         * Warlock 3 che provava a spendere uno slot da patto si sentiva dire
-         * «non hai più slot», perché nei suoi normali la chiave `pact` non c'è.
-         */
+        // `pact` si misura sempre sulla riserva da patto: in un multiclasse `spellSlots()` sono i normali.
         if ($slot === 'pact') {
             return $character->pactSlots()->total();
         }

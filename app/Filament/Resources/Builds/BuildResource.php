@@ -18,13 +18,8 @@ use UnitEnum;
 /**
  * Le build consigliate.
  *
- * Sta in Redazione perché è contenuto da leggere, non un tavolo — ma a
- * differenza di news ed eventi **la vedono anche i DM**: una build è consiglio
- * di gioco, e chi conduce le serate è la persona che sa quale personaggio
- * funziona davvero.
- *
- * È l'unica voce di quel gruppo che un DM veda, e basta lei a far comparire la
- * sezione nel menù.
+ * In Redazione, ma a differenza di news ed eventi la vedono anche i DM: è
+ * l'unica voce del gruppo che fa comparire la sezione nel loro menù.
  */
 class BuildResource extends Resource
 {

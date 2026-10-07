@@ -14,18 +14,9 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Queue\Middleware\RateLimited;
 
 /**
- * Le notifiche del gruppo.
- *
- * Restano sempre in applicazione, così chi rientra dopo una settimana trova
- * quello che si è perso. In più partono per email, categoria per categoria,
- * secondo quello che il giocatore ha scelto nel profilo.
- *
- * Ogni notifica dice tre cose: un titolo, una riga di spiegazione e dove
- * andare a vedere. Niente di più, e l'email non le riscrive: le impagina
- * soltanto. Un testo solo, e nessun rischio che i due si scollino.
- *
- * Vanno in coda: un evento pubblicato avvisa tutto il gruppo, e trenta invii
- * dentro una richiesta la farebbero scadere.
+ * Le notifiche del gruppo: sempre in app, e per email secondo le categorie
+ * scelte nel profilo. Titolo, una riga e un link; l'email impagina lo stesso
+ * testo. In coda, perché un avviso a tutto il gruppo non blocchi la richiesta.
  */
 abstract class InAppNotification extends Notification implements ShouldQueue
 {
@@ -34,28 +25,15 @@ abstract class InAppNotification extends Notification implements ShouldQueue
     /** Il limitatore di invii, registrato in AppServiceProvider. */
     public const LIMITATORE = 'notifiche-email';
 
-    /**
-     * Gli errori veri dopo cui arrendersi.
-     *
-     * Le attese del limitatore non sono errori e non contano qui: quelle le
-     * governa `retryUntil`.
-     */
+    /** Errori veri dopo cui arrendersi; le attese del limitatore le governa `retryUntil`. */
     public int $maxExceptions = 3;
 
     /** A quale interruttore del profilo risponde questa notifica. */
     abstract public function category(): NotificationCategory;
 
     /**
-     * Il freno sugli invii, e solo su quelli.
-     *
-     * L'hosting accetta 250 email l'ora su tutto l'account, e un DM che
-     * programma il calendario di un mese ne genererebbe una per giocatore per
-     * ogni serata: 240 in pochi minuti, e l'invio si blocca. Con il limitatore
-     * le eccedenti tornano in coda e partono più tardi, invece di finire fra i
-     * job falliti senza che nessuno se ne accorga.
-     *
-     * Laravel accoda un job per canale, quindi la notifica in applicazione
-     * resta immediata: qui si frena la posta soltanto.
+     * Frena solo le email: l'hosting ne accetta 250 l'ora, e le eccedenti tornano
+     * in coda invece di fallire. La notifica in app resta immediata.
      *
      * @return list<object>
      */
@@ -64,13 +42,7 @@ abstract class InAppNotification extends Notification implements ShouldQueue
         return $channel === 'mail' ? [new RateLimited(self::LIMITATORE)] : [];
     }
 
-    /**
-     * Quanto insistere.
-     *
-     * Serve una finestra abbastanza larga da attraversare l'ora in cui il
-     * tetto è stato raggiunto: a quel punto il contatore riparte e la coda si
-     * svuota da sola.
-     */
+    /** Abbastanza da superare l'ora in cui si è raggiunto il tetto. */
     public function retryUntil(): DateTimeInterface
     {
         return now()->addHours(3);

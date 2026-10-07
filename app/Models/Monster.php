@@ -13,7 +13,7 @@ use Spatie\Activitylog\Support\LogOptions;
 /**
  * Un mostro del bestiario: lo statblock riusabile che il DM pesca nel tracker.
  *
- * Nel tracker il mostro scelto viene **copiato** nella serata — i PF calano lì,
+ * Nel tracker il mostro scelto viene **copiato** nella sessione — i PF calano lì,
  * non qui. Con `campaign_id` nullo il mostro è **pubblico** (usabile in ogni
  * campagna); valorizzato, lo vede e lo usa solo il DM di quella campagna.
  */

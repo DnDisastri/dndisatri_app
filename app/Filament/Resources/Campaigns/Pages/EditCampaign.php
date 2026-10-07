@@ -18,9 +18,8 @@ class EditCampaign extends EditRecord
     }
 
     /**
-     * Solo un admin può cambiare a chi appartiene un tavolo. Il campo è già
-     * disabilitato nel modulo, ma un campo disabilitato non è una difesa:
-     * la decisione va presa qui, dove il browser non arriva.
+     * Solo un admin cambia il DM di una campagna: il campo disabilitato non
+     * basta, la richiesta si manomette.
      */
     protected function mutateFormDataBeforeSave(array $data): array
     {

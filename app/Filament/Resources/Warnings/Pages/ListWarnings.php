@@ -6,6 +6,7 @@ use App\Actions\Users\IssueWarning;
 use App\Enums\Icon;
 use App\Filament\Resources\Warnings\WarningResource;
 use App\Models\User;
+use App\Models\Warning;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -14,11 +15,8 @@ use Filament\Resources\Pages\ListRecords;
 use RuntimeException;
 
 /**
- * M21 — chi è sotto richiamo adesso, e lo storico di tutti.
- *
- * In testa c'è M22, il modulo per darne uno: sta qui e non in una pagina sua
- * perché prima di dare un richiamo si guarda se quella persona ne ha già
- * presi, e la risposta è la tabella che sta sotto.
+ * M21: chi è sotto richiamo e lo storico. In testa M22, per darne uno guardando
+ * subito i precedenti.
  */
 class ListWarnings extends ListRecords
 {
@@ -31,15 +29,7 @@ class ListWarnings extends ListRecords
         ];
     }
 
-    /**
-     * M22 — dare un richiamo.
-     *
-     * Il modulo dice **cosa comporta** invece di limitarsi a chiederlo: chi lo
-     * dà deve sapere che sta mettendo quattro azioni di mercato sotto
-     * approvazione, e chi lo prende leggerà il motivo nelle sue notifiche. Per
-     * questo il motivo è obbligatorio: un richiamo senza motivo non si può né
-     * contestare né togliere con cognizione di causa.
-     */
+    /** M22: dare un richiamo. Il motivo è obbligatorio, lo legge chi lo riceve. */
     private function issueAction(): Action
     {
         return Action::make('richiama')
@@ -48,8 +38,8 @@ class ListWarnings extends ListRecords
             ->color('danger')
             ->modalHeading('Dare un richiamo')
             ->modalDescription('Da questo momento i suoi scambi e le sue vendite passano '
-                .'dall\'approvazione di un dungeon master, finché il richiamo non viene tolto. '
-                .'Il negozio della gilda resta libero.')
+                .'dall\'approvazione di un DM, finché il richiamo non viene tolto. '
+                .'L\'Emporio resta libero.')
             ->modalSubmitActionLabel('Dai il richiamo')
             ->schema([
                 Select::make('user_id')
@@ -65,7 +55,7 @@ class ListWarnings extends ListRecords
                     ->rows(3)
                     ->helperText('Lo legge il giocatore nelle sue notifiche.'),
             ])
-            ->authorize(fn () => auth()->user()->can('create', \App\Models\Warning::class))
+            ->authorize(fn () => auth()->user()->can('create', Warning::class))
             ->action(function (array $data) {
                 $target = User::findOrFail($data['user_id']);
 
@@ -89,12 +79,8 @@ class ListWarnings extends ListRecords
     }
 
     /**
-     * Chi si può richiamare: i giocatori che non lo sono già.
-     *
-     * Fuori restano gli amministratori — non giocano, e `IssueWarning` li
-     * rifiuta comunque — e sé stessi, che sarebbe una cosa buffa. Le regole
-     * vere stanno nell'azione: qui si tolgono dall'elenco per non far scegliere
-     * qualcosa che poi verrebbe rifiutato.
+     * Chi si può richiamare: non gli admin, non sé stessi, non chi lo è già.
+     * Le regole vere stanno in `IssueWarning`.
      *
      * @return array<int,string>
      */

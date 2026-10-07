@@ -5,15 +5,8 @@ declare(strict_types=1);
 namespace App\Enums;
 
 /**
- * Le condizioni del manuale (D&D 5e): lo stato in cui un combattente si trova
- * durante uno scontro — prono, avvelenato, stordito.
- *
- * Sono una **lista fissa** e non testo libero: sono quindici, sono quelle, e un
- * elenco chiuso tiene i nomi coerenti fra un DM e l'altro. Un giorno accanto a
- * ognuna potrà starci cosa comporta; per adesso è il nome che serve al tavolo.
- *
- * Il valore è la chiave inglese (stabile, non cambia se cambia l'etichetta); la
- * parola che si legge la dà `label()`.
+ * Le quindici condizioni del manuale (D&D 5e), lista chiusa per avere nomi coerenti.
+ * Il valore è la chiave inglese, stabile; l'etichetta la dà `label()`.
  */
 enum Condition: string
 {

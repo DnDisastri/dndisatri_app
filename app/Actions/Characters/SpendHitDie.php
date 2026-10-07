@@ -10,28 +10,13 @@ use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**
- * Spendere un dado vita.
+ * Spendere un dado vita, in due modi:
  *
- * Si spende in due modi diversi, e l'applicazione li tiene distinti perché al
- * tavolo sono due gesti distinti:
+ * - in un riposo breve: il giocatore tira il dado vero e qui arriva il
+ *   risultato, a cui si somma il modificatore di Costituzione (mai sotto zero);
+ * - per un privilegio di classe: si passa `null`, la riserva cala e i PF no.
  *
- * - **durante un riposo breve**, tirando il dado e recuperando il risultato.
- *   Il dado lo tira il giocatore, al tavolo, col suo d8 vero: qui arriva il
- *   risultato. È una scelta e non una scorciatoia — questo gruppo gioca di
- *   persona, e un'applicazione che tira al posto tuo si prenderebbe la parte
- *   migliore. Al numero tirato si aggiunge il modificatore di Costituzione,
- *   che è l'unica aritmetica che val la pena togliere di mano.
- * - **e basta**, quando è un privilegio di classe a consumarlo. Lì il dado non
- *   cura: paga qualcos'altro, e quel qualcos'altro lo sa il giocatore. Si passa
- *   `null` e la riserva cala senza toccare i punti ferita.
- *
- * Il modificatore può essere negativo: in quel caso si recupera meno del
- * tirato, e mai meno di zero. Un dado speso per niente è previsto dal
- * regolamento, e non è un errore da impedire.
- *
- * Non si controlla che sia in corso un riposo: l'applicazione non sa cosa
- * succede al tavolo, e a saperlo sono i giocatori. Quello che si controlla è
- * che il dado ci sia.
+ * Non si controlla che sia in corso un riposo, solo che il dado ci sia.
  */
 final class SpendHitDie
 {

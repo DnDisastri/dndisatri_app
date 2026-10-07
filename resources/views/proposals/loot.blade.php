@@ -43,7 +43,7 @@
 
         <x-panel title="Oggetti">
             <p class="mb-3 text-sm text-muted">
-                Scrivi il nome e scegli fra i suggerimenti: catalogo, negozio e oggetti già trovati da altri
+                Scrivi il nome e scegli fra i suggerimenti: catalogo, Emporio e oggetti già trovati da altri
                 riempiono il resto da soli. Se non c'è, scrivilo tu: nome breve, descrizione nei dettagli,
                 valore in mo (anche 0,5). Lascia in bianco le righe che non ti servono.
             </p>
@@ -105,7 +105,7 @@
             </div>
 
             <p class="mt-3 text-xs text-muted">
-                Il tipo e un eventuale bonus magico li conferma il DM quando approva.
+                Il tipo e un eventuale bonus magico li conferma il dungeon master quando approva.
             </p>
 
             <div class="mt-3">

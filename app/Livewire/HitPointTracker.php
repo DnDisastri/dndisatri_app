@@ -11,10 +11,7 @@ use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 /**
- * I punti ferita durante la serata (D7).
- *
- * Prima di questo pannello l'unico modo di segnare un colpo preso era una
- * proposta da far approvare a un DM. Per ogni colpo.
+ * I punti ferita durante la sessione (D7), senza approvazione.
  */
 class HitPointTracker extends Component
 {
@@ -40,24 +37,10 @@ class HitPointTracker extends Component
     /** Cos'ha appena fatto un riposo, se ne è stato preso uno. */
     public ?string $riposo = null;
 
-    /**
-     * Il riposo che si sta per prendere, mentre il riquadro chiede conferma.
-     *
-     * Un riposo **cancella lo stato di una serata** — slot spesi, dadi vita,
-     * temporanei — e non si annulla. Premuto per sbaglio invece di «Cure», si
-     * perde il conto di tutto quello che si era segnato. Da qui la conferma,
-     * che non chiede «sei sicuro?» ma dice **cosa sta per tornare indietro**:
-     * è l'unica domanda a cui si possa rispondere davvero.
-     */
+    /** Il riposo in attesa di conferma: azzera slot, dadi vita e temporanei, e non si annulla. */
     public ?string $conferma = null;
 
-    /**
-     * Quanto hai fatto col dado vita, mentre il riquadro lo chiede.
-     *
-     * Sta per conto suo e **non** nella casella dei danni: prima il pulsante
-     * riusava quella, e siccome ci sta scritto 1 di suo, «Spendi un dado vita»
-     * bruciava un dado per curare un punto senza chiedere niente a nessuno.
-     */
+    /** Il tiro del dado vita, separato dalla casella dei danni (che vale 1 di suo). */
     public ?int $dadoVita = null;
 
     /** Se il riquadro del dado vita è aperto. */
@@ -83,13 +66,7 @@ class HitPointTracker extends Component
         $this->dadoVita = null;
     }
 
-    /**
-     * Spendere un dado vita tirandolo, com'è durante un riposo breve.
-     *
-     * Il numero che si scrive è **quello che hai fatto col dado vero**, non i
-     * punti che vuoi recuperare: il modificatore di Costituzione lo aggiunge
-     * l'azione, che è l'unico conto che val la pena togliere di mano.
-     */
+    /** Dado vita tirato in un riposo breve: si scrive il tiro, la Costituzione la somma l'azione. */
     public function spendHitDie(): void
     {
         $this->spendi($this->dadoVita);
@@ -140,11 +117,7 @@ class HitPointTracker extends Component
     }
 
     /**
-     * Cosa torna indietro con questo riposo, per **questo** personaggio.
-     *
-     * L'elenco è fatto di cose vere e non di promesse generiche: se non hai
-     * slot spesi, «tutti gli slot indietro» non compare. Una conferma che
-     * elenca anche quello che non cambia insegna a non leggerla.
+     * Cosa torna indietro con questo riposo, solo quello che cambia davvero.
      *
      * @return list<string>
      */

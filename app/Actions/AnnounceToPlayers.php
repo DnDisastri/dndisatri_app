@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Notification;
 
 /**
- * Avvisa i giocatori di una novità del gruppo (un evento, un nuovo tavolo).
+ * Avvisa i giocatori di una novità del gruppo (un evento, una nuova sessione).
  *
  * Una sola volta per record: `players_notified_at` fa da guardia, così
  * modificare più tardi lo stesso evento non rimanda l'avviso.

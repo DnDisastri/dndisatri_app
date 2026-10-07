@@ -13,14 +13,8 @@ use RuntimeException;
 use Spatie\Permission\Models\Role;
 
 /**
- * Promuove un giocatore a dungeon master, per decisione di un admin.
- *
- * L'altra strada esiste già ed è `ReviewDmRequest`: il giocatore chiede, un
- * admin approva. Questa serve al caso opposto, quando è l'admin a proporlo, e
- * risparmia la finzione di far presentare una domanda a chi non l'ha chiesta.
- *
- * Il ruolo resta assegnabile **solo lato server**, da qui o da lì: non è un
- * campo scrivibile da nessun form. Era il buco della vecchia applicazione.
+ * Un admin promuove un giocatore a DM senza una sua richiesta (l'altra strada è
+ * `ReviewDmRequest`). Il ruolo si assegna solo da qui o da lì, mai da un modulo.
  */
 final class PromoteToDm
 {
@@ -31,7 +25,7 @@ final class PromoteToDm
         }
 
         if ($target->isAdmin()) {
-            throw new RuntimeException('Gli amministratori non conducono: non hanno personaggi né tavoli.');
+            throw new RuntimeException('Gli amministratori non conducono: non hanno personaggi né campagne.');
         }
 
         return DB::transaction(function () use ($target, $promoter) {

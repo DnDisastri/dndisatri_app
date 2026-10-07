@@ -29,8 +29,8 @@ final class WarningIssued extends InAppNotification
             'title' => 'Hai ricevuto un richiamo',
             'body' => $this->warning->reason
                 .' Finché resta attivo, i tuoi scambi, gli annunci e gli acquisti'
-                .' da altri giocatori devono essere approvati da un DM.'
-                .' Il negozio della gilda resta libero.',
+                .' da altri giocatori devono essere approvati da un dungeon master.'
+                .' L\'Emporio resta libero.',
             'url' => null,
         ];
     }

@@ -65,7 +65,7 @@ class EventsTable
                 ]),
             ])
             ->emptyStateHeading('Nessun evento')
-            ->emptyStateDescription('Crea il primo raduno, one-shot o serata speciale.');
+            ->emptyStateDescription('Crea il primo raduno, one-shot o sessione speciale.');
     }
 
     private static function openAction(): Action

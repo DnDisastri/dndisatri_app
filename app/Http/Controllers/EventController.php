@@ -7,15 +7,7 @@ use Illuminate\View\View;
 
 class EventController extends Controller
 {
-    /**
-     * Gli eventi del gruppo (P33): raduni, one-shot, serate speciali.
-     *
-     * Cosa diversa dalle serate di campagna, che appartengono a una storia.
-     *
-     * Si vede **solo il pubblicato**: una data futura in `published_at` è una
-     * pubblicazione programmata, e mostrarla in anticipo vanificherebbe il
-     * motivo per cui è stata programmata.
-     */
+    /** Gli eventi del gruppo (P33), fuori dalle campagne; solo quelli già pubblicati. */
     public function index(): View
     {
         return view('events.index', [
@@ -24,13 +16,7 @@ class EventController extends Controller
         ]);
     }
 
-    /**
-     * Il dettaglio (P34): locandina, quando, dove, la descrizione per esteso.
-     *
-     * Un evento non ancora pubblicato non esiste per chi guarda — 404, non
-     * «non hai il permesso»: dire che c'è qualcosa di nascosto è già dire
-     * qualcosa di una sorpresa che era programmata apposta.
-     */
+    /** Il dettaglio (P34). Non ancora pubblicato: 404, per non svelare la sorpresa. */
     public function show(Event $event): View
     {
         abort_unless($event->isPublished(), 404);

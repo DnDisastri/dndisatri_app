@@ -112,7 +112,7 @@ class Listings extends Component
     private function outcome(object $result, string $done): string
     {
         return $result instanceof SupervisedAction
-            ? 'Sei sotto richiamo: la richiesta è in attesa che un DM la approvi.'
+            ? 'Sei sotto richiamo: la richiesta è in attesa che un dungeon master la approvi.'
             : $done;
     }
 

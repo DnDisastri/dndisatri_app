@@ -7,13 +7,8 @@ namespace App\Enums;
 /**
  * Il tipo di una quest.
  *
- * Oggi ce n'è una sola — **di campagna**, legata a una storia e a un tavolo —
- * ma la label esiste già per quando ne arriveranno altre che a una campagna non
- * appartengono: una **boss run**, una **da farmare**. Definirle qui adesso vuol
- * dire che introdurle domani è aggiungere la logica, non inventare il concetto.
- *
- * Attenzione, quando arriverà il momento: `quests.campaign_id` è obbligatorio,
- * e i tipi diversi da campagna dovranno renderlo facoltativo.
+ * Oggi solo «di campagna». Per tipi senza campagna (boss run, farm)
+ * `quests.campaign_id` andrà reso facoltativo.
  */
 enum QuestType: string
 {

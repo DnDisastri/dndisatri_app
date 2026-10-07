@@ -46,7 +46,7 @@ enum LedgerAction: string
             self::ListingSold => 'Venduto',
             self::ListingBought => 'Comprato da un giocatore',
             self::Trade => 'Scambio',
-            self::DmGold => 'Monete dal DM',
+            self::DmGold => 'Monete dal dungeon master',
             self::Approve => 'Richiesta approvata',
             self::Reversal => 'Annullamento',
             self::Exchange => 'Cambio monete',

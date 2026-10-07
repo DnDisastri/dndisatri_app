@@ -21,7 +21,7 @@ class CampaignResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Icon::Campaigns;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Tavoli';
+    protected static string|UnitEnum|null $navigationGroup = 'Gestione';
 
     protected static ?string $modelLabel = 'campagna';
 

@@ -81,7 +81,7 @@ class MarketItemsTable
                 ]),
             ])
             ->emptyStateHeading('Niente qui')
-            ->emptyStateDescription('Gli articoli del negozio, e in magazzino gli oggetti arrivati dai baratti.');
+            ->emptyStateDescription('Gli articoli dell\'Emporio, e in magazzino gli oggetti arrivati dai baratti.');
     }
 
     /** Il prezzo parte dal valore che l'oggetto aveva nello zaino del giocatore. */
@@ -94,7 +94,7 @@ class MarketItemsTable
             ->visible(fn (MarketItem $record) => auth()->user()->can('putOnSale', $record))
             ->authorize(fn (MarketItem $record) => auth()->user()->can('putOnSale', $record))
             ->modalHeading(fn (MarketItem $record) => "Mettere in vendita «{$record->name}»?")
-            ->modalDescription('Da adesso compare nel negozio e chiunque può comprarlo.')
+            ->modalDescription('Da adesso compare nell\'Emporio e chiunque può comprarlo.')
             ->modalSubmitActionLabel('Metti in vendita')
             ->fillForm(fn (MarketItem $record) => ['prezzo' => $record->price_cp / 100])
             ->schema([

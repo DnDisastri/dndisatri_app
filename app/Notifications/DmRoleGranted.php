@@ -24,7 +24,7 @@ final class DmRoleGranted extends InAppNotification
     {
         return [
             'title' => 'Sei un dungeon master',
-            'body' => 'Un amministratore ti ha nominato. Ora puoi aprire campagne, programmare tavoli e condurre incarichi.',
+            'body' => 'Un amministratore ti ha nominato. Ora puoi aprire campagne, programmare sessioni e condurre quest.',
             'url' => route('dm.home'),
         ];
     }
