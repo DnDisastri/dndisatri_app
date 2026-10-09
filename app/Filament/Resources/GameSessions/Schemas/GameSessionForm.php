@@ -50,7 +50,7 @@ class GameSessionForm
 
                         TextInput::make('max_players')
                             ->label('Posti')
-                            ->helperText('Chi si prenota dopo entra in lista d\'attesa.')
+                            ->helperText('I posti da offrire. Si può chiedere un posto anche quando sono pieni.')
                             ->numeric()
                             ->minValue(1)
                             ->maxValue(30)

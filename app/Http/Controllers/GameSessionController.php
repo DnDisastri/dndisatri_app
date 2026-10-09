@@ -6,6 +6,7 @@ use App\Actions\Sessions\AwardSessionRewards;
 use App\Actions\Sessions\RecordAttendance;
 use App\Actions\Sessions\WriteRecap;
 use App\Domain\Dnd\Coins;
+use App\Enums\SeatStatus;
 use App\Exceptions\MarketException;
 use App\Models\Event;
 use App\Models\GameSession;
@@ -42,9 +43,22 @@ class GameSessionController extends Controller
             ->orderBy('played_at')
             ->get();
 
+        $utente = $request->user();
+        $mieiPosti = $utente->sessionBookings()
+            ->whereIn('game_session_id', $sessions->pluck('id'))
+            ->whereNotIn('status', [SeatStatus::Withdrawn->value, SeatStatus::Unverified->value])
+            ->get()
+            ->keyBy('game_session_id');
+
         return view('sessions.index', [
             'mese' => $mese,
             'sessions' => $sessions,
+            'mieiPosti' => $mieiPosti,
+            // I giorni in cui si ha già un tavolo: lì non si chiede un secondo posto.
+            'giorniPresi' => $sessions->filter(fn (GameSession $s) => $mieiPosti->has($s->id))
+                ->map(fn (GameSession $s) => $s->played_at->toDateString())
+                ->unique()->values()->all(),
+            'mieiPersonaggi' => $utente->characters()->alive()->orderBy('name')->get(),
 
             // Per giorno: nella stessa sera possono esserci due sessioni.
             'perGiorno' => $sessions->groupBy(fn (GameSession $s) => $s->played_at->toDateString()),
@@ -62,6 +76,7 @@ class GameSessionController extends Controller
 
         $utente = auth()->user();
         $posti = $session->bookings()->holdingSeat()->with(['user', 'character'])->get();
+        $gestisce = $utente->can('manageSeats', $session);
 
         // La precedente e la successiva della stessa campagna, per data e non per numero.
         $precedente = GameSession::where('campaign_id', $session->campaign_id)
@@ -80,16 +95,16 @@ class GameSessionController extends Controller
             'prossima' => $prossima,
 
             // Gli eroi con PF, CA e monete, a qualsiasi DM (M16): i prenotati, o chi ha giocato la campagna.
-            'eroi' => $utente->isDm()
-                ? ($posti->isNotEmpty() ? $session->bookedCharacters() : $session->campaign->roster())
-                : collect(),
+            'eroi' => $utente->isDm() ? $session->bookedCharacters() : collect(),
 
-            // Le prenotazioni, ospiti compresi: chi ha un posto, la fila, e il proprio.
-            'posti' => $posti,
-            'inAttesa' => $session->bookings()->waiting()->with('user')->get(),
+            // I giocatori vedono solo i confermati; il DM tutte le richieste, in ordine di arrivo.
+            'confermati' => $posti->where('status', SeatStatus::Confirmed)->values(),
+            'richieste' => $gestisce
+                ? $session->bookings()->visibleToDm()->with(['user', 'character'])->get()
+                : collect(),
             // Gli ospiti segnati presenti, per «Chi c'era» e per collegarli all'account.
             'ospitiPresenti' => $session->bookings()->whereNull('user_id')->where('guest_attended', true)->get(),
-            'mioPosto' => $session->seatOf($utente),
+            'mioPosto' => $session->bookingOf($utente),
             'mioPersonaggio' => $session->bookedCharacterOf($utente),
             'mieiPersonaggi' => $utente->characters()->alive()->orderBy('name')->get(),
 

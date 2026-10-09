@@ -26,6 +26,10 @@
 
             <x-field name="name" label="Nome utente" :value="$user->name" autocomplete="username" required />
             <x-field name="email" label="Email" type="email" :value="$user->email" autocomplete="email" required />
+            <div>
+                <x-field name="phone" label="Telefono (facoltativo)" type="tel" :value="$user->phone" autocomplete="tel" />
+                <p class="mt-1 text-xs text-muted">Lo vedono solo i dungeon master, per contattarti se si libera un posto.</p>
+            </div>
 
             <p class="text-xs text-muted">
                 Il nome è quello con cui ti vedono gli altri nella Gilda, ed è

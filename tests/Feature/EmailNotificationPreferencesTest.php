@@ -213,7 +213,9 @@ describe('la pagina del profilo', function () {
 it('ogni notifica dichiara la sua categoria', function () {
     $classi = collect(glob(app_path('Notifications/*.php')))
         ->map(fn (string $file) => 'App\\Notifications\\'.basename($file, '.php'))
-        ->reject(fn (string $classe) => (new ReflectionClass($classe))->isAbstract());
+        ->reject(fn (string $classe) => (new ReflectionClass($classe))->isAbstract())
+        // Le email agli ospiti senza account non hanno categorie: non c'è un profilo dove spegnerle.
+        ->filter(fn (string $classe) => is_subclass_of($classe, InAppNotification::class));
 
     expect($classi)->not->toBeEmpty();
 

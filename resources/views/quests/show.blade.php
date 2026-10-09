@@ -140,7 +140,7 @@
             <x-button size="sm" class="mt-3" :href="route('sessions.show', $quest->session)">Vai alla sessione e prenotati</x-button>
         @elseif ($quest->isActive())
             <p class="mt-2 text-sm text-muted">
-                Il DM non l'ha ancora messa in una sessione. Se ti interessa, segnala: quando la mette, ti arriva un avviso.
+                Il DM non l'ha ancora messa in una sessione. Se ti interessa, segnala: quando la mette, ti arriverà un avviso.
             </p>
         @endif
 

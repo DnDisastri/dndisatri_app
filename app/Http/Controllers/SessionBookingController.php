@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Sessions\AddGuest;
-use App\Actions\Sessions\BookSessionSeat;
-use App\Actions\Sessions\ConfirmSessionPlayers;
+use App\Actions\Sessions\AnswerReserveQuestion;
+use App\Actions\Sessions\AnswerSessionOffer;
+use App\Actions\Sessions\AskReserves;
 use App\Actions\Sessions\LinkGuest;
-use App\Actions\Sessions\PromoteFromWaitingList;
+use App\Actions\Sessions\OfferSessionSeat;
+use App\Actions\Sessions\RequestSessionSeat;
 use App\Actions\Sessions\WithdrawFromSession;
 use App\Enums\SeatStatus;
 use App\Exceptions\SessionUnavailableException;
@@ -17,11 +19,93 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\View\View;
 use InvalidArgumentException;
 
-/** Prenotarsi a una sessione, ritirarsi, e i due gesti del DM sui posti. */
+/** Chiedere un posto, rispondere all'offerta, ritirarsi; e i gesti del DM sui posti. */
 class SessionBookingController extends Controller
 {
+    /** Le proprie prenotazioni in un posto solo, divise per quello che c'è da fare. */
+    public function mine(Request $request): View
+    {
+        $posti = $request->user()->sessionBookings()
+            ->whereNotIn('status', [SeatStatus::Withdrawn->value, SeatStatus::Unverified->value])
+            ->whereHas('session', fn ($q) => $q->where('played_at', '>', now()))
+            ->with(['session.campaign', 'character'])
+            ->get()
+            ->sortBy(fn (SessionBooking $p) => $p->session->played_at)
+            ->values();
+
+        return view('sessions.mine', [
+            'daConfermare' => $posti->where('status', SeatStatus::Offered),
+            'domandeRiserva' => $posti->filter->awaitsReserveAnswer(),
+            'confermate' => $posti->where('status', SeatStatus::Confirmed),
+            'inviate' => $posti->filter(fn (SessionBooking $p) => $p->status === SeatStatus::Requested && ! $p->awaitsReserveAnswer()),
+            'riserve' => $posti->where('status', SeatStatus::Reserve),
+            'scadute' => $posti->where('status', SeatStatus::Expired),
+        ]);
+    }
+
+    /** Dal calendario: un posto a più sessioni insieme, con lo stesso eroe, una al giorno. */
+    public function bookMany(Request $request): RedirectResponse
+    {
+        $utente = $request->user();
+
+        $dati = $request->validate([
+            'sessioni' => ['required', 'array', 'max:31'],
+            'sessioni.*' => ['integer'],
+            'character_id' => ['required', 'integer', Rule::exists('characters', 'id')],
+        ], [
+            'sessioni.required' => 'Scegli almeno una sessione.',
+            'character_id.required' => 'Scegli con quale eroe vieni.',
+        ]);
+
+        $sessioni = GameSession::whereIn('id', $dati['sessioni'])->with('campaign')->orderBy('played_at')->get();
+
+        if ($sessioni->countBy(fn (GameSession $s) => $s->played_at->toDateString())->max() > 1) {
+            return back()->withInput()->with('error', 'Puoi chiedere una sola sessione al giorno: nello stesso giorno ne hai scelte due.');
+        }
+
+        $eroe = Character::findOrFail($dati['character_id']);
+
+        if ($eroe->user_id !== $utente->getKey() || ! $eroe->isAlive()) {
+            return back()->withInput()->with('error', SessionUnavailableException::wrongCharacter()->getMessage());
+        }
+        $fatte = 0;
+        $saltate = [];
+
+        foreach ($sessioni as $sessione) {
+            if ($utente->cannot('book', $sessione)) {
+                $saltate[] = $sessione->campaign?->title.' del '.$sessione->played_at->translatedFormat('j F');
+
+                continue;
+            }
+
+            try {
+                app(RequestSessionSeat::class)->handle($sessione, $utente, $eroe);
+                $fatte++;
+            } catch (SessionUnavailableException) {
+                $saltate[] = $sessione->campaign?->title.' del '.$sessione->played_at->translatedFormat('j F');
+            }
+        }
+
+        $messaggio = match (true) {
+            $fatte === 0 => 'Nessuna richiesta inviata.',
+            $fatte === 1 => 'Richiesta inviata per 1 sessione.',
+            default => "Richiesta inviata per {$fatte} sessioni.",
+        };
+
+        if ($fatte > 0) {
+            $messaggio .= ' Se c\'è posto per te, ti arriverà un\'email per confermarlo. Le trovi tutte in «Le mie prenotazioni».';
+        }
+
+        if ($saltate !== []) {
+            $messaggio .= ' Non inviate (già chieste, o un altro tavolo lo stesso giorno): '.implode(', ', $saltate).'.';
+        }
+
+        return back()->with($fatte > 0 ? 'status' : 'error', $messaggio);
+    }
+
     public function book(Request $request, GameSession $session): RedirectResponse
     {
         $utente = $request->user();
@@ -37,52 +121,80 @@ class SessionBookingController extends Controller
         ]);
 
         try {
-            $stato = app(BookSessionSeat::class)->handle($session, $utente, Character::findOrFail($dati['character_id']));
+            app(RequestSessionSeat::class)->handle($session, $utente, Character::findOrFail($dati['character_id']));
         } catch (SessionUnavailableException $e) {
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('status', match (true) {
-            $giaDentro => 'Personaggio cambiato.',
-            $stato === SeatStatus::Waiting => 'I posti erano esauriti: sei in lista d\'attesa. Se qualcuno si ritira, il DM ti chiama.',
-            default => 'Prenotato. Il posto è tuo quando il DM conferma la sessione.',
-        });
+        return back()->with('status', $giaDentro
+            ? 'Personaggio cambiato.'
+            : 'Richiesta inviata: hai chiesto un posto per questa sessione. Se c\'è posto per te, ti arriverà un\'email per confermarlo.');
     }
 
     public function withdraw(Request $request, GameSession $session): RedirectResponse
     {
         $this->authorize('withdraw', $session);
 
-        app(WithdrawFromSession::class)->handle($session, $request->user());
+        try {
+            app(WithdrawFromSession::class)->handle($session->bookingOf($request->user()));
+        } catch (SessionUnavailableException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
-        return back()->with('status', 'Ti sei tirato indietro.');
+        return back()->with('status', 'Fatto: hai lasciato la sessione.');
     }
 
-    public function confirm(GameSession $session): RedirectResponse
+    /** `risposta`: «si» conferma il posto offerto, qualsiasi altra cosa ci rinuncia. */
+    public function answerOffer(Request $request, GameSession $session): RedirectResponse
     {
-        $this->authorize('confirmPlayers', $session);
+        $posto = $session->bookingOf($request->user());
+        abort_if($posto === null, 404);
 
-        app(ConfirmSessionPlayers::class)->handle($session);
+        try {
+            $stato = app(AnswerSessionOffer::class)->handle($posto, $request->input('risposta') === 'si');
+        } catch (SessionUnavailableException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
-        return back()->with('status', 'Sessione confermata: i prenotati hanno ricevuto la notifica.');
+        return back()->with('status', $stato === SeatStatus::Confirmed
+            ? 'Posto confermato: ci vediamo alla sessione.'
+            : 'Hai rinunciato al posto. Il dungeon master lo sa.');
     }
 
-    public function promote(Request $request, GameSession $session): RedirectResponse
+    public function answerReserve(Request $request, GameSession $session): RedirectResponse
     {
-        $this->authorize('promote', $session);
+        $posto = $session->bookingOf($request->user());
+        abort_if($posto === null, 404);
+
+        try {
+            $stato = app(AnswerReserveQuestion::class)->handle($posto, $request->input('risposta') === 'si');
+        } catch (SessionUnavailableException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('status', $stato === SeatStatus::Reserve
+            ? 'Sei fra le riserve: se si libera un posto, potresti essere chiamato.'
+            : 'Richiesta ritirata.');
+    }
+
+    public function offer(Request $request, GameSession $session): RedirectResponse
+    {
+        $this->authorize('manageSeats', $session);
 
         $dati = $request->validate([
             'booking_id' => ['required', 'integer'],
         ]);
 
         try {
-            app(PromoteFromWaitingList::class)->handle($session, $this->posto($session, $dati['booking_id']));
+            $posto = app(OfferSessionSeat::class)->handle($session, $this->posto($session, $dati['booking_id']));
         } catch (SessionUnavailableException $e) {
             // Fra il caricamento e il clic un posto può essersi riempito.
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('status', 'Chiamato dalla lista d\'attesa.');
+        return back()->with('status', $posto->status === SeatStatus::Confirmed
+            ? "{$posto->displayName()} ha il posto confermato: non ha un'email, avvisalo tu."
+            : "Posto offerto a {$posto->displayName()}: ha ".SessionBooking::OFFER_HOURS.' ore per confermare.');
     }
 
     public function addGuest(Request $request, GameSession $session): RedirectResponse
@@ -93,21 +205,31 @@ class SessionBookingController extends Controller
             'guest_name' => ['required', 'string', 'max:80'],
             'guest_character' => ['nullable', 'string', 'max:80'],
             'guest_note' => ['nullable', 'string', 'max:255'],
+            'guest_social' => ['nullable', 'required_without:guest_email', 'string', 'max:80'],
+            'guest_email' => ['nullable', 'string', 'email', 'max:255'],
+            'guest_phone' => ['nullable', 'string', 'max:30'],
         ], [
             'guest_name.required' => 'Scrivi il nome dell\'ospite.',
+            'guest_social.required_without' => 'Serve almeno un contatto: Instagram o Telegram, oppure l\'email.',
         ]);
 
         try {
-            $posto = app(AddGuest::class)->handle(
-                $session, $request->user(), $dati['guest_name'], $dati['guest_character'] ?? null, $dati['guest_note'] ?? null,
-            );
+            $posto = app(AddGuest::class)->handle($session, $request->user(), $dati['guest_name'], [
+                'email' => $dati['guest_email'] ?? null,
+                'social' => $dati['guest_social'] ?? null,
+                'phone' => $dati['guest_phone'] ?? null,
+                'character' => $dati['guest_character'] ?? null,
+                'note' => $dati['guest_note'] ?? null,
+            ]);
         } catch (SessionUnavailableException $e) {
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('status', $posto->status === SeatStatus::Waiting
-            ? 'Posti esauriti: l\'ospite è in lista d\'attesa.'
-            : 'Ospite aggiunto.');
+        app(AskReserves::class)->handle($session);
+
+        return back()->with('status', $posto->status === SeatStatus::Reserve
+            ? 'Posti esauriti: l\'ospite è fra le riserve.'
+            : 'Ospite aggiunto, col posto confermato.');
     }
 
     public function removeGuest(GameSession $session, int $booking): RedirectResponse
@@ -117,7 +239,7 @@ class SessionBookingController extends Controller
         $posto = $this->posto($session, $booking);
         abort_unless($posto->isGuest(), 404);
 
-        $posto->forceFill(['status' => SeatStatus::Withdrawn, 'decided_at' => now()])->save();
+        $posto->forceFill(['status' => SeatStatus::Withdrawn, 'decided_at' => now(), 'offer_expires_at' => null])->save();
 
         return back()->with('status', 'Ospite tolto.');
     }
@@ -127,15 +249,19 @@ class SessionBookingController extends Controller
     {
         $this->authorize('manageGuests', $session);
 
-        $dati = $request->validate([
-            'user_id' => ['required', 'integer', Rule::exists('users', 'id')],
-        ]);
+        // Per nome: è univoco, ed è quello che il DM scrive nel campo con i suggerimenti.
+        // L'errore va in cima alla pagina: accanto al campo comparirebbe sotto ogni ospite.
+        $giocatore = User::where('name', (string) $request->input('user_name'))->first();
+
+        if ($giocatore === null || $giocatore->isAdmin()) {
+            return back()->with('error', 'Nessun giocatore si chiama così: scegli il nome fra i suggerimenti.');
+        }
 
         $posto = $this->posto($session, $booking);
         abort_unless($posto->isGuest(), 404);
 
         try {
-            app(LinkGuest::class)->handle($posto, User::findOrFail($dati['user_id']));
+            app(LinkGuest::class)->handle($posto, $giocatore);
         } catch (InvalidArgumentException $e) {
             return back()->with('error', $e->getMessage());
         }

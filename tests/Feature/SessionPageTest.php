@@ -337,7 +337,9 @@ describe('il calendario', function () {
             ->assertDontSee('La bacheca del bardo');
     });
 
-    it('segna quali sessioni sono ancora da giocare', function () {
+    it('lascia chiedere il posto solo alle sessioni ancora da giocare', function () {
+        Character::factory()->for($this->giocatore)->create();
+
         GameSession::factory()->for($this->campagna)->create([
             'played_at' => now()->startOfMonth()->addDays(2),
         ]);
@@ -347,7 +349,7 @@ describe('il calendario', function () {
         $this->actingAs($this->giocatore)
             ->get(route('sessions.index', ['mese' => $primaDelMese->format('Y-m')]))
             ->assertOk()
-            ->assertDontSee('Da giocare');
+            ->assertDontSee('name="sessioni[]"', false);
 
         GameSession::factory()->for($this->campagna)->create([
             'played_at' => now()->addDays(3)->setTime(21, 0),
@@ -356,7 +358,7 @@ describe('il calendario', function () {
         $this->actingAs($this->giocatore)
             ->get(route('sessions.index', ['mese' => now()->addDays(3)->format('Y-m')]))
             ->assertOk()
-            ->assertSee('Da giocare');
+            ->assertSee('name="sessioni[]"', false);
     });
 
     it('dalla Home si arriva al calendario', function () {

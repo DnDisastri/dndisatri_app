@@ -3,9 +3,11 @@
 namespace App\Providers;
 
 use App\Domain\Dnd\SubclassCatalogue;
+use App\Http\Controllers\GuestBookingController;
 use App\Notifications\InAppNotification;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -62,5 +64,11 @@ class AppServiceProvider extends ServiceProvider
          * quello che non passa di qui.
          */
         RateLimiter::for(InAppNotification::LIMITATORE, fn () => Limit::perHour(200));
+
+        // Il modulo pubblico degli ospiti: ogni invio manda un'email, quindi pochi per IP e per indirizzo.
+        RateLimiter::for(GuestBookingController::LIMITATORE, fn (Request $request) => [
+            Limit::perHour(5)->by('ip:'.$request->ip()),
+            Limit::perHour(3)->by('email:'.(string) $request->input('email')),
+        ]);
     }
 }

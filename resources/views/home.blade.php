@@ -112,10 +112,8 @@
                             <span class="mt-1 block text-xs text-muted">
                                 @if ($mio?->isActive())
                                     <x-badge tone="own">{{ $mio->mine() }}</x-badge>
-                                @elseif ($session->isFull())
-                                    Posti esauriti, c'è la lista d'attesa
                                 @else
-                                    {{ $session->freeSlots() === 1 ? '1 posto libero' : $session->freeSlots().' posti liberi' }}
+                                    {{ $session->confirmedCount() }} / {{ $session->max_players }} confermati
                                 @endif
                             </span>
                         </span>

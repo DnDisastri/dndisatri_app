@@ -6,28 +6,38 @@ namespace App\Actions\Sessions;
 
 use App\Enums\SeatStatus;
 use App\Exceptions\SessionUnavailableException;
-use App\Models\GameSession;
-use App\Models\User;
+use App\Models\SessionBooking;
+use App\Notifications\SessionSeatReleased;
 
 /**
- * Ritirarsi, anche a sessione confermata: chi si ammala non viene lo stesso.
- * La riga resta, con lo stato cambiato.
+ * Ritirarsi, anche col posto confermato: chi si ammala non viene lo stesso.
+ * La riga resta, con lo stato cambiato. Se si libera un posto vero, lo sanno
+ * il DM della campagna e gli admin; nessuno entra da solo al suo posto.
  */
 final class WithdrawFromSession
 {
-    public function handle(GameSession $session, User $user): void
+    public function __construct(private readonly NotifySeatReleased $notifyReleased) {}
+
+    public function handle(SessionBooking $posto): void
     {
-        if (! $session->acceptsBookings()) {
+        if (! $posto->session->acceptsBookings()) {
             throw SessionUnavailableException::closed();
         }
 
-        if (! $session->hasParticipant($user)) {
+        if (! $posto->status->isActive()) {
             throw SessionUnavailableException::notAParticipant();
         }
 
-        $session->players()->updateExistingPivot($user, [
-            'status' => SeatStatus::Withdrawn->value,
+        $liberaUnPosto = $posto->status->takesSeat();
+
+        $posto->forceFill([
+            'status' => SeatStatus::Withdrawn,
             'decided_at' => now(),
-        ]);
+            'offer_expires_at' => null,
+        ])->save();
+
+        if ($liberaUnPosto) {
+            $this->notifyReleased->handle($posto, SessionSeatReleased::WITHDRAWN);
+        }
     }
 }

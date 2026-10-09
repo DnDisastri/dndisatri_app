@@ -22,6 +22,19 @@
         <x-intro :page="\App\Enums\IntroPage::Sessions" class="mt-1" />
     </div>
 
+    {{-- Il calendario pubblico del mese, da far uscire insieme al calendario delle sessioni. --}}
+    @if (auth()->user()->isDm() || auth()->user()->isAdmin())
+        <x-panel>
+            <p class="text-xs uppercase tracking-wide text-muted">Link del calendario per chi non ha un account</p>
+            <p class="mt-1 text-xs text-muted">
+                Chi lo apre vede le sessioni di {{ $mese->translatedFormat('F') }} e chiede un posto a più sessioni insieme, una al giorno.
+            </p>
+            <input type="text" readonly value="{{ route('guest-bookings.calendar', ['mese' => $mese->format('Y-m')]) }}"
+                   aria-label="Link del calendario per chi non ha un account"
+                   class="mt-2 w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-fg">
+        </x-panel>
+    @endif
+
     <div class="space-y-6 lg:grid lg:grid-cols-5 lg:items-start lg:gap-8 lg:space-y-0">
     <x-panel class="lg:sticky lg:top-8 lg:col-span-2">
 {{-- Il mese resta nell'URL, così la vista può essere condivisa e riaperta nello stesso stato. --}}
@@ -76,37 +89,89 @@
             Le sessioni di {{ $mese->translatedFormat('F') }}
         </h3>
 
-{{-- Solo la prima sessione del giorno riceve l'ancora, così ogni `id` resta univoco. --}}
-        @php $ancorati = []; @endphp
+        @if ($perGiorno->isEmpty())
+            <x-empty>Nessuna sessione in questo mese.</x-empty>
+        @else
+            {{-- Un riquadro per giorno, come nel calendario degli ospiti: si spuntano le sessioni e si chiede il posto una volta sola. --}}
+            <form method="POST" action="{{ route('sessions.book-many') }}" data-una-al-giorno>
+                @csrf
 
-        <div class="space-y-2">
-            @forelse ($sessions as $session)
-                @php
-                    $data = $session->played_at->toDateString();
-                    $ancora = in_array($data, $ancorati, true) ? null : $ancorati[] = $data;
-                @endphp
+                <div class="grid gap-3 sm:grid-cols-2">
+                    @foreach ($perGiorno as $giorno => $quelGiorno)
+                        @php
+                            $data = \Illuminate\Support\Carbon::parse($giorno);
+                            $giornoPreso = in_array($giorno, $giorniPresi, true);
+                        @endphp
 
-                <x-card padding="sm" :href="route('sessions.show', ['session' => $session, 'da' => 'serate'])"
-                        :id="$ancora ? 'g-'.$ancora : null"
-                        class="flex items-baseline justify-between gap-3 scroll-mt-20">
-                    <span>
-                        <span class="block font-semibold text-fg">{{ $session->campaign?->title }}</span>
-                        <span class="block text-sm text-muted">{{ $session->displayTitle() }}</span>
+                        <fieldset id="g-{{ $giorno }}" class="scroll-mt-20 rounded-card border border-line bg-surface p-3">
+                            <legend class="sr-only">{{ $data->translatedFormat('l j F') }}</legend>
 
-                        @if ($session->isUpcoming())
-                            <x-badge tone="accent" class="mt-1">Da giocare</x-badge>
-                        @endif
-                    </span>
+                            <div class="mb-2 flex items-baseline justify-between gap-2">
+                                <p class="flex items-baseline gap-2">
+                                    <span class="text-2xl font-bold text-fg">{{ $data->day }}</span>
+                                    <span class="text-sm capitalize text-muted">{{ $data->translatedFormat('l') }}</span>
+                                </p>
+                                @if ($quelGiorno->count() > 1 && ! $giornoPreso && $data->isFuture())
+                                    <span class="text-xs text-muted">scegline una</span>
+                                @endif
+                            </div>
 
-                    <span class="shrink-0 text-right text-sm text-muted">
-                        {{ $session->played_at->translatedFormat('D j') }}<br>
-                        {{ $session->played_at->format('H:i') }}
-                    </span>
-                </x-card>
-            @empty
-                <x-empty>Nessuna sessione in questo mese.</x-empty>
-            @endforelse
-        </div>
+                            <div class="space-y-2">
+                                @foreach ($quelGiorno as $session)
+                                    @php
+                                        $mio = $mieiPosti->get($session->id);
+                                        $puoChiedere = ! $giornoPreso && $mieiPersonaggi->isNotEmpty() && auth()->user()->can('book', $session);
+                                    @endphp
+
+                                    <div class="flex items-start gap-3 rounded-[2px] bg-page px-3 py-2 ring-1 ring-transparent transition has-[:checked]:ring-active">
+                                        @if ($puoChiedere)
+                                            <input type="checkbox" name="sessioni[]" value="{{ $session->id }}" id="s-{{ $session->id }}"
+                                                   data-giorno="{{ $giorno }}" @checked(in_array($session->id, old('sessioni', [])))
+                                                   class="mt-1 accent-active">
+                                        @endif
+
+                                        <span class="min-w-0 flex-1">
+                                            <label @if ($puoChiedere) for="s-{{ $session->id }}" @endif
+                                                   @class(['block text-sm font-semibold text-fg', 'cursor-pointer' => $puoChiedere])>
+                                                {{ $session->played_at->format('H:i') }} · {{ $session->campaign?->title }}
+                                            </label>
+                                            <a href="{{ route('sessions.show', ['session' => $session, 'da' => 'serate']) }}"
+                                               class="block truncate text-xs text-muted hover:text-fg hover:underline">{{ $session->displayTitle() }} ›</a>
+                                        </span>
+
+                                        @if ($mio)
+                                            <x-badge :tone="$mio->status->tone()" class="shrink-0">{{ $mio->status->label() }}</x-badge>
+                                        @elseif (! $session->isUpcoming())
+                                            <x-badge tone="outline" class="shrink-0">Giocata</x-badge>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        </fieldset>
+                    @endforeach
+                </div>
+
+                {{-- La barra resta a vista mentre si scorre il mese; sul telefono sopra la barra di navigazione. --}}
+                @if ($mieiPersonaggi->isNotEmpty())
+                    <div class="sticky bottom-24 z-20 mt-4 flex flex-wrap items-center gap-2 rounded-card border border-line bg-surface p-3 shadow-lg lg:bottom-4">
+                        <label for="character_id" class="text-sm text-muted">Con</label>
+                        <select name="character_id" id="character_id" required
+                                class="min-w-0 flex-1 rounded-md border border-line bg-page px-3 py-2 text-sm text-fg">
+                            @foreach ($mieiPersonaggi as $pg)
+                                <option value="{{ $pg->id }}" @selected((int) old('character_id') === $pg->id)>{{ $pg->name }}</option>
+                            @endforeach
+                        </select>
+                        <x-button>Chiedo un posto</x-button>
+                    </div>
+                    @error('sessioni') <p class="mt-2 text-sm text-on-danger-soft">{{ $message }}</p> @enderror
+                @elseif (! auth()->user()->isAdmin())
+                    <p class="mt-4 text-sm text-muted">
+                        Per chiedere un posto ti serve un eroe.
+                        <a href="{{ route('characters.create') }}" class="font-semibold text-active hover:underline">Crealo</a>
+                    </p>
+                @endif
+            </form>
+        @endif
     </section>
     </div>
 

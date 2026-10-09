@@ -51,12 +51,24 @@ abstract class InAppNotification extends Notification implements ShouldQueue
     /** @return array{title: string, body: string, url: string|null} */
     abstract public function toArray(object $notifiable): array;
 
+    /** Le notifiche che chiedono una risposta arrivano per email anche a chi le ha spente. */
+    public function alwaysEmail(): bool
+    {
+        return false;
+    }
+
+    /** Il testo del pulsante nell'email. */
+    public function buttonLabel(): string
+    {
+        return 'Vai a vedere';
+    }
+
     /** @return list<string> */
     public function via(object $notifiable): array
     {
         $canali = ['database'];
 
-        if ($notifiable instanceof User && $notifiable->wantsEmailFor($this->category())) {
+        if ($notifiable instanceof User && ($this->alwaysEmail() || $notifiable->wantsEmailFor($this->category()))) {
             $canali[] = 'mail';
         }
 
@@ -73,8 +85,10 @@ abstract class InAppNotification extends Notification implements ShouldQueue
                 'titolo' => $contenuto['title'],
                 'corpo' => $contenuto['body'],
                 'indirizzo' => $contenuto['url'],
-                'destinatario' => $notifiable,
+                'nome' => $notifiable->name,
                 'categoria' => $this->category(),
+                'forzata' => $this->alwaysEmail(),
+                'pulsante' => $this->buttonLabel(),
             ]);
     }
 }

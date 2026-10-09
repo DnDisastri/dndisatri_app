@@ -65,6 +65,9 @@ final class Navigazione
     public static function menu(User $utente): array
     {
         $voci = [
+            // In cima: chiedere un posto e seguire le proprie richieste dev'essere a un tocco.
+            self::voce('Calendario', 'sessions.index', Icon::Sessions, ['sessions.index', 'sessions.show']),
+            self::voce('Le mie prenotazioni', 'sessions.mine', Icon::Bookings, ['sessions.mine']),
             self::voce('Gilda', 'guild.index', Icon::Guild, ['guild.*', 'fallen.*']),
             self::voce('Build consigliate', 'builds.index', Icon::Builds),
             self::voce('Le mie richieste', 'proposals.index', Icon::Proposals),

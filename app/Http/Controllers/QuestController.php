@@ -92,7 +92,7 @@ class QuestController extends Controller
 
         $quest->interested()->attach($utente, ['joined_at' => now()]);
 
-        return back()->with('status', 'Segnato. Quando il DM la mette in una sessione, ti arriva un avviso.');
+        return back()->with('status', 'Segnato. Quando il DM la mette in una sessione, ti arriverà un avviso.');
     }
 
     /** Mettere la quest in una sessione in programma della campagna, o toglierla. */

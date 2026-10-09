@@ -40,7 +40,6 @@ class GameSession extends Model
             'played_at' => 'datetime',
             'recap_written_at' => 'datetime',
             'players_notified_at' => 'datetime',
-            'players_confirmed_at' => 'datetime',
             'rewards' => 'array',
             'min_players' => 'integer',
             'max_players' => 'integer',
@@ -83,10 +82,10 @@ class GameSession extends Model
             ->withTimestamps();
     }
 
-    /** I personaggi di chi ha un posto, per gli eroi del DM e il combattimento. */
+    /** I personaggi dei posti confermati, per gli eroi del DM e il combattimento: un'offerta non è ancora un sì. */
     public function bookedCharacters(): Collection
     {
-        $ids = $this->bookings()->holdingSeat()->pluck('character_id')->filter();
+        $ids = $this->bookings()->confirmed()->pluck('character_id')->filter();
 
         return Character::query()
             ->alive()
@@ -135,10 +134,15 @@ class GameSession extends Model
         return $this->isUpcoming();
     }
 
-    /** Ospiti compresi: occupano un posto come gli altri. */
+    /** Offerti e confermati, ospiti compresi: il posto è tenuto per loro. */
     public function participantCount(): int
     {
         return $this->bookings()->holdingSeat()->count();
+    }
+
+    public function confirmedCount(): int
+    {
+        return $this->bookings()->confirmed()->count();
     }
 
     public function freeSlots(): int
@@ -146,15 +150,22 @@ class GameSession extends Model
         return max(0, $this->max_players - $this->participantCount());
     }
 
+    /** Non ci sono posti da offrire: si può ancora chiedere, si finisce fra le richieste. */
     public function isFull(): bool
     {
         return $this->freeSlots() === 0;
     }
 
+    /** Tutti i posti confermati: è il momento di chiedere agli altri se restano come riserve. */
+    public function isFullyConfirmed(): bool
+    {
+        return $this->confirmedCount() >= $this->max_players;
+    }
+
     /** Il minimo è un'indicazione per il DM, non un divieto. */
     public function missingToMinimum(): int
     {
-        return max(0, $this->min_players - $this->participantCount());
+        return max(0, $this->min_players - $this->confirmedCount());
     }
 
     public function hasMinimum(): bool
@@ -162,17 +173,14 @@ class GameSession extends Model
         return $this->missingToMinimum() === 0;
     }
 
-    /** Dichiarato dal DM, non dedotto: chi si ritira dopo non lo annulla. */
-    public function isConfirmed(): bool
+    public function bookingOf(User $user): ?SessionBooking
     {
-        return $this->players_confirmed_at !== null;
+        return $this->bookings()->where('user_id', $user->getKey())->first();
     }
 
     public function seatOf(User $user): ?SeatStatus
     {
-        $stato = $this->players()->whereKey($user->getKey())->first()?->pivot?->status;
-
-        return $stato === null ? null : SeatStatus::from($stato);
+        return $this->bookingOf($user)?->status;
     }
 
     /** Il personaggio con cui il giocatore si è prenotato. */
@@ -181,7 +189,7 @@ class GameSession extends Model
         return $this->players()->whereKey($user->getKey())->first()?->pivot?->character_id;
     }
 
-    /** Ha un posto o è in lista: chi si è ritirato non conta. */
+    /** Ha chiesto un posto o ce l'ha: chi si è ritirato non conta. */
     public function hasParticipant(User $user): bool
     {
         return $this->seatOf($user)?->isActive() ?? false;

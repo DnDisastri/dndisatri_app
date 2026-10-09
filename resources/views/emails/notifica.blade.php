@@ -20,7 +20,7 @@
 
                     <tr>
                         <td style="padding:28px 24px 8px;">
-                            <p style="margin:0 0 4px; color:#666666; font-size:13px;">Ciao {{ $destinatario->name }},</p>
+                            <p style="margin:0 0 4px; color:#666666; font-size:13px;">Ciao {{ $nome }},</p>
                             <h1 style="margin:0 0 12px; color:#1a1a1a; font-size:21px; line-height:1.3;">{{ $titolo }}</h1>
                             <p style="margin:0; color:#1a1a1a; font-size:15px; line-height:1.6;">{!! nl2br(e($corpo)) !!}</p>
                         </td>
@@ -32,7 +32,7 @@
                                 <a href="{{ $indirizzo }}"
                                    style="display:inline-block; background-color:#d4423e; color:#ffffff; font-size:15px;
                                           font-weight:bold; text-decoration:none; padding:12px 24px; border-radius:999px;">
-                                    Vai a vedere
+                                    {{ $pulsante ?? 'Vai a vedere' }}
                                 </a>
                             </td>
                         </tr>
@@ -40,9 +40,16 @@
 
                     <tr>
                         <td style="border-top:1px solid #d9d9d9; padding:16px 24px; color:#666666; font-size:12px; line-height:1.6;">
-                            Ricevi questa email perché nel tuo profilo è attiva la categoria
-                            «{{ $categoria->label() }}».
-                            Puoi disattivarla quando vuoi <a href="{{ route('profile.edit') }}" style="color:#2c3e6e;">dal tuo profilo</a>.
+                            @if ($categoria === null)
+                                Ricevi questa email per la tua richiesta di un posto a D&amp;Disastri.
+                                Se non sei stato tu, ignorala: senza il clic sul link non succede niente.
+                            @elseif ($forzata ?? false)
+                                Questa email ti arriva anche con le notifiche disattivate: serve una tua risposta.
+                            @else
+                                Ricevi questa email perché nel tuo profilo è attiva la categoria
+                                «{{ $categoria->label() }}».
+                                Puoi disattivarla quando vuoi <a href="{{ route('profile.edit') }}" style="color:#2c3e6e;">dal tuo profilo</a>.
+                            @endif
                         </td>
                     </tr>
 

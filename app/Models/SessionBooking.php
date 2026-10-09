@@ -7,9 +7,12 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/** Un posto a una sessione: di un giocatore registrato, o di un ospite aggiunto da un DM. */
+/** Un posto a una sessione: di un giocatore registrato, o di un ospite senza account. */
 class SessionBooking extends Model
 {
+    /** Quanto ha per confermare chi riceve un posto, salvo che la sessione cominci prima. */
+    public const OFFER_HOURS = 24;
+
     protected $table = 'game_session_bookings';
 
     protected $guarded = ['*'];
@@ -20,6 +23,8 @@ class SessionBooking extends Model
             'status' => SeatStatus::class,
             'joined_at' => 'datetime',
             'decided_at' => 'datetime',
+            'offer_expires_at' => 'datetime',
+            'reserve_asked_at' => 'datetime',
             'guest_attended' => 'boolean',
         ];
     }
@@ -56,13 +61,58 @@ class SessionBooking extends Model
         return $this->character?->name ?? $this->guest_character;
     }
 
-    public function scopeHoldingSeat(Builder $query): void
+    public function contactEmail(): ?string
     {
-        $query->whereIn('status', [SeatStatus::Booked->value, SeatStatus::Confirmed->value])->orderBy('joined_at');
+        return $this->user?->email ?? $this->guest_email;
     }
 
-    public function scopeWaiting(Builder $query): void
+    public function contactPhone(): ?string
     {
-        $query->where('status', SeatStatus::Waiting->value)->orderBy('joined_at');
+        return $this->user?->phone ?? $this->guest_phone;
+    }
+
+    /** Il nome utente Instagram o Telegram di un ospite aggiunto dal DM. */
+    public function contactSocial(): ?string
+    {
+        return $this->guest_social;
+    }
+
+    /** Senza email l'ospite non può rispondere dall'app: lo contatta il DM. */
+    public function answersOutsideApp(): bool
+    {
+        return $this->isGuest() && blank($this->guest_email);
+    }
+
+    /** Alla sessione piena gli si è chiesto se resta come riserva, e non ha ancora risposto. */
+    public function awaitsReserveAnswer(): bool
+    {
+        return $this->status === SeatStatus::Requested && $this->reserve_asked_at !== null;
+    }
+
+    /** La pagina dell'ospite, senza account: il token è il suo accesso. */
+    public function guestUrl(): ?string
+    {
+        return $this->guest_token ? route('guest-bookings.show', $this->guest_token) : null;
+    }
+
+    public function scopeHoldingSeat(Builder $query): void
+    {
+        $query->whereIn('status', SeatStatus::seatValues())->orderBy('joined_at');
+    }
+
+    public function scopeConfirmed(Builder $query): void
+    {
+        $query->where('status', SeatStatus::Confirmed->value)->orderBy('joined_at');
+    }
+
+    /** Quello che il DM vede: tutti tranne gli ospiti non verificati e chi si è ritirato, in ordine di arrivo. */
+    public function scopeVisibleToDm(Builder $query): void
+    {
+        $query->whereNotIn('status', [SeatStatus::Unverified->value, SeatStatus::Withdrawn->value])->orderBy('joined_at');
+    }
+
+    public function scopeReserves(Builder $query): void
+    {
+        $query->where('status', SeatStatus::Reserve->value)->orderBy('joined_at');
     }
 }

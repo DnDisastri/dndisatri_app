@@ -20,12 +20,27 @@ class SessionUnavailableException extends RuntimeException
 
     public static function notAParticipant(): self
     {
-        return new self('Non risulti prenotato a questa sessione.');
+        return new self('Non risulti fra chi ha chiesto un posto in questa sessione.');
     }
 
-    public static function notWaiting(): self
+    public static function cannotOffer(): self
     {
-        return new self('Questo giocatore non è in lista d\'attesa.');
+        return new self('A questa persona non si può offrire un posto adesso.');
+    }
+
+    public static function noOffer(): self
+    {
+        return new self('Non c\'è un posto da confermare: forse la conferma è scaduta.');
+    }
+
+    public static function noReserveQuestion(): self
+    {
+        return new self('Non c\'è nessuna domanda a cui rispondere.');
+    }
+
+    public static function sameDay(): self
+    {
+        return new self('Quel giorno hai già chiesto un posto a un\'altra sessione: non ci si sdoppia fra due tavoli.');
     }
 
     public static function wrongCharacter(): self

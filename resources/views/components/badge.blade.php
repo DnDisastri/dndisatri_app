@@ -6,9 +6,10 @@
 {{--
     La pillola: una parola che qualifica quello che le sta accanto.
 
-    Quattro toni: `neutral` (un fatto senza peso), `accent` (da notare:
-    difficoltà, conteggio), `danger` (andato storto), `own` (riguarda te: il
-    tuo posto — navy, non crema, che sulla card quest è già la difficoltà).
+    Cinque toni: `neutral` (un fatto senza peso), `outline` (un passaggio
+    intermedio: chiaro col bordo, si legge anche sul tema scuro), `accent` (da
+    notare: difficoltà, conteggio), `danger` (andato storto), `own` (riguarda te:
+    il tuo posto — navy, non crema, che sulla card quest è già la difficoltà).
 
     Tono e misura sono proprietà, non classi (`$attributes->merge()` accoda).
 --}}
@@ -24,6 +25,7 @@
         'accent' => 'bg-accent-soft text-on-accent-soft',
         'danger' => 'bg-danger-soft text-on-danger-soft',
         'own' => 'bg-primary text-on-primary',
+        'outline' => 'border border-line bg-surface text-fg',
         default => 'bg-quiet text-on-quiet',
     };
 @endphp

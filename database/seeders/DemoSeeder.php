@@ -226,12 +226,19 @@ class DemoSeeder extends Seeder
                     'max_players' => 4,
                 ]);
 
-                // Quattro posti presi e uno in attesa: un personaggio per giocatore.
+                // Due confermati, uno in attesa di conferma e due richieste: un personaggio per giocatore.
                 foreach ($personaggi->unique('user_id')->take(5)->values() as $i => $pg) {
+                    $stato = match (true) {
+                        $i < 2 => SeatStatus::Confirmed,
+                        $i === 2 => SeatStatus::Offered,
+                        default => SeatStatus::Requested,
+                    };
+
                     $prossima->players()->attach($pg->user_id, [
                         'character_id' => $pg->getKey(),
-                        'status' => ($i < 4 ? SeatStatus::Booked : SeatStatus::Waiting)->value,
-                        // Sfalsati di un minuto: la lista d'attesa ha un ordine.
+                        'status' => $stato->value,
+                        'offer_expires_at' => $stato === SeatStatus::Offered ? now()->addDay() : null,
+                        // Sfalsati di un minuto: le richieste hanno un ordine di arrivo.
                         'joined_at' => now()->subMinutes(10 - $i),
                     ]);
                 }

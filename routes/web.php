@@ -11,6 +11,7 @@ use App\Http\Controllers\EncounterController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\FaqController;
 use App\Http\Controllers\GameSessionController;
+use App\Http\Controllers\GuestBookingController;
 use App\Http\Controllers\GuildController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LedgerController;
@@ -33,6 +34,21 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // Pubblica: la si raggiunge dalla presentazione, prima dell'accesso.
 Route::get('chi-siamo', [AboutController::class, 'show'])->name('about');
+
+// Ospiti senza account: il modulo per chiedere un posto e la pagina personale col token.
+Route::get('calendario', [GuestBookingController::class, 'calendar'])->name('guest-bookings.calendar');
+Route::post('calendario', [GuestBookingController::class, 'storeCalendar'])
+    ->middleware('throttle:'.GuestBookingController::LIMITATORE)
+    ->name('guest-bookings.calendar.store');
+Route::get('serate/{session}/chiedi-un-posto', [GuestBookingController::class, 'create'])->name('guest-bookings.create');
+Route::post('serate/{session}/chiedi-un-posto', [GuestBookingController::class, 'store'])
+    ->middleware('throttle:'.GuestBookingController::LIMITATORE)
+    ->name('guest-bookings.store');
+Route::get('prenotazione/{token}', [GuestBookingController::class, 'show'])->whereUuid('token')->name('guest-bookings.show');
+Route::get('prenotazione/{token}/verifica', [GuestBookingController::class, 'verify'])->whereUuid('token')->name('guest-bookings.verify');
+Route::post('prenotazione/{token}/offerta', [GuestBookingController::class, 'answerOffer'])->whereUuid('token')->name('guest-bookings.answer-offer');
+Route::post('prenotazione/{token}/riserva', [GuestBookingController::class, 'answerReserve'])->whereUuid('token')->name('guest-bookings.answer-reserve');
+Route::post('prenotazione/{token}/ritira', [GuestBookingController::class, 'withdraw'])->whereUuid('token')->name('guest-bookings.withdraw');
 
 Route::middleware('auth')->group(function () {
 
@@ -93,11 +109,14 @@ Route::middleware('auth')->group(function () {
     Route::post('incarichi/{quest}/concludi', [QuestController::class, 'conclude'])->name('quests.conclude');
 
     Route::get('serate', [GameSessionController::class, 'index'])->name('sessions.index');
+    Route::post('serate/richiedi', [SessionBookingController::class, 'bookMany'])->name('sessions.book-many');
+    Route::get('le-mie-prenotazioni', [SessionBookingController::class, 'mine'])->name('sessions.mine');
     Route::get('serate/{session}', [GameSessionController::class, 'show'])->name('sessions.show');
     Route::post('serate/{session}/prenota', [SessionBookingController::class, 'book'])->name('sessions.book');
     Route::post('serate/{session}/ritirati', [SessionBookingController::class, 'withdraw'])->name('sessions.withdraw');
-    Route::post('serate/{session}/conferma', [SessionBookingController::class, 'confirm'])->name('sessions.confirm');
-    Route::post('serate/{session}/chiama', [SessionBookingController::class, 'promote'])->name('sessions.promote');
+    Route::post('serate/{session}/offerta', [SessionBookingController::class, 'answerOffer'])->name('sessions.answer-offer');
+    Route::post('serate/{session}/riserva', [SessionBookingController::class, 'answerReserve'])->name('sessions.answer-reserve');
+    Route::post('serate/{session}/offri', [SessionBookingController::class, 'offer'])->name('sessions.offer');
     Route::post('serate/{session}/ospiti', [SessionBookingController::class, 'addGuest'])->name('sessions.guests.store');
     Route::post('serate/{session}/ospiti/{booking}/togli', [SessionBookingController::class, 'removeGuest'])->whereNumber('booking')->name('sessions.guests.remove');
     Route::post('serate/{session}/ospiti/{booking}/collega', [SessionBookingController::class, 'linkGuest'])->whereNumber('booking')->name('sessions.guests.link');

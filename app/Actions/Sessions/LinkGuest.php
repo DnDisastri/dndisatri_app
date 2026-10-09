@@ -11,7 +11,8 @@ use InvalidArgumentException;
 
 /**
  * L'ospite si è registrato: il suo posto passa al suo account, con lo stesso stato.
- * Se era già segnato presente, la presenza passa a lui. Il personaggio lo sceglie poi dalla sessione.
+ * Se era già segnato presente, la presenza passa a lui. Con un solo eroe vivo il posto prende quello;
+ * altrimenti il personaggio lo sceglie lui dalla sessione, e intanto nei combattimenti resta un ospite.
  */
 final class LinkGuest
 {
@@ -28,15 +29,23 @@ final class LinkGuest
         }
 
         return DB::transaction(function () use ($posto, $giocatore, $sessione) {
+            $eroi = $giocatore->characters()->alive()->pluck('id');
+            $unicoEroe = $eroi->count() === 1 ? $eroi->first() : null;
+
             if ($posto->guest_attended && ! $sessione->attended($giocatore)) {
-                $sessione->attendees()->attach($giocatore, ['character_id' => null]);
+                $sessione->attendees()->attach($giocatore, ['character_id' => $unicoEroe]);
             }
 
             $posto->forceFill([
                 'user_id' => $giocatore->getKey(),
+                'character_id' => $unicoEroe,
                 'guest_name' => null,
                 'guest_character' => null,
                 'guest_note' => null,
+                'guest_email' => null,
+                'guest_phone' => null,
+                'guest_social' => null,
+                'guest_token' => null,
                 'guest_attended' => false,
             ])->save();
 

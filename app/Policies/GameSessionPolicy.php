@@ -2,7 +2,6 @@
 
 namespace App\Policies;
 
-use App\Enums\SeatStatus;
 use App\Models\Campaign;
 use App\Models\GameSession;
 use App\Models\User;
@@ -54,7 +53,7 @@ class GameSessionPolicy
         return $user->isAdmin() || $user->isDm();
     }
 
-    /** Prenotarsi: chi non conduce quella campagna, finché la sessione non comincia. */
+    /** Chiedere un posto: chi non conduce quella campagna, anche a sessione piena. */
     public function book(User $user, GameSession $session): bool
     {
         return $session->acceptsBookings()
@@ -67,19 +66,10 @@ class GameSessionPolicy
         return $session->acceptsBookings() && $session->hasParticipant($user);
     }
 
-    /** Confermare i posti e chiamare dall'attesa: qualsiasi DM, come chiudere la sessione. */
-    public function confirmPlayers(User $user, GameSession $session): bool
+    /** Vedere tutte le richieste, coi contatti, e offrire i posti: qualsiasi DM, come chiudere la sessione. */
+    public function manageSeats(User $user, GameSession $session): bool
     {
-        return ($user->isAdmin() || $user->isDm())
-            && $session->acceptsBookings()
-            && $session->bookings()->where('status', SeatStatus::Booked->value)->exists();
-    }
-
-    public function promote(User $user, GameSession $session): bool
-    {
-        return ($user->isAdmin() || $user->isDm())
-            && $session->acceptsBookings()
-            && ! $session->isFull();
+        return $user->isAdmin() || $user->isDm();
     }
 
     /** Un ospite senza account, prenotato fuori dall'app: qualsiasi DM, in qualsiasi campagna. */

@@ -36,18 +36,18 @@ return [
     [
         'category' => 'Quest',
         'question' => "Cos'è una quest?",
-        'answer' => 'È una storia da giocare dentro una campagna. Nella pagina Quest vedi quelle aperte e la difficoltà. Se una ti piace tocca Mi interessa: quando il dungeon master la mette in una sessione ti arriva un avviso, e per giocarla ti prenoti alla sessione.',
+        'answer' => 'È una storia da giocare dentro una campagna. Nella pagina Quest vedi quelle aperte e la difficoltà. Se una ti piace tocca Mi interessa: quando il dungeon master la mette in una sessione ti arriverà un avviso, e per giocarla ti prenoti alla sessione.',
     ],
     [
         'category' => 'Quest',
         'question' => 'Come mi prenoto?',
-        'answer' => "Ti prenoti alla sessione, non alla quest: apri la sessione, scegli con quale eroe vieni e tocca Mi prenoto. Se i posti sono finiti entri in lista d'attesa. Puoi tirarti indietro fino all'inizio. Quando il dungeon master conferma la sessione, ricevi una notifica.",
+        'answer' => "Chiedi un posto alla sessione, non alla quest. Dal Calendario nel menù spunta le sessioni che ti interessano (una al giorno: non ci si sdoppia fra due tavoli), scegli con quale eroe vieni e tocca Chiedo un posto. Se c'è posto per te ti arriverà un'email, e avrai 24 ore per confermarlo. In Le mie prenotazioni trovi tutte le tue richieste: lì confermi, rinunci, o resti fra le riserve se la sessione si riempie. Puoi tirarti indietro fino all'inizio.",
     ],
 
     [
         'category' => 'Sessioni',
         'question' => 'Dove vedo quando si gioca?',
-        'answer' => 'Nella sezione Sessioni: le prossime in programma e quelle già giocate, ognuna con la sua campagna, i posti e le quest che ci si giocano.',
+        'answer' => "Nel Calendario, dal menù: le sessioni del mese giorno per giorno, con la campagna e l'ora. Da lì chiedi il posto, e aprendo una sessione vedi chi gioca e le quest che ci si giocano.",
     ],
     [
         'category' => 'Sessioni',

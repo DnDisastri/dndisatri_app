@@ -58,13 +58,14 @@ return [
     [
         'illustration' => TutorialIllustration::Quest,
         'title' => 'Trova una quest',
-        'body' => 'Si gioca nelle **sessioni**: il dungeon master ne annuncia una con i suoi posti, '
-            .'e tu ti prenoti dalla sua pagina con uno dei tuoi eroi. Se i posti sono finiti entri in '
-            ."**lista d'attesa**; puoi **tirarti indietro** fino all'inizio. Quando il dungeon master "
-            ."conferma la sessione, ricevi una notifica.\n\n"
+        'body' => 'Si gioca nelle **sessioni**, che escono a inizio mese. Apri il **Calendario** dal menù, '
+            ."**spunta le sessioni** a cui vorresti giocare (una al giorno), scegli l'eroe e tocca **Chiedo un posto**: "
+            .'la richiesta parte per tutte insieme, anche per quelle che sembrano piene. '
+            ."Se c'è posto per te ti arriverà un'email, e avrai **24 ore per confermarlo**. "
+            ."In **Le mie prenotazioni** trovi tutte le tue richieste: lì confermi, rinunci o resti fra le **riserve** se la sessione si riempie.\n\n"
             .'Le **quest** sono le storie da giocare: le trovi nella Home e nelle campagne. '
             .'Su una quest tocca **Mi interessa**: quando il dungeon master la mette in una sessione, '
-            .'ti arriva un avviso per prenotarti.',
+            .'ti arriverà un avviso per prenotarti.',
     ],
     [
         'illustration' => TutorialIllustration::Market,
