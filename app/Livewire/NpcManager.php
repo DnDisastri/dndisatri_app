@@ -28,8 +28,8 @@ class NpcManager extends Component
 
     public bool $aperto = false;
 
-    /** @var array{name: string, location: ?string, wants: ?string, notes: ?string, is_alive: bool} */
-    public array $png = ['name' => '', 'location' => null, 'wants' => null, 'notes' => null, 'is_alive' => true];
+    /** @var array{name: string, location: ?string, wants: ?string, notes: ?string} */
+    public array $png = ['name' => '', 'location' => null, 'wants' => null, 'notes' => null];
 
     /** @var TemporaryUploadedFile|null */
     public $foto = null;
@@ -60,7 +60,7 @@ class NpcManager extends Component
         $this->authorize('update', $npc);
 
         $this->modificaId = $npc->id;
-        $this->png = $npc->only(['name', 'location', 'wants', 'notes', 'is_alive']);
+        $this->png = $npc->only(['name', 'location', 'wants', 'notes']);
         $this->foto = null;
         $this->resetErrorBag();
         $this->aperto = true;
@@ -80,7 +80,6 @@ class NpcManager extends Component
             'png.location' => ['nullable', 'string', 'max:150'],
             'png.wants' => ['nullable', 'string', 'max:255'],
             'png.notes' => ['nullable', 'string', 'max:5000'],
-            'png.is_alive' => ['boolean'],
             'foto' => ['nullable', 'image', 'max:4096'],
         ], ['png.name.required' => 'Serve un nome.'])['png'];
 
@@ -131,7 +130,7 @@ class NpcManager extends Component
         $png = $campagna
             ? $campagna->npcs()
                 ->when(trim($this->cerca) !== '', fn ($q) => $q->search(trim($this->cerca)))
-                ->orderByDesc('is_alive')->orderBy('name')->get()
+                ->orderBy('name')->get()
             : collect();
 
         return view('livewire.npc-manager', [

@@ -1,7 +1,7 @@
-@props(['eroi'])
+@props(['eroi', 'vuoto' => 'Ancora nessun eroe con il posto confermato.'])
 {{-- La vista DM mostra PF, CA e oro, dati volutamente omessi dalle card pubbliche della Gilda. --}}
 @if ($eroi->isEmpty())
-    <x-empty>Ancora nessun eroe: nessuno si è prenotato e nessuno ha giocato questa campagna.</x-empty>
+    <x-empty>{{ $vuoto }}</x-empty>
 @else
     {{-- Colonne in base al contenitore: pagina intera nell'Area Master, mezza colonna nella sessione. --}}
     <div class="@container">

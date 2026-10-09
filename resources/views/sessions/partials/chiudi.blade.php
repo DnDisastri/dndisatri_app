@@ -21,31 +21,49 @@
 
             <p class="text-xs uppercase tracking-wide text-muted">1. Chi c'era</p>
             <p class="mt-1 text-xs text-muted">
-                Chi si è presentato. Partono spuntati i prenotati: togli chi non è venuto e aggiungi chi è arrivato. Il personaggio serve per le ricompense.
+                Chi si è presentato. Partono spuntati i confermati: togli chi non è venuto, e cerca chi è arrivato in più. Il personaggio serve per le ricompense.
             </p>
 
             @php
-                // Finché le presenze non sono segnate, si parte da chi ha un posto, con il suo personaggio.
+                // Finché le presenze non sono segnate, si parte dai confermati, col loro personaggio.
                 $daSegnare = $session->attendees->isEmpty() && $ospitiPresenti->isEmpty();
-                $ospitiPrenotati = $session->bookings->filter(fn ($p) => $p->isGuest() && ($p->guest_attended || ($daSegnare && $p->status->takesSeat())));
+                $ospitiPrenotati = $session->bookings->filter(fn ($p) => $p->isGuest() && ($p->guest_attended || ($daSegnare && $p->status === \App\Enums\SeatStatus::Confirmed)));
                 $tuttiGliOspiti = $session->bookings->filter(fn ($p) => $p->isGuest() && $p->status->isActive());
+
+                $righe = $candidates->map(function ($candidato) use ($daSegnare, $confermati, $session) {
+                    if ($daSegnare) {
+                        $posto = $confermati->firstWhere('user_id', $candidato->id);
+
+                        return ['utente' => $candidato, 'presente' => $posto !== null, 'scelto' => $posto?->character_id];
+                    }
+
+                    $attendee = $session->attendees->firstWhere('id', $candidato->id);
+
+                    return ['utente' => $candidato, 'presente' => $attendee !== null, 'scelto' => $attendee?->pivot->character_id];
+                });
+
+                // Con 60 giocatori la lista intera non si scorre: a vista solo gli spuntati, gli altri si cercano.
+                [$aVista, $daCercare] = $righe->partition(fn ($r) => $r['presente']);
             @endphp
 
             <div class="mt-3 space-y-2">
-                @foreach ($candidates as $candidato)
+                @foreach ($aVista->concat($daCercare) as $riga)
                     @php
-                        if ($daSegnare) {
-                            $posto = $posti->firstWhere('user_id', $candidato->id);
-                            $presente = $posto !== null;
-                            $scelto = $posto?->character_id;
-                        } else {
-                            $attendee = $session->attendees->firstWhere('id', $candidato->id);
-                            $presente = $attendee !== null;
-                            $scelto = $attendee?->pivot->character_id;
-                        }
+                        ['utente' => $candidato, 'presente' => $presente, 'scelto' => $scelto] = $riga;
                     @endphp
 
-                    <x-inset padding="sm" class="flex flex-wrap items-center justify-between gap-2">
+                    {{-- La ricerca sta fra gli spuntati e i risultati. --}}
+                    @if ($loop->index === $aVista->count())
+                        <label class="block pt-1 text-sm">
+                            <span class="mb-1 block text-muted">Aggiungi un altro giocatore</span>
+                            <input type="search" data-presenze-cerca placeholder="Scrivi il nome" autocomplete="off"
+                                   class="{{ $campo }}">
+                        </label>
+                    @endif
+
+                    <x-inset padding="sm" class="flex flex-wrap items-center justify-between gap-2"
+                             :data-presenza-extra="$presente ? null : mb_strtolower($candidato->name)"
+                             :hidden="! $presente">
                         <label class="flex items-center gap-2 text-sm text-fg">
                             <input type="checkbox" name="presenti[]" value="{{ $candidato->id }}"
                                    @checked($presente)
@@ -101,7 +119,7 @@
                 <p class="mt-1 text-sm text-muted">Prima segna chi c'era, con il suo personaggio.</p>
             @else
                 <form method="POST" action="{{ route('sessions.rewards', $session) }}" class="mt-2 space-y-3"
-                      @if (! empty($session->rewards)) data-conferma="Le ricompense di questa sessione sono già state date. Le dai di nuovo?" @endif>
+                      @if (! empty($session->rewards)) data-conferma="Le ricompense di questa sessione sono già state date. Le dai di nuovo?" data-conferma-azione="Dalle di nuovo" @endif>
                     @csrf
 
                     <p class="text-xs text-muted">

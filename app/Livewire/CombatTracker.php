@@ -17,6 +17,8 @@ use Livewire\Component;
  *
  * - Eroe: legge e scrive i PF veri della scheda (`AdjustHitPoints`).
  * - Mostro e ospite: PF e CA vivono solo nel json `combatants`.
+ * - Ospite: ricorda il suo posto (`bookingId`); quando quel posto ha un personaggio
+ *   (ospite collegato all'account), la riga diventa la sua scheda.
  *
  * Il turno segue un id stabile, non un indice: riordinando la fila non scivola.
  */
@@ -66,6 +68,62 @@ class CombatTracker extends Component
         $this->round = (int) $encounter->round;
         $this->turnoId = $encounter->turn_id;
         $this->combattenti = $this->normalizza($encounter->combatants ?? []);
+
+        // Senza passare da persiste(): aprire la pagina non deve mettere in corso lo scontro.
+        if ($this->sostituisciOspiti()) {
+            $encounter->forceFill(['combatants' => $this->combattenti])->save();
+        }
+    }
+
+    /**
+     * Gli ospiti il cui posto ha ora un personaggio diventano quel personaggio: restano
+     * iniziativa, condizioni e turno, mentre PF e CA tornano a essere quelli della scheda.
+     */
+    private function sostituisciOspiti(): bool
+    {
+        $sessione = $this->scontro()->session;
+        $ids = collect($this->combattenti)->where('tipo', 'ospite')->pluck('bookingId')->filter();
+
+        if ($sessione === null || $ids->isEmpty()) {
+            return false;
+        }
+
+        // Il posto si cerca fra quelli della sessione: un id arrivato dal client non basta.
+        $posti = $sessione->bookings()->whereIn('id', $ids)->whereNotNull('character_id')->with('character')->get()->keyBy('id');
+        $giàPg = collect($this->combattenti)->where('tipo', 'pg')->pluck('characterId')->all();
+        $cambiato = false;
+
+        foreach ($this->combattenti as $i => $c) {
+            $pg = $c['tipo'] === 'ospite' ? $posti->get($c['bookingId'])?->character : null;
+
+            if ($pg === null || ! $pg->isAlive()) {
+                continue;
+            }
+
+            $cambiato = true;
+
+            // Il suo eroe è già in fila: la riga dell'ospite è un doppione.
+            if (in_array($pg->id, $giàPg, true)) {
+                unset($this->combattenti[$i]);
+
+                continue;
+            }
+
+            $this->combattenti[$i] = array_merge($c, [
+                'tipo' => 'pg',
+                'nome' => $pg->name,
+                'characterId' => $pg->id,
+                'bookingId' => null,
+                'hp' => null,
+                'hpMax' => null,
+                'ac' => null,
+            ]);
+            $giàPg[] = $pg->id;
+        }
+
+        $this->combattenti = array_values($this->combattenti);
+
+        return $cambiato;
     }
 
     private function assicuraDm(): void
@@ -110,6 +168,7 @@ class CombatTracker extends Component
             'nome' => mb_substr((string) ($c['nome'] ?? 'Vuoto'), 0, 80),
             'iniziativa' => (int) ($c['iniziativa'] ?? 0),
             'characterId' => isset($c['characterId']) ? (int) $c['characterId'] : null,
+            'bookingId' => isset($c['bookingId']) ? (int) $c['bookingId'] : null,
             'hp' => isset($c['hp']) ? (int) $c['hp'] : null,
             'hpMax' => isset($c['hpMax']) ? (int) $c['hpMax'] : null,
             'ac' => isset($c['ac']) ? (int) $c['ac'] : null,
@@ -130,12 +189,14 @@ class CombatTracker extends Component
     // === Comporre la fila ===
 
     /**
-     * Mette in fila gli eroi a iniziativa zero: i prenotati della sessione collegata,
-     * altrimenti i presenti, altrimenti chi ha giocato la campagna. Poi gli ospiti.
+     * Mette in fila gli eroi a iniziativa zero: i confermati della sessione collegata,
+     * altrimenti i presenti, altrimenti chi ha giocato la campagna. Poi chi ha un posto
+     * confermato ma nessuna scheda (gli ospiti), come ospite.
      */
     public function aggiungiEroi(): void
     {
         $this->assicuraDm();
+        $this->sostituisciOspiti();
 
         $giàDentro = collect($this->combattenti)->pluck('characterId')->filter()->all();
 
@@ -169,13 +230,13 @@ class CombatTracker extends Component
             ];
         }
 
-        // Gli ospiti della sessione non hanno una scheda: PF e CA li scrive il DM, come per un mostro.
-        $giàOspiti = collect($this->combattenti)->where('tipo', 'ospite')->pluck('nome')->all();
+        // Senza scheda (ospiti, o collegati che non hanno ancora scelto l'eroe): PF e CA li scrive il DM.
+        $giàOspiti = collect($this->combattenti)->where('tipo', 'ospite');
 
-        foreach ($sessione?->bookings()->holdingSeat()->whereNull('user_id')->get() ?? [] as $ospite) {
-            $nome = $ospite->guest_character ?: $ospite->guest_name;
+        foreach ($sessione?->bookings()->confirmed()->whereNull('character_id')->with('user')->get() ?? [] as $ospite) {
+            $nome = $ospite->guest_character ?: $ospite->displayName();
 
-            if (in_array($nome, $giàOspiti, true)) {
+            if ($giàOspiti->contains('bookingId', $ospite->id) || $giàOspiti->contains('nome', $nome)) {
                 continue;
             }
 
@@ -185,6 +246,7 @@ class CombatTracker extends Component
                 'nome' => $nome,
                 'iniziativa' => 0,
                 'characterId' => null,
+                'bookingId' => $ospite->id,
                 'hp' => null,
                 'hpMax' => null,
                 'ac' => null,

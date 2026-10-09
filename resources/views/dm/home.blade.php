@@ -116,9 +116,10 @@
                             <p class="mt-1 text-sm text-muted">
                                 {{ $sessione->played_at->translatedFormat('l j F, H:i') }}
                                 @if ($sessione->isUpcoming())
-                                    · {{ $sessione->participantCount() }} / {{ $sessione->max_players }} prenotati
-                                    @if ($sessione->bookings()->waiting()->exists()) · lista d'attesa @endif
-                                    · {{ $sessione->isConfirmed() ? 'confermata' : 'da confermare' }}
+                                    · {{ $sessione->confirmedCount() }} / {{ $sessione->max_players }} confermati
+                                    @if ($nuove = $sessione->bookings()->where('status', \App\Enums\SeatStatus::Requested->value)->count())
+                                        · {{ $nuove === 1 ? '1 richiesta' : $nuove.' richieste' }}
+                                    @endif
                                 @endif
                             </p>
                         </div>
@@ -190,11 +191,11 @@
 
         <section class="space-y-3">
             <div class="flex items-baseline justify-between">
-                <h2 class="text-xs uppercase tracking-wide text-muted">{{ $eroiPrenotati ? 'I prenotati' : 'Chi ha giocato la campagna' }}</h2>
+                <h2 class="text-xs uppercase tracking-wide text-muted">Gli eroi della prossima sessione</h2>
                 <a href="{{ route('guild.index') }}" class="text-xs font-semibold text-active">Gilda ›</a>
             </div>
 
-            @include('dm.partials.eroi', ['eroi' => $eroi])
+            @include('dm.partials.eroi', ['eroi' => $eroi, 'vuoto' => 'Gli eroi compariranno qui quando qualcuno avrà il posto confermato nella prossima sessione.'])
         </section>
         </div>
     @endif

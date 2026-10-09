@@ -29,17 +29,13 @@
         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             @forelse ($elenco as $npc)
                 <button type="button" wire:click="modifica({{ $npc->id }})"
-                        @class([
-                            'flex gap-3 rounded-card border border-line bg-surface p-3 text-left transition hover:border-active',
-                            'opacity-60' => ! $npc->is_alive,
-                        ])>
+                        class="flex gap-3 rounded-card border border-line bg-surface p-3 text-left transition hover:border-active">
                     @if ($npc->photoUrl())
                         <img src="{{ $npc->photoUrl() }}" alt="" class="h-14 w-14 shrink-0 rounded-lg object-cover">
                     @endif
                     <span class="min-w-0">
                         <span class="block font-semibold text-fg">
                             {{ $npc->name }}
-                            @unless ($npc->is_alive) <x-badge tone="neutral">morto</x-badge> @endunless
                         </span>
                         @if ($npc->location) <span class="block text-xs text-muted">{{ $npc->location }}</span> @endif
                         @if ($npc->wants) <span class="mt-1 block text-sm text-fg">Vuole: {{ $npc->wants }}</span> @endif
@@ -85,11 +81,6 @@
                 <span class="mb-1 block text-xs text-muted">Meglio quadrata, almeno 400 × 400 px, fino a 4 MB.</span>
                 <input type="file" accept="image/*" wire:model="foto" class="block w-full text-sm text-muted">
                 @error('foto') <span class="mt-1 block text-on-danger-soft">{{ $message }}</span> @enderror
-            </label>
-
-            <label class="flex items-center gap-2 text-fg">
-                <input type="checkbox" wire:model="png.is_alive" class="rounded border-line accent-[var(--ui-active)]">
-                Vivo
             </label>
 
             <x-button full type="submit">Salva</x-button>

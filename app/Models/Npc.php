@@ -10,17 +10,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
 
 /** Un PNG ricorrente di una campagna: appunti dei DM, mai visibili ai giocatori. */
-#[Fillable(['name', 'location', 'wants', 'notes', 'is_alive'])]
+#[Fillable(['name', 'location', 'wants', 'notes'])]
 class Npc extends Model
 {
     use HasFactory;
-
-    protected $attributes = ['is_alive' => true];
-
-    protected function casts(): array
-    {
-        return ['is_alive' => 'boolean'];
-    }
 
     public function campaign(): BelongsTo
     {

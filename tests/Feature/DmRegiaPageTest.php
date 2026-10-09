@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Actions\Characters\AdjustHitPoints;
 use App\Actions\Users\IssueWarning;
 use App\Enums\EncounterStatus;
+use App\Enums\SeatStatus;
 use App\Livewire\CombatTracker;
 use App\Livewire\HitPointTracker;
 use App\Livewire\NpcManager;
@@ -43,16 +44,26 @@ beforeEach(function () {
 });
 
 describe('la Regia (home)', function () {
-    it('il DM vede la sua campagna, gli eroi e la porta della sessione', function () {
+    it('il DM vede la sua campagna, gli eroi confermati e la porta della sessione', function () {
         $this->scontro->update(['game_session_id' => $this->prossima->id]);
 
+        // Ha giocato la campagna ma non ha un posto: nell'Area Master non compare.
         $this->actingAs($this->dm)
             ->get(route('dm.home'))
             ->assertOk()
             ->assertSee('Le Rovine di Valcupa')
-            ->assertSee('Anna Ventochiara')
+            ->assertDontSee('Anna Ventochiara')
+            ->assertSee('Gli eroi compariranno qui')
             ->assertSee('Conduci la sessione')
             ->assertSee('Imboscata sul ponte');
+
+        $this->prossima->players()->attach($this->giocatore->id, [
+            'character_id' => $this->anna->id,
+            'status' => SeatStatus::Confirmed->value,
+            'joined_at' => now(),
+        ]);
+
+        $this->actingAs($this->dm)->get(route('dm.home'))->assertSee('Anna Ventochiara');
     });
 
     it('un giocatore non ci entra', function () {

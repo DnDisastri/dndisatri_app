@@ -28,16 +28,14 @@ class DmController extends Controller
         $corrente?->load('handoverUpdatedBy');
 
         $sessione = $corrente ? $this->sessioneInMano($corrente) : null;
-        $prenotati = $sessione?->isUpcoming() ? $sessione->bookedCharacters() : collect();
 
         return view('dm.home', [
             'mie' => $mie,
             'altre' => $altre,
             'corrente' => $corrente,
             'sessione' => $sessione,
-            // Per una sessione in programma con dei prenotati, gli eroi sono loro.
-            'eroi' => $prenotati->isNotEmpty() ? $prenotati : ($corrente ? $corrente->roster() : collect()),
-            'eroiPrenotati' => $prenotati->isNotEmpty(),
+            // Solo chi ha il posto confermato nella prossima sessione: chi ha giocato la campagna sta nella sua pagina.
+            'eroi' => $sessione?->isUpcoming() ? $sessione->bookedCharacters() : collect(),
             'combattimenti' => $corrente ? $corrente->encounters()->open()->with('session')->latest('updated_at')->get() : collect(),
             // La campagna di un altro: la home lo dice, senza impedirlo.
             'sostituto' => $corrente !== null && $corrente->dm_id !== $user->getKey(),

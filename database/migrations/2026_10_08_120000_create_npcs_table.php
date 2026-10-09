@@ -17,7 +17,6 @@ return new class extends Migration
             $table->string('wants', 255)->nullable();
             $table->text('notes')->nullable();
             $table->string('photo_path')->nullable();
-            $table->boolean('is_alive')->default(true);
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
