@@ -34,25 +34,14 @@ class QuestsTable
                     ->badge()
                     ->visibleFrom('md'),
 
-                // Prenotati sui posti, e se è raggiunto il minimo per giocare.
-                TextColumn::make('posti')
-                    ->label('Prenotati')
-                    ->state(fn (Quest $record) => $record->participantCount().' / '.$record->max_participants)
-                    ->description(fn (Quest $record) => $record->hasMinimum()
-                        ? 'minimo raggiunto'
-                        : 'ne mancano '.$record->missingToMinimum().' al minimo')
-                    ->color(fn (Quest $record) => $record->hasMinimum() ? 'success' : 'warning'),
+                TextColumn::make('interested_count')
+                    ->label('Interessati')
+                    ->counts('interested'),
 
-                TextColumn::make('attesa')
-                    ->label('In attesa')
-                    ->state(fn (Quest $record) => $record->waiting()->count() ?: 'Vuoto')
-                    ->visibleFrom('md'),
-
-                TextColumn::make('night_confirmed_at')
-                    ->label('Serata')
-                    ->state(fn (Quest $record) => $record->isNightConfirmed() ? 'Si fa' : 'Da decidere')
-                    ->badge()
-                    ->color(fn (Quest $record) => $record->isNightConfirmed() ? 'success' : 'gray')
+                TextColumn::make('session.played_at')
+                    ->label('Sessione')
+                    ->dateTime('j M, H:i')
+                    ->placeholder('Non ancora')
                     ->visibleFrom('md'),
 
                 TextColumn::make('esito')

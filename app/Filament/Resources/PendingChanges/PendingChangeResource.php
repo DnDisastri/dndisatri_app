@@ -29,7 +29,7 @@ class PendingChangeResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Icon::Proposals;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Tavoli';
+    protected static string|UnitEnum|null $navigationGroup = 'Gestione';
 
     protected static ?string $modelLabel = 'richiesta';
 

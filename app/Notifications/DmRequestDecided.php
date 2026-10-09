@@ -30,9 +30,9 @@ final class DmRequestDecided extends InAppNotification
         return [
             'title' => $approved
                 ? 'Sei un dungeon master'
-                : 'La richiesta di diventare DM è stata rifiutata',
+                : 'La richiesta di diventare dungeon master è stata rifiutata',
             'body' => ($approved
-                ? 'Da adesso puoi aprire tavoli, dare quest e decidere sulle richieste degli altri. '
+                ? 'Da adesso puoi programmare sessioni, dare quest e decidere sulle richieste degli altri. '
                 : '')
                 .($this->request->review_note ? "Nota: {$this->request->review_note}" : ''),
             'url' => null,

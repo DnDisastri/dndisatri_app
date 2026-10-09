@@ -16,31 +16,16 @@ use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**
- * La morte di un personaggio.
- *
- * Il permesso e il memoriale esistevano da sempre; l'azione che scrive la data
- * di morte no, e finché non c'è stata un personaggio poteva essere dichiarato
- * caduto solo intervenendo a mano sul database.
- *
- * **È irreversibile.** `died_at` non è mass-assignable, quindi questa è l'unica
- * strada che porta lì, e non esiste il ritorno: un personaggio non risorge.
- *
- * Non basta però segnare la data, perché il caduto lascia in giro due cose che
- * non potranno mai andare a buon fine:
- *
- * - **gli annunci aperti**, che resterebbero comprabili — chi compra pagherebbe
- *   un morto. Si ritirano, e gli oggetti rientrano nel suo inventario, dove
- *   restano a raccontare con cosa è morto;
- * - **le proposte di scambio aperte**, in entrambe le direzioni, che
- *   fallirebbero comunque all'accettazione.
+ * La morte di un personaggio: irreversibile, ed è l'unica strada per `died_at`.
+ * Ritira i suoi annunci aperti (gli oggetti tornano nello zaino) e chiude le
+ * proposte di scambio aperte in tutte e due le direzioni.
  */
 final class KillCharacter
 {
     /**
      * @param  string|null  $story  come è andata: è quello che resterà scritto
      *                              nel memoriale, e vale più della data
-     * @param  GameSession|null  $session  la serata in cui è successo, se è
-     *                                     successo a un tavolo
+     * @param  GameSession|null  $session  la sessione in cui è successo, se c'è
      */
     public function handle(
         Character $character,

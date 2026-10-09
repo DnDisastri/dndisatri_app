@@ -57,7 +57,7 @@
             <x-empty>Di come sia andata non è rimasto scritto niente.</x-empty>
         @endif
 
-{{-- La serata della morte è facoltativa: una morte può essere registrata anche fuori da una sessione. --}}
+{{-- La sessione della morte è facoltativa: una morte può essere registrata anche fuori da una sessione. --}}
         @if ($character->diedInSession)
             <p class="mt-4 border-t border-line pt-3 text-sm">
                 <a href="{{ route('sessions.show', $character->diedInSession) }}"

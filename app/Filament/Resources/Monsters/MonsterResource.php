@@ -18,12 +18,8 @@ use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
 
 /**
- * Il bestiario.
- *
- * Sta fra i **Tavoli** e non in Redazione: non è contenuto da leggere come una
- * build, è uno strumento per condurre — lo scrive un DM e lo pesca dal tracker
- * di combattimento (M38). La policy lo tiene a DM e admin; i giocatori non lo
- * vedono.
+ * Il bestiario, in Gestione: lo scrive un DM e lo pesca il tracker (M38).
+ * Solo DM e admin.
  */
 class MonsterResource extends Resource
 {
@@ -31,7 +27,7 @@ class MonsterResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Icon::Bestiary;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Tavoli';
+    protected static string|UnitEnum|null $navigationGroup = 'Gestione';
 
     protected static ?string $modelLabel = 'mostro';
 

@@ -48,8 +48,10 @@ class ProfileController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'min:3', 'max:255', 'unique:users,name,'.$user->getKey()],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$user->getKey()],
+            'phone' => ['nullable', 'string', 'max:30'],
         ], [], [
             'name' => 'nome utente',
+            'phone' => 'telefono',
         ]);
 
         $user->update($validated);

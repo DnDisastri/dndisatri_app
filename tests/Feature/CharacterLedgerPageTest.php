@@ -23,7 +23,7 @@ it('elenca i movimenti con la variazione e la borsa dopo', function () {
         ->get(route('characters.ledger', $this->pg))
         ->assertOk()
         ->assertSee('Bottino della serata')
-        ->assertSeeText('Monete dal DM')
+        ->assertSeeText('Monete dal dungeon master')
         ->assertSeeText('+10 mo 5 ma')
         ->assertSeeText('in borsa dopo: 1 mp 100 mo 5 ma');
 });

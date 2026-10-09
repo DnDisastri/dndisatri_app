@@ -168,7 +168,7 @@
                 <p class="mb-2 mt-3 text-xs uppercase tracking-wide text-muted">
                     Una sezione vuota, dentro una pagina che ha dell'altro
                 </p>
-                <x-empty>Nessun tavolo in programma.</x-empty>
+                <x-empty>Nessuna sessione in programma.</x-empty>
             </div>
 
             <div>
@@ -185,7 +185,7 @@
             <p class="mb-2 mt-3 text-xs uppercase tracking-wide text-muted">
                 Non è contenuto della pagina: è l'applicazione che parla
             </p>
-            <x-note>Prenotato. Il posto è tuo quando il dungeon master conferma che la serata si fa.</x-note>
+            <x-note>Prenotato. Il posto è tuo quando il dungeon master conferma la quest.</x-note>
             <x-note tone="danger">Non hai abbastanza oro: te ne mancano 40.</x-note>
         </div>
     </x-panel>

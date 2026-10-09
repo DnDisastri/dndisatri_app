@@ -182,7 +182,7 @@ describe('l\'approvazione', function () {
         $this->actingAs($this->dm)
             ->get(PendingChangeResource::getUrl('view', ['record' => $richiesta]))
             ->assertOk()
-            ->assertSee('Baratto col negozio')
+            ->assertSeeText('Baratto con l\'Emporio')
             ->assertSee('Adamantine Armor')
             ->assertSee('entra nel magazzino');
 
@@ -190,7 +190,7 @@ describe('l\'approvazione', function () {
 
         $this->actingAs($this->dm)
             ->get(PendingChangeResource::getUrl('view', ['record' => $richiesta]))
-            ->assertSee('non è più disponibile nel negozio');
+            ->assertSeeText('non è più disponibile nell\'Emporio');
     });
 });
 

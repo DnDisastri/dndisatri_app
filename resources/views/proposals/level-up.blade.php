@@ -69,7 +69,7 @@
                     @endforeach
                 </ul>
                 <p class="mt-1 text-xs">
-                    Puoi chiederlo lo stesso: la richiesta arriverà col dettaglio, e sarà un DM a decidere.
+                    Puoi chiederlo lo stesso: la richiesta arriverà col dettaglio, e sarà un dungeon master a decidere.
                 </p>
             </div>
         @endif

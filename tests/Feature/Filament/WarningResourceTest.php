@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\Users\IssueWarning;
+use App\Actions\Users\LiftWarning;
 use App\Filament\Resources\Warnings\Pages\ListWarnings;
 use App\Filament\Resources\Warnings\WarningResource;
 use App\Models\User;
@@ -21,7 +22,7 @@ function richiamato(?User $da = null): Warning
 }
 
 describe('chi ci entra', function () {
-    it('i DM, perché sono loro a condurre le serate', function () {
+    it('i DM, perché sono loro a condurre le sessioni', function () {
         richiamato();
 
         $this->actingAs(User::factory()->dm()->create())
@@ -64,7 +65,7 @@ describe('la pagina', function () {
     it('ma non conta quelli già tolti', function () {
         $warning = richiamato();
 
-        app(App\Actions\Users\LiftWarning::class)
+        app(LiftWarning::class)
             ->handle($warning, User::factory()->dm()->create());
 
         expect(WarningResource::getNavigationBadge())->toBeNull();
@@ -106,7 +107,7 @@ describe('dare un richiamo', function () {
         $this->actingAs(User::factory()->dm()->create())
             ->get(WarningResource::getUrl('index'))
             ->assertOk();
-// L'azione ricontrolla il vincolo al salvataggio perché lo stato può cambiare mentre il form è aperto.
+        // L'azione ricontrolla il vincolo al salvataggio perché lo stato può cambiare mentre il form è aperto.
         expect(fn () => app(IssueWarning::class)->handle(
             $warning->user,
             User::factory()->dm()->create(),
@@ -114,7 +115,6 @@ describe('dare un richiamo', function () {
         ))->toThrow(RuntimeException::class);
     });
 });
-
 
 describe('togliere un richiamo', function () {
     it('lo chiude, e il giocatore torna libero', function () {
@@ -146,7 +146,7 @@ describe('togliere un richiamo', function () {
     it('e su uno già tolto il pulsante non c\'è', function () {
         $warning = richiamato();
 
-        app(App\Actions\Users\LiftWarning::class)
+        app(LiftWarning::class)
             ->handle($warning, User::factory()->dm()->create());
 
         Livewire::actingAs(User::factory()->dm()->create())

@@ -11,16 +11,10 @@ use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**
- * Riporta un dungeon master a giocatore.
+ * Riporta un dungeon master a giocatore, il contrario di `PromoteToDm`.
  *
- * Il contrario di `PromoteToDm`, e il motivo per cui esiste: una nomina che si
- * dà dal pannello e si toglie solo dal database sarebbe una porta che si apre
- * e non si chiude.
- *
- * **Non si toglie a chi ha un tavolo aperto.** Una campagna senza un master
- * che possa condurla resterebbe in piedi ma inutilizzabile, e il danno
- * comparirebbe più tardi, addosso ai giocatori. Prima si chiude la campagna o
- * si passa a un altro, poi si toglie il ruolo.
+ * Non a chi conduce una campagna aperta: resterebbe senza DM. Prima la si
+ * chiude o la si passa a un altro.
  */
 final class DemoteFromDm
 {

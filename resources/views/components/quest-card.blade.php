@@ -5,17 +5,11 @@
     'dim' => false,
 ])
 
-{{--
-    La card di un incarico, una per tutti gli elenchi (Home, campagna,
-    incarichi). Tre assi come proprietà:
-
-    - `campaign` — il nome della campagna (spento dentro la campagna stessa);
-    - `rewards` — le ricompense (servono a chi sceglie a un tavolo);
-    - `dim` — la card spenta, deciso da chi chiama («spento» = finito nella
-      campagna, pieno nell'elenco).
---}}
+{{-- La card di una quest in Home, campagna ed elenco. `campaign`: mostra il nome
+     della campagna; `rewards`: le ricompense; `dim`: la card spenta. --}}
 @php
-    $mioPosto = $quest->seatOf(auth()->user());
+    $miInteressa = $quest->isActive() && $quest->isInterested(auth()->user());
+    $interessati = $quest->interested_count ?? $quest->interested()->count();
 @endphp
 
 <x-card padding="sm" :href="route('quests.show', $quest)"
@@ -45,37 +39,25 @@
     @endif
 
     @if ($quest->isActive())
-        {{-- Plurale a mano: il pluralizzatore di Laravel ragiona in inglese. --}}
-        <p class="mt-3 text-sm text-muted">
-            {{ $quest->participantCount() }} prenotati su {{ $quest->max_participants }} posti
+        <p class="mt-3 text-sm">
+            @if ($quest->isScheduled())
+                <span class="font-semibold text-fg">Si gioca {{ $quest->session->played_at->translatedFormat('l j F') }}</span>
+            @else
+                <span class="text-muted">Non ancora in una sessione</span>
+            @endif
         </p>
 
-        {{-- Se serve qualcuno, sotto e da solo: è la riga che fa fermare scorrendo. --}}
-        <p class="mt-1 text-sm">
-            @if ($quest->missingToMinimum() > 0)
-                {{-- Plurale a mano anche qui (in inglese sbaglierebbe). --}}
-                <span class="font-semibold text-fg">
-                    {{ $quest->missingToMinimum() === 1
-                        ? 'Manca 1 giocatore'
-                        : 'Mancano '.$quest->missingToMinimum().' giocatori' }}
-                </span>
-            @elseif ($quest->isNightConfirmed())
-                <span class="font-semibold text-fg">La serata si fa</span>
-            @elseif ($quest->isFull())
-                <span class="text-muted">Posti esauriti, si entra in lista d'attesa</span>
-            @else
-                <span class="text-muted">Si può fare</span>
-            @endif
+        {{-- Plurale a mano: il pluralizzatore di Laravel ragiona in inglese. --}}
+        <p class="mt-1 text-sm text-muted">
+            {{ $interessati === 1 ? 'Interessa a 1 giocatore' : 'Interessa a '.$interessati.' giocatori' }}
         </p>
     @else
         <p class="mt-3 text-sm text-muted">{{ $quest->outcome()->label() }}</p>
     @endif
 
-    {{-- Il proprio posto, in seconda persona (`mine()`, non `label()`):
-         «Prenotato» da solo direbbe che qualcosa è prenotato, non che sei tu. --}}
-    @if ($quest->isActive() && $mioPosto?->isActive())
+    @if ($miInteressa)
         <p class="mt-3">
-            <x-badge tone="own">{{ $mioPosto->mine() }}</x-badge>
+            <x-badge tone="own">Ti interessa</x-badge>
         </p>
     @endif
 </x-card>

@@ -111,14 +111,14 @@ describe('monete', function () {
 });
 
 describe('dichiara caduto', function () {
-    it('lo segna morto, col racconto e la serata', function () {
+    it('lo segna morto, col racconto e la sessione', function () {
         $campagna = Campaign::factory()->create(['title' => 'I Tre Regni']);
-        $serata = GameSession::factory()->for($campagna)->create(['number' => 12, 'title' => 'La Torre Nera']);
+        $sessione = GameSession::factory()->for($campagna)->create(['number' => 12, 'title' => 'La Torre Nera']);
 
         Livewire::actingAs($this->dm)
             ->test(DmTools::class, ['character' => $this->pg])
             ->set('morteRacconto', 'Caduto dalla torre per salvare la bambina.')
-            ->set('morteSessione', $serata->id)
+            ->set('morteSessione', $sessione->id)
             ->set('morteCapito', true)
             ->call('dichiaraCaduto')
             ->assertHasNoErrors()
@@ -128,9 +128,9 @@ describe('dichiara caduto', function () {
 
         expect($this->pg->isAlive())->toBeFalse()
             ->and($this->pg->death_story)->toBe('Caduto dalla torre per salvare la bambina.')
-            ->and($this->pg->died_in_session_id)->toBe($serata->id);
+            ->and($this->pg->died_in_session_id)->toBe($sessione->id);
     });
-    // Racconto e serata sono opzionali perché una morte può essere registrata anche fuori da una sessione.
+    // Racconto e sessione sono opzionali perché una morte può essere registrata anche fuori da una sessione.
     it('e anche a mani vuote, purché confermato', function () {
         Livewire::actingAs($this->dm)
             ->test(DmTools::class, ['character' => $this->pg])

@@ -12,7 +12,7 @@
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="Icon::Quests" class="h-7 w-7" /> Quest
     </h2>
-    <p class="mb-6 text-sm text-muted">Scegli la tua prossima avventura e preparati a partire.</p>
+    <x-intro :page="\App\Enums\IntroPage::Quests" class="mb-6" />
 
 {{-- I filtri sono link e preservano l'altro parametro, così lo stato resta nell'URL e la pagina è condivisibile. --}}
     @if ($campaigns->count() > 1)
@@ -61,7 +61,7 @@
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         @forelse ($quests as $quest)
 
-            <x-quest-card :quest="$quest" :dim="$quest->isFull()" />
+            <x-quest-card :quest="$quest" />
         @empty
 
             <x-empty size="lg" class="col-span-full">

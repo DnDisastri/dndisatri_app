@@ -2,11 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Sessions\AwardSessionRewards;
 use App\Actions\Sessions\RecordAttendance;
 use App\Actions\Sessions\WriteRecap;
+use App\Domain\Dnd\Coins;
+use App\Enums\SeatStatus;
+use App\Exceptions\MarketException;
 use App\Models\Event;
 use App\Models\GameSession;
 use App\Models\User;
+use App\Notifications\SessionClosedBySubstitute;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -15,35 +20,17 @@ use Illuminate\View\View;
 use InvalidArgumentException;
 
 /**
- * La serata (P21).
- *
- * **Il resoconto è il contenuto della pagina, non una nota a piè di pagina.**
- * Fra un anno di una serata non si ricorda la data: si ricorda cosa è
- * successo, e questo è il posto dove sta scritto.
- *
- * I due gesti di chi conduce vivono qui e non nel Pannello (D20): il recap si
- * scrive **dove i giocatori lo leggeranno**, e le presenze si spuntano quando
- * si spegne la luce, col telefono in mano.
+ * La sessione (P21): resoconto, presenze e ricompense si fanno qui, non nel
+ * Pannello (D20). Le prenotazioni stanno in SessionBookingController.
  */
 class GameSessionController extends Controller
 {
-    /**
-     * Il calendario delle serate (P20).
-     *
-     * Un **calendario** e non un elenco: una serata si guarda per sapere
-     * quando è, e un mese si legge a colpo d'occhio mentre un elenco si legge
-     * riga per riga. È la stessa ragione per cui i calendari esistono.
-     */
+    /** Il calendario delle sessioni (P20). */
     public function index(Request $request): View
     {
         $this->authorize('viewAny', GameSession::class);
 
-        /*
-         * Il mese arriva dall'indirizzo, così una pagina si può mandare a
-         * qualcuno. Un mese scritto storto non è un errore — è un indirizzo
-         * vecchio o una prova — quindi si ricade su quello corrente invece di
-         * rispondere 404.
-         */
+        // Un mese scritto storto nell'indirizzo ricade su quello corrente, niente 404.
         $mese = rescue(
             fn () => Carbon::createFromFormat('Y-m', (string) $request->query('mese'))->startOfMonth(),
             fn () => now()->startOfMonth(),
@@ -56,22 +43,27 @@ class GameSessionController extends Controller
             ->orderBy('played_at')
             ->get();
 
+        $utente = $request->user();
+        $mieiPosti = $utente->sessionBookings()
+            ->whereIn('game_session_id', $sessions->pluck('id'))
+            ->whereNotIn('status', [SeatStatus::Withdrawn->value, SeatStatus::Unverified->value])
+            ->get()
+            ->keyBy('game_session_id');
+
         return view('sessions.index', [
             'mese' => $mese,
             'sessions' => $sessions,
+            'mieiPosti' => $mieiPosti,
+            // I giorni in cui si ha già un tavolo: lì non si chiede un secondo posto.
+            'giorniPresi' => $sessions->filter(fn (GameSession $s) => $mieiPosti->has($s->id))
+                ->map(fn (GameSession $s) => $s->played_at->toDateString())
+                ->unique()->values()->all(),
+            'mieiPersonaggi' => $utente->characters()->alive()->orderBy('name')->get(),
 
-            // Le serate del mese raccolte per giorno: il calendario deve
-            // sapere quali caselle segnare, e in una stessa sera possono
-            // girare due tavoli diversi.
+            // Per giorno: nella stessa sera possono esserci due sessioni.
             'perGiorno' => $sessions->groupBy(fn (GameSession $s) => $s->played_at->toDateString()),
 
-            /*
-             * Gli eventi in fondo. Sono l'altra metà del «quando si gioca»: le
-             * serate appartengono a una storia, i raduni e le one-shot no, e
-             * chi apre il calendario le sta cercando tutte e due. Non seguono
-             * il mese scelto perché sono i **prossimi** — un raduno lo si
-             * guarda per prenotarsi, non per ricostruire marzo.
-             */
+            // I prossimi eventi, indipendenti dal mese scelto.
             'events' => Event::published()->upcoming()->limit(4)->get(),
         ]);
     }
@@ -80,12 +72,13 @@ class GameSessionController extends Controller
     {
         $this->authorize('view', $session);
 
-        $session->load(['campaign.dm', 'recapWrittenBy', 'attendees.characters']);
+        $session->load(['campaign.dm', 'recapWrittenBy', 'attendees.characters', 'quests', 'bookings']);
 
-        // La serata prima e quella dopo, **nella stessa campagna**: si legge una
-        // storia in fila, e da una serata il passo più naturale è alla vicina.
-        // L'ordine è il tempo, non il numero: una serata recuperata fuori
-        // sequenza sta dove è stata giocata.
+        $utente = auth()->user();
+        $posti = $session->bookings()->holdingSeat()->with(['user', 'character'])->get();
+        $gestisce = $utente->can('manageSeats', $session);
+
+        // La precedente e la successiva della stessa campagna, per data e non per numero.
         $precedente = GameSession::where('campaign_id', $session->campaign_id)
             ->where('played_at', '<', $session->played_at)
             ->orderByDesc('played_at')
@@ -101,28 +94,25 @@ class GameSessionController extends Controller
             'precedente' => $precedente,
             'prossima' => $prossima,
 
-            /*
-             * Il tavolo a colpo d'occhio, solo per chi conduce (M16 lato serata):
-             * i personaggi che hanno giocato questa campagna, coi numeri della
-             * serata — punti ferita, oro, stato. È la cosa che al DM serve
-             * mentre gioca e che la pagina del giocatore, giustamente, nasconde.
-             *
-             * A qualsiasi DM, non solo a quello del tavolo: al colpo d'occhio ci
-             * si arriva anche coprendo un collega. Ai giocatori niente.
-             */
-            'tavolo' => auth()->user()?->isDm()
-                ? $session->campaign->roster()
+            // Gli eroi con PF, CA e monete, a qualsiasi DM (M16): i prenotati, o chi ha giocato la campagna.
+            'eroi' => $utente->isDm() ? $session->bookedCharacters() : collect(),
+
+            // I giocatori vedono solo i confermati; il DM tutte le richieste, in ordine di arrivo.
+            'confermati' => $posti->where('status', SeatStatus::Confirmed)->values(),
+            'richieste' => $gestisce
+                ? $session->bookings()->visibleToDm()->with(['user', 'character'])->get()
+                : collect(),
+            // Gli ospiti segnati presenti, per «Chi c'era» e per collegarli all'account.
+            'ospitiPresenti' => $session->bookings()->whereNull('user_id')->where('guest_attended', true)->get(),
+            'mioPosto' => $session->bookingOf($utente),
+            'mioPersonaggio' => $session->bookedCharacterOf($utente),
+            'mieiPersonaggi' => $utente->characters()->alive()->orderBy('name')->get(),
+
+            'combattimenti' => auth()->user()?->isDm()
+                ? $session->encounters()->oldest()->get()
                 : collect(),
 
-            /*
-             * Chi si può spuntare come presente. Gli admin restano fuori: non
-             * hanno personaggi e non giocano, e comparirebbero in fondo a ogni
-             * elenco senza che nessuno li spunti mai.
-             *
-             * Si carica solo a chi deve segnare le presenze — a un giocatore
-             * questo elenco non serve, ed è una query e mezza in meno su una
-             * pagina che leggono tutti.
-             */
+            // Chi si può segnare presente (gli admin non giocano), solo a chi segna le presenze.
             'candidates' => auth()->user()->can('recordAttendance', $session)
                 ? User::visibleToPlayers()->with('characters')->orderBy('name')->get()
                 : collect(),
@@ -139,18 +129,14 @@ class GameSessionController extends Controller
         ]);
 
         app(WriteRecap::class)->handle($session, $request->user(), $dati['recap']);
+        $this->avvisaIlTitolare($session, $request->user(), 'il resoconto');
 
         return back()->with('status', 'Resoconto salvato.');
     }
 
     /**
-     * Le presenze (M14).
-     *
-     * Arrivano come `presenti[]` — gli id spuntati — più `personaggi[id]` con
-     * la scelta della tendina. Si tengono solo i personaggi di chi è davvero
-     * spuntato: la tendina resta compilata anche quando la casella si
-     * ridisattiva, e senza questo filtro si segnerebbe il personaggio di un
-     * assente.
+     * Le presenze (M14): `presenti[]`, `personaggi[id]` e `ospiti[]`. Si tiene il
+     * personaggio solo di chi è spuntato: la tendina resta compilata anche dopo.
      */
     public function recordAttendance(Request $request, GameSession $session): RedirectResponse
     {
@@ -161,6 +147,8 @@ class GameSessionController extends Controller
             'presenti.*' => ['integer', Rule::exists('users', 'id')],
             'personaggi' => ['array'],
             'personaggi.*' => ['nullable', 'integer', Rule::exists('characters', 'id')],
+            'ospiti' => ['array'],
+            'ospiti.*' => ['integer'],
         ]);
 
         $presenze = collect($dati['presenti'] ?? [])
@@ -177,6 +165,44 @@ class GameSessionController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
+        // Gli ospiti non hanno un account: la presenza sta sul loro posto.
+        $ospiti = $session->bookings()->whereNull('user_id');
+        $ospiti->clone()->update(['guest_attended' => false]);
+        $ospiti->clone()->whereIn('id', $dati['ospiti'] ?? [])->update(['guest_attended' => true]);
+
+        $this->avvisaIlTitolare($session, $request->user(), 'le presenze');
+
         return back()->with('status', 'Presenze salvate.');
+    }
+
+    /** Le ricompense di fine sessione: le dà chi può segnare le presenze, ai presenti. */
+    public function awardRewards(Request $request, GameSession $session, AwardSessionRewards $rewards): RedirectResponse
+    {
+        $this->authorize('recordAttendance', $session);
+
+        $dati = $request->validate([
+            'coins' => ['required', 'array'],
+            'coins.*' => ['nullable', 'integer', 'min:0', 'max:'.Coins::MAX],
+            'reason' => ['required', 'string', 'max:120'],
+        ], [
+            'reason.required' => 'Scrivi il motivo: finisce nel Registro di ognuno.',
+        ]);
+
+        try {
+            $chi = $rewards->handle($session, $request->user(), Coins::fromArray($dati['coins']), $dati['reason']);
+        } catch (InvalidArgumentException|MarketException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
+        $this->avvisaIlTitolare($session, $request->user(), 'le ricompense');
+
+        return back()->with('status', 'Ricompense date a '.$chi->pluck('name')->join(', ', ' e ').'.');
+    }
+
+    private function avvisaIlTitolare(GameSession $session, User $chi, string $cosa): void
+    {
+        if ($session->isSubstitute($chi)) {
+            $session->campaign->dm?->notify(new SessionClosedBySubstitute($session, $chi->name, $cosa));
+        }
     }
 }

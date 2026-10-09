@@ -38,17 +38,17 @@ it('non conta le sessioni giocate prima dell\'ultimo passaggio di livello', func
         'summary' => 'Sale al 4',
     ]);
     $change->forceFill(['status' => PendingChangeStatus::Approved])->save();
-// La data dell'ultimo level-up approvato è il confine da cui contare le sessioni successive.
+    // La data dell'ultimo level-up approvato è il confine da cui contare le sessioni successive.
     PendingChange::whereKey($change->getKey())->update(['updated_at' => now()->subDays(10)]);
 
-    presenza($this->pg, $this->owner, GameSession::factory()->playedOn(now()->subDays(20))->create()); 
-    presenza($this->pg, $this->owner, GameSession::factory()->playedOn(now()->subDays(2))->create()); 
+    presenza($this->pg, $this->owner, GameSession::factory()->playedOn(now()->subDays(20))->create());
+    presenza($this->pg, $this->owner, GameSession::factory()->playedOn(now()->subDays(2))->create());
 
     expect($this->pg->sessionsSinceLastLevelUp())->toBe(1)
         ->and($this->pg->canRequestLevelUp())->toBeTrue();
 });
 
-it('non conta le serate ancora da giocare', function () {
+it('non conta le sessioni ancora da giocare', function () {
     presenza($this->pg, $this->owner, GameSession::factory()->upcoming()->create());
 
     expect($this->pg->sessionsSinceLastLevelUp())->toBe(0)

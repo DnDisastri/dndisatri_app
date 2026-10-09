@@ -25,7 +25,7 @@ class MarketItemResource extends Resource
 
     protected static ?string $modelLabel = 'articolo';
 
-    protected static ?string $pluralModelLabel = 'catalogo del negozio';
+    protected static ?string $pluralModelLabel = 'catalogo dell\'Emporio';
 
     protected static ?string $recordTitleAttribute = 'name';
 

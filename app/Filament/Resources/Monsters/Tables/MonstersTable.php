@@ -51,7 +51,7 @@ class MonstersTable
                 EditAction::make(),
             ])
             ->emptyStateHeading('Bestiario vuoto')
-            ->emptyStateDescription('Aggiungi i mostri che rivedi: al tavolo li peschi invece di riscriverli.')
+            ->emptyStateDescription('Aggiungi i mostri che rivedi: in sessione li peschi invece di riscriverli.')
             ->modifyQueryUsing(fn ($query) => $query->with(['createdBy', 'campaign']));
     }
 }

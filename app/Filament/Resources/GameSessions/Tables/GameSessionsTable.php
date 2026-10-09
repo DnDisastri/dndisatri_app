@@ -19,7 +19,7 @@ class GameSessionsTable
         return $table
             ->defaultSort('played_at', 'desc')
             // recapWrittenBy si legge in una description: va precaricato, o con
-            // il lazy loading disattivato la tabella esplode appena c'è una serata.
+            // il lazy loading disattivato la tabella esplode appena c'è una sessione.
             ->modifyQueryUsing(fn ($query) => $query->with(['campaign', 'recapWrittenBy']))
             ->columns([
                 TextColumn::make('campaign.title')
@@ -27,8 +27,8 @@ class GameSessionsTable
                     ->searchable()
                     ->sortable(),
 
-                TextColumn::make('serata')
-                    ->label('Serata')
+                TextColumn::make('sessione')
+                    ->label('Sessione')
                     ->state(fn (GameSession $record) => $record->displayTitle())
                     ->searchable(['number', 'title']),
 
@@ -37,7 +37,7 @@ class GameSessionsTable
                     ->dateTime('j M Y, H:i')
                     ->sortable(),
 
-                // Cosa manca da fare sulla serata: resoconto e presenze.
+                // Cosa manca da fare sulla sessione: resoconto e presenze.
                 TextColumn::make('resoconto')
                     ->label('Resoconto')
                     ->state(fn (GameSession $record) => $record->hasRecap() ? 'Scritto' : 'Manca')
@@ -69,7 +69,7 @@ class GameSessionsTable
             ]);
     }
 
-    /** Apre la pagina pubblica della serata. */
+    /** Apre la pagina pubblica della sessione. */
     private static function openAction(): Action
     {
         return Action::make('apri')

@@ -120,7 +120,7 @@ class Trades extends Component
             $this->reset('give', 'want', 'giveMonete', 'wantMonete', 'message');
 
             $this->esito($result instanceof SupervisedAction
-                ? 'Sei sotto richiamo: la proposta è in attesa che un DM la approvi.'
+                ? 'Sei sotto richiamo: la proposta è in attesa che un dungeon master la approvi.'
                 : 'Proposta inviata.');
         } catch (MarketException $e) {
             $this->addError('scambio', $e->getMessage());
@@ -185,7 +185,7 @@ class Trades extends Component
             $this->chiudiRichiesta();
 
             $this->esito($result instanceof SupervisedAction
-                ? 'Sei sotto richiamo: la proposta è in attesa che un DM la approvi.'
+                ? 'Sei sotto richiamo: la proposta è in attesa che un dungeon master la approvi.'
                 : 'Proposta mandata: ora tocca a lui confermare.');
         } catch (MarketException $e) {
             $this->addError('scambio', $e->getMessage());
@@ -226,7 +226,7 @@ class Trades extends Component
             $result = app(Supervisor::class)->acceptTrade(auth()->user(), $trade);
 
             $this->esito($result instanceof SupervisedAction
-                ? 'Sei sotto richiamo: l\'accettazione è in attesa che un DM la approvi.'
+                ? 'Sei sotto richiamo: l\'accettazione è in attesa che un dungeon master la approvi.'
                 : 'Scambio concluso.');
         } catch (MarketException $e) {
             $this->addError('scambio', $e->getMessage());

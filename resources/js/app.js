@@ -447,6 +447,72 @@ if (righeBottino) {
     });
 }
 
+// Listino del Manuale: ricerca e categoria senza ricaricare
+
+const listino = document.querySelector('[data-listino]');
+
+if (listino) {
+    const cerca = listino.querySelector('[data-listino-cerca]');
+    const categoria = listino.querySelector('[data-listino-categoria]');
+    const vuoto = listino.querySelector('[data-listino-vuoto]');
+
+    const filtra = () => {
+        const testo = cerca.value.trim().toLowerCase();
+        let visibili = 0;
+
+        listino.querySelectorAll('[data-listino-gruppo]').forEach((gruppo) => {
+            const nelGruppo = !categoria.value || gruppo.dataset.listinoGruppo === categoria.value;
+            let qui = 0;
+
+            gruppo.querySelectorAll('[data-listino-voce]').forEach((voce) => {
+                const mostra = nelGruppo && voce.dataset.listinoVoce.includes(testo);
+                voce.hidden = !mostra;
+                if (mostra) qui++;
+            });
+
+            gruppo.hidden = qui === 0;
+            visibili += qui;
+        });
+
+        vuoto.hidden = visibili > 0;
+    };
+
+    cerca.addEventListener('input', filtra);
+    categoria.addEventListener('change', filtra);
+}
+
+// Presenze: gli altri giocatori compaiono solo cercandoli, quelli spuntati restano a vista
+
+document.querySelectorAll('[data-presenze-cerca]').forEach((cerca) => {
+    const righe = cerca.closest('form').querySelectorAll('[data-presenza-extra]');
+
+    const filtra = () => {
+        const testo = cerca.value.trim().toLowerCase();
+
+        righe.forEach((riga) => {
+            const spuntato = riga.querySelector('input[type="checkbox"]').checked;
+            riga.hidden = !spuntato && (testo === '' || !riga.dataset.presenzaExtra.includes(testo));
+        });
+    };
+
+    cerca.addEventListener('input', filtra);
+    // Invio nel campo di ricerca non deve salvare le presenze.
+    cerca.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
+});
+
+// Calendario degli ospiti: una sessione al giorno, spuntarne un'altra toglie la prima
+
+document.querySelectorAll('form[data-una-al-giorno]').forEach((modulo) => {
+    modulo.addEventListener('change', (e) => {
+        const scelta = e.target.closest('input[data-giorno]');
+        if (!scelta?.checked) return;
+
+        modulo.querySelectorAll(`input[data-giorno="${scelta.dataset.giorno}"]`).forEach((altra) => {
+            if (altra !== scelta) altra.checked = false;
+        });
+    });
+});
+
 // Conferma prima dei moduli `data-conferma`
 
 const conferma = document.getElementById('conferma');
@@ -461,6 +527,8 @@ if (conferma) {
         evento.preventDefault();
         modulo = form;
         conferma.querySelector('[data-conferma-testo]').textContent = form.dataset.conferma;
+        // Il pulsante dice il gesto (`data-conferma-azione`); senza, è una cancellazione.
+        conferma.querySelector('[data-conferma-si]').textContent = form.dataset.confermaAzione ?? 'Elimina';
         conferma.showModal();
     });
 

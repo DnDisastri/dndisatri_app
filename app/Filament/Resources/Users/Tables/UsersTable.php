@@ -88,7 +88,7 @@ class UsersTable
                         && ! $record->isAdmin())
                     ->requiresConfirmation()
                     ->modalHeading('Nominare dungeon master?')
-                    ->modalDescription(fn (User $record) => "{$record->name} potrà aprire campagne, programmare tavoli e condurre incarichi. Riceverà un avviso.")
+                    ->modalDescription(fn (User $record) => "{$record->name} potrà aprire campagne, programmare sessioni e condurre quest. Riceverà un avviso.")
                     ->action(function (User $record) {
                         app(PromoteToDm::class)->handle($record, auth()->user());
 

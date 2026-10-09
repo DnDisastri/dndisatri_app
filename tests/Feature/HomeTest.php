@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Actions\Quests\BookQuestSeat;
 use App\Models\Campaign;
+use App\Models\Character;
 use App\Models\Event;
 use App\Models\GameSession;
 use App\Models\Post;
@@ -29,7 +29,7 @@ describe('la bacheca del bardo', function () {
             ->assertSee(route('events.show', $evento))
             ->assertSee('Vedi tutti gli eventi');
     });
-// La Home mostra solo un'anteprima degli eventi; l'elenco completo vive nella pagina dedicata.
+    // La Home mostra solo un'anteprima degli eventi; l'elenco completo vive nella pagina dedicata.
     it('si ferma a quattro', function () {
         Event::factory()->count(6)->create([
             'published_at' => now()->subDay(),
@@ -55,9 +55,9 @@ describe('la bacheca del bardo', function () {
     });
 });
 
-describe('i prossimi tavoli', function () {
-// Più campagne possono giocare nella stessa sera e devono comparire tutte.
-    it('mostra tutti i tavoli della stessa sera', function () {
+describe('le prossime sessioni', function () {
+    // Più campagne possono giocare nella stessa sera e devono comparire tutte.
+    it('mostra tutte le sessioni della stessa sera', function () {
         $sera = now()->addWeek()->setTime(21, 0);
 
         $prima = Campaign::factory()->create(['title' => 'Il tavolo rosso']);
@@ -77,30 +77,18 @@ describe('i prossimi tavoli', function () {
         $this->actingAs($this->giocatore)
             ->get('/')
             ->assertOk()
-            ->assertSee('Nessun tavolo in programma.');
+            ->assertSee('Nessuna sessione in programma.');
     });
 });
 
 describe('gli incarichi aperti', function () {
-    it('mostra solo quelli con ancora posto', function () {
-        $campagna = Campaign::factory()->create();
-
-        Quest::factory()->for($campagna)->create([
-            'title' => 'Con posto',
-            'max_participants' => 5,
-        ]);
-
-        $pieno = Quest::factory()->for($campagna)->create([
-            'title' => 'Al completo',
-            'max_participants' => 1,
-        ]);
-        app(BookQuestSeat::class)->handle($pieno, User::factory()->player()->create());
+    it('mostra le quest aperte', function () {
+        Quest::factory()->for(Campaign::factory())->create(['title' => 'Ancora da giocare']);
 
         $this->actingAs($this->giocatore)
             ->get('/')
             ->assertOk()
-            ->assertSee('Con posto')
-            ->assertDontSee('Al completo');
+            ->assertSee('Ancora da giocare');
     });
 
     it('tiene fuori quelli già conclusi', function () {
@@ -195,7 +183,7 @@ describe('l\'invito al tutorial', function () {
     });
 
     it('sparisce a chi un eroe ce l\'ha già', function () {
-        \App\Models\Character::factory()->ownedBy($this->giocatore)->create();
+        Character::factory()->ownedBy($this->giocatore)->create();
 
         $this->actingAs($this->giocatore)
             ->get('/')
@@ -212,8 +200,8 @@ describe('l\'invito al tutorial', function () {
     });
 });
 
-// Tavoli e quest stanno affiancati: cinque tavoli e tre quest hanno all'incirca la stessa altezza.
-it('mostra al massimo cinque tavoli e tre quest', function () {
+// Sessioni e quest stanno affiancate: cinque sessioni e tre quest hanno all'incirca la stessa altezza.
+it('mostra al massimo cinque sessioni e tre quest', function () {
     $campagna = Campaign::factory()->create();
 
     foreach (range(1, 7) as $i) {

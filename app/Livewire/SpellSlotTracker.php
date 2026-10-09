@@ -10,11 +10,8 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 
 /**
- * Gli slot incantesimo sulla scheda: si consumano, si recuperano, e i riposi
- * li rimettono a posto.
- *
- * È l'unica parte della scheda che il giocatore modifica direttamente, perché
- * è lo stato di una serata e non una modifica al personaggio.
+ * Gli slot incantesimo: si consumano e si recuperano senza approvazione, perché
+ * sono stato della sessione e non modifiche alla scheda.
  */
 class SpellSlotTracker extends Component
 {
@@ -68,15 +65,9 @@ class SpellSlotTracker extends Component
         $character = $this->character();
 
         /*
-         * Due riserve, non una. Un Warlock 3 / Stregone 2 ha gli slot normali
-         * (dallo Stregone) **e** quelli da patto (dal Warlock), che si
-         * recuperano diversamente: il patto torna anche col riposo breve. Prima
-         * la scheda mostrava solo i normali, e la riserva da patto spariva.
-         *
-         * Un Warlock **puro** è il caso da non sbagliare: `spellSlots()` per lui
-         * restituisce già la riserva da patto (`isPact`). Disegnarla anche come
-         * «normale» la mostrerebbe due volte — quindi lì i normali non ci sono,
-         * e a mostrare il patto ci pensa `$pact`.
+         * Due riserve: normali e da patto (il patto torna anche col riposo breve).
+         * Per un Warlock puro `spellSlots()` è già il patto (`isPact`): non va
+         * disegnato due volte.
          */
         $standard = $character->spellSlots();
         $pact = $character->pactSlots();

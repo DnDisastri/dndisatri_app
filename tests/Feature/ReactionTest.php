@@ -19,62 +19,62 @@ beforeEach(function () {
 
 function serataRaccontata(Campaign $campagna, User $dm): GameSession
 {
-    $serata = GameSession::factory()->for($campagna)->create(['played_at' => now()->subWeek()]);
-    app(WriteRecap::class)->handle($serata, $dm, 'Il drago dormiva. Non più.');
+    $sessione = GameSession::factory()->for($campagna)->create(['played_at' => now()->subWeek()]);
+    app(WriteRecap::class)->handle($sessione, $dm, 'Il drago dormiva. Non più.');
 
-    return $serata->fresh();
+    return $sessione->fresh();
 }
 
 it('mette una reaction e la conta', function () {
-    $serata = serataRaccontata($this->campagna, $this->dm);
+    $sessione = serataRaccontata($this->campagna, $this->dm);
 
     $this->actingAs($this->giocatore)
-        ->post(route('reactions.store', ['serata', $serata->getKey()]), ['reazione' => Reaction::Fire->value])
+        ->post(route('reactions.store', ['serata', $sessione->getKey()]), ['reazione' => Reaction::Fire->value])
         ->assertRedirect();
 
-    expect($serata->reactions()->count())->toBe(1)
-        ->and($serata->reactionOf($this->giocatore))->toBe(Reaction::Fire)
-        ->and($serata->reactionCounts()['fire'])->toBe(1);
+    expect($sessione->reactions()->count())->toBe(1)
+        ->and($sessione->reactionOf($this->giocatore))->toBe(Reaction::Fire)
+        ->and($sessione->reactionCounts()['fire'])->toBe(1);
 });
 // Ogni utente ha una sola reaction per contenuto: sceglierne un'altra sostituisce la precedente.
 it('sostituisce la reaction di prima invece di sommarla', function () {
-    $serata = serataRaccontata($this->campagna, $this->dm);
+    $sessione = serataRaccontata($this->campagna, $this->dm);
 
     $this->actingAs($this->giocatore)
-        ->post(route('reactions.store', ['serata', $serata->getKey()]), ['reazione' => Reaction::Fire->value]);
+        ->post(route('reactions.store', ['serata', $sessione->getKey()]), ['reazione' => Reaction::Fire->value]);
 
     $this->actingAs($this->giocatore)
-        ->post(route('reactions.store', ['serata', $serata->getKey()]), ['reazione' => Reaction::Heart->value]);
+        ->post(route('reactions.store', ['serata', $sessione->getKey()]), ['reazione' => Reaction::Heart->value]);
 
-    expect($serata->reactions()->count())->toBe(1)
-        ->and($serata->reactionOf($this->giocatore))->toBe(Reaction::Heart);
+    expect($sessione->reactions()->count())->toBe(1)
+        ->and($sessione->reactionOf($this->giocatore))->toBe(Reaction::Heart);
 });
 
 it('toccando due volte la stessa la toglie', function () {
-    $serata = serataRaccontata($this->campagna, $this->dm);
+    $sessione = serataRaccontata($this->campagna, $this->dm);
 
     foreach ([1, 2] as $volta) {
         $this->actingAs($this->giocatore)
-            ->post(route('reactions.store', ['serata', $serata->getKey()]), ['reazione' => Reaction::Clap->value]);
+            ->post(route('reactions.store', ['serata', $sessione->getKey()]), ['reazione' => Reaction::Clap->value]);
     }
 
-    expect($serata->reactions()->count())->toBe(0)
-        ->and($serata->reactionOf($this->giocatore))->toBeNull();
+    expect($sessione->reactions()->count())->toBe(0)
+        ->and($sessione->reactionOf($this->giocatore))->toBeNull();
 });
 
 it('somma le persone diverse', function () {
-    $serata = serataRaccontata($this->campagna, $this->dm);
+    $sessione = serataRaccontata($this->campagna, $this->dm);
     $altro = User::factory()->player()->create();
 
     $this->actingAs($this->giocatore)
-        ->post(route('reactions.store', ['serata', $serata->getKey()]), ['reazione' => Reaction::Dice->value]);
+        ->post(route('reactions.store', ['serata', $sessione->getKey()]), ['reazione' => Reaction::Dice->value]);
     $this->actingAs($altro)
-        ->post(route('reactions.store', ['serata', $serata->getKey()]), ['reazione' => Reaction::Dice->value]);
+        ->post(route('reactions.store', ['serata', $sessione->getKey()]), ['reazione' => Reaction::Dice->value]);
 
-    expect($serata->reactionCounts()['dice'])->toBe(2);
+    expect($sessione->reactionCounts()['dice'])->toBe(2);
 });
 
-it('sulla serata compare col resoconto, e non prima', function () {
+it('sulla sessione compare col resoconto, e non prima', function () {
     $raccontata = serataRaccontata($this->campagna, $this->dm);
     $daGiocare = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->addWeek()]);
 
@@ -156,33 +156,33 @@ it('su un tipo che non accetta reaction risponde 404', function () {
 });
 
 it('rifiuta una faccina che non esiste', function () {
-    $serata = serataRaccontata($this->campagna, $this->dm);
+    $sessione = serataRaccontata($this->campagna, $this->dm);
 
     $this->actingAs($this->giocatore)
-        ->post(route('reactions.store', ['serata', $serata->getKey()]), ['reazione' => 'palle-di-fuoco'])
+        ->post(route('reactions.store', ['serata', $sessione->getKey()]), ['reazione' => 'palle-di-fuoco'])
         ->assertSessionHasErrors('reazione');
 
-    expect($serata->reactions()->count())->toBe(0);
+    expect($sessione->reactions()->count())->toBe(0);
 });
 // `aria-pressed` comunica alle tecnologie assistive quale reaction appartiene all'utente corrente.
 it('segna come premuta la propria reaction', function () {
-    $serata = serataRaccontata($this->campagna, $this->dm);
+    $sessione = serataRaccontata($this->campagna, $this->dm);
 
     $this->actingAs($this->giocatore)
-        ->post(route('reactions.store', ['serata', $serata->getKey()]), ['reazione' => Reaction::Heart->value]);
+        ->post(route('reactions.store', ['serata', $sessione->getKey()]), ['reazione' => Reaction::Heart->value]);
 
     $html = $this->actingAs($this->giocatore)
-        ->get(route('sessions.show', $serata))->assertOk()->getContent();
-// Il regex tollera attributi su più righe e non dipende dalla formattazione prodotta da Blade.
+        ->get(route('sessions.show', $sessione))->assertOk()->getContent();
+    // Il regex tollera attributi su più righe e non dipende dalla formattazione prodotta da Blade.
     expect($html)->toMatch('/value="heart"[^>]*aria-pressed="true"/')
         ->and($html)->toMatch('/value="fire"[^>]*aria-pressed="false"/');
 });
 
 it('non scrive zero sotto le faccine che nessuno ha messo', function () {
-    $serata = serataRaccontata($this->campagna, $this->dm);
+    $sessione = serataRaccontata($this->campagna, $this->dm);
 
     $this->actingAs($this->giocatore)
-        ->get(route('sessions.show', $serata))
+        ->get(route('sessions.show', $sessione))
         ->assertOk()
         ->assertDontSee('>0<', false);
 });

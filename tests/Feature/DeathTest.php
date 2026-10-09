@@ -33,7 +33,7 @@ describe('dichiarare caduto un personaggio', function () {
 });
 
 describe('il racconto della morte', function () {
-    it('resta scritto insieme alla serata in cui è successo', function () {
+    it('resta scritto insieme alla sessione in cui è successo', function () {
         $character = Character::factory()->create();
         $session = GameSession::factory()->create();
 
@@ -50,7 +50,7 @@ describe('il racconto della morte', function () {
             ->and($fallen->diedInSession->is($session))->toBeTrue();
     });
 
-    it('e si può morire senza una serata a cui appenderlo', function () {
+    it('e si può morire senza una sessione a cui appenderlo', function () {
         $character = Character::factory()->create();
 
         app(KillCharacter::class)->handle(
@@ -64,8 +64,8 @@ describe('il racconto della morte', function () {
         expect($fallen->died_in_session_id)->toBeNull()
             ->and($fallen->death_story)->not->toBeNull();
     });
-    // La relazione con la serata è opzionale: cancellarla non deve rimuovere il racconto né riaprire il personaggio.
-    it('cancellare la serata non cancella il caduto', function () {
+    // La relazione con la sessione è opzionale: cancellarla non deve rimuovere il racconto né riaprire il personaggio.
+    it('cancellare la sessione non cancella il caduto', function () {
         $character = Character::factory()->create();
         $session = GameSession::factory()->create();
 

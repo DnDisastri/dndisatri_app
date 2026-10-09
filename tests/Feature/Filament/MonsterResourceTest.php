@@ -60,23 +60,23 @@ describe('scrivere un mostro', function () {
 
     it('lega il mostro alla campagna quando non è pubblico', function () {
         $dm = User::factory()->dm()->create();
-        $tavolo = Campaign::factory()->create(['dm_id' => $dm->id]);
+        $suaCampagna = Campaign::factory()->create(['dm_id' => $dm->id]);
 
         Livewire::actingAs($dm)
             ->test(CreateMonster::class)
             ->fillForm([
                 'name' => 'Guardiano', 'hp' => 30, 'ac' => 16,
-                'pubblico' => false, 'campaign_id' => $tavolo->id,
+                'pubblico' => false, 'campaign_id' => $suaCampagna->id,
             ])
             ->call('create')
             ->assertHasNoFormErrors();
 
-        expect(Monster::where('name', 'Guardiano')->firstOrFail()->campaign_id)->toBe($tavolo->id);
+        expect(Monster::where('name', 'Guardiano')->firstOrFail()->campaign_id)->toBe($suaCampagna->id);
     });
 });
 
 describe('i mostri legati a una campagna', function () {
-    it('un DM vede i pubblici e i propri, non quelli di un altro tavolo', function () {
+    it('un DM vede i pubblici e i propri, non quelli di un\x27altra campagna', function () {
         $dm = User::factory()->dm()->create();
         $mio = Campaign::factory()->create(['dm_id' => $dm->id]);
         $altro = Campaign::factory()->create(['dm_id' => User::factory()->dm()->create()->id]);
@@ -91,7 +91,7 @@ describe('i mostri legati a una campagna', function () {
             ->assertCanNotSeeTableRecords([$altruiMostro]);
     });
 
-    it('non li lascia vedere né modificare a un DM di un altro tavolo', function () {
+    it('non li lascia vedere né modificare a un DM di un\x27altra campagna', function () {
         $altro = Campaign::factory()->create(['dm_id' => User::factory()->dm()->create()->id]);
         $altruiMostro = Monster::factory()->create(['campaign_id' => $altro->id]);
         $estraneo = User::factory()->dm()->create();
@@ -103,8 +103,8 @@ describe('i mostri legati a una campagna', function () {
 
     it('li lascia gestire al DM della campagna e agli admin', function () {
         $dm = User::factory()->dm()->create();
-        $tavolo = Campaign::factory()->create(['dm_id' => $dm->id]);
-        $mostro = Monster::factory()->create(['campaign_id' => $tavolo->id]);
+        $suaCampagna = Campaign::factory()->create(['dm_id' => $dm->id]);
+        $mostro = Monster::factory()->create(['campaign_id' => $suaCampagna->id]);
 
         expect($dm->can('update', $mostro))->toBeTrue()
             ->and(User::factory()->admin()->create()->can('update', $mostro))->toBeTrue();

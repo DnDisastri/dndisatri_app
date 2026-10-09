@@ -111,8 +111,8 @@ describe('gli eventi', function () {
     });
 });
 
-describe('i tavoli', function () {
-    it('un nuovo tavolo futuro avvisa i giocatori', function () {
+describe('le sessioni', function () {
+    it('una nuova sessione futura avvisa i giocatori', function () {
         Notification::fake();
 
         $dm = User::factory()->dm()->create();
@@ -131,7 +131,7 @@ describe('i tavoli', function () {
         Notification::assertSentTo($giocatore, GameSessionScheduled::class);
     });
 
-    it('un tavolo inserito già concluso non avvisa', function () {
+    it('una sessione inserita già conclusa non avvisa', function () {
         Notification::fake();
 
         $dm = User::factory()->dm()->create();

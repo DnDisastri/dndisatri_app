@@ -34,7 +34,7 @@ class ReactionController extends Controller
          */
         abort_unless($request->user()->can('view', $oggetto), 404);
 
-        // Una serata senza resoconto non ha ancora niente da applaudire, e un
+        // Una sessione senza resoconto non ha ancora niente da applaudire, e un
         // incarico aperto ha già il suo gesto: «voglio partecipare».
         abort_unless($oggetto->acceptsReactions(), 404);
 

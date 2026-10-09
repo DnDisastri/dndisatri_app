@@ -1,14 +1,7 @@
 @props(['character', 'warn' => false])
 
-{{--
-    La card di un personaggio in Gilda, una sola per vivi e caduti: guarda
-    `isAlive()` e cambia da sé dove porta, il colore della foto e la riga
-    della morte.
-
-    Mostra chi è (foto, nome, pasta, chi lo gioca), non i numeri di serata (CA,
-    PF) né l'oro: quelli cambiano di ora in ora, e l'oro altera le trattative.
-    Forma `rounded-card` come ogni card, si accende al passaggio.
---}}
+{{-- La card di un personaggio in Gilda, vivo o caduto. Niente CA, PF né monete:
+     cambiano di continuo, e le monete altererebbero le trattative. --}}
 @php $vivo = $character->isAlive(); @endphp
 
 {{-- Un vivo alla scheda, un caduto al memoriale: lì la cosa che si cerca è com'è andata. --}}

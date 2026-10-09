@@ -11,11 +11,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Collection;
 
 /**
- * «Questa cosa accetta le reaction.»
- *
- * Metterlo su un modello è tutto quello che serve: da lì in poi la pagina può
- * disegnare `<x-reactions>` e la rotta accetta il tipo, purché stia anche in
- * `App\Enums\Reactable`.
+ * Un modello che accetta le reaction; il tipo va aggiunto anche in `App\Enums\Reactable`.
  */
 trait HasReactions
 {
@@ -25,11 +21,7 @@ trait HasReactions
     }
 
     /**
-     * Quante per faccina, solo quelle che qualcuno ha davvero messo.
-     *
-     * Una query sola con un `group by`, e non dieci conteggi: su una pagina
-     * con dieci reaction possibili sarebbe la differenza fra una richiesta al
-     * database e undici.
+     * Quante per faccina, in una query sola.
      *
      * @return Collection<string, int> chiave della reaction => quante
      */
@@ -51,14 +43,7 @@ trait HasReactions
         return $this->reactions()->where('user_id', $user->getKey())->first()?->type;
     }
 
-    /**
-     * Se in questo momento ha senso reagire.
-     *
-     * Il caso che conta è la serata: prima che il resoconto sia scritto non
-     * c'è niente da applaudire, e la reaction andrebbe a una pagina che dice
-     * soltanto quando si gioca. I modelli che hanno un «finito» lo
-     * ridefiniscono; per gli altri una cosa pubblicata è già pronta.
-     */
+    /** Se ha senso reagire adesso; lo ridefinisce chi ha un «finito», come la sessione. */
     public function acceptsReactions(): bool
     {
         return true;

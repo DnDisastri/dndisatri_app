@@ -10,28 +10,16 @@ use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
 /**
- * Segna chi c'era davvero a una serata, e con quale personaggio.
+ * Segna chi c'era a una sessione, e con quale personaggio. Sostituisce l'elenco:
+ * quello che si salva è la lista definitiva. Vale anche per chi non era prenotato.
  *
- * Sostituisce l'elenco invece di aggiungere: il DM spunta i presenti a fine
- * sessione e quella è la lista definitiva, comprese le correzioni.
- *
- * Non c'è nessun vincolo di iscrizione a una quest: chi si presenta senza
- * essersi iscritto viene segnato lo stesso, che è come vanno le serate.
- *
- * **Il personaggio è facoltativo.** Il DM che conduce c'era senza giocare, un
- * ospite pure, e le presenze registrate prima che questa colonna esistesse non
- * possono inventarselo. Quello che invece non si può fare è attribuire a un
- * giocatore il personaggio di un altro: è l'unico controllo qui dentro, e
- * serve perché la scelta arriva da una tendina e le tendine si manomettono.
+ * Il personaggio è facoltativo; non può però essere di un altro giocatore
+ * (la tendina si manomette). Gli ospiti senza account stanno sul loro posto.
  */
 final class RecordAttendance
 {
     /**
-     * Due forme, entrambe valide:
-     *
-     * - `[3, 7]` — solo i giocatori, senza dire con che cosa giocavano;
-     * - `[3 => 12, 7 => null]` — giocatore => personaggio, che è quello che
-     *   manda la pagina delle presenze.
+     * `[3, 7]` (solo giocatori) o `[3 => 12, 7 => null]` (giocatore => personaggio).
      *
      * @param  Collection<int,mixed>|array<int,mixed>  $attendance
      */

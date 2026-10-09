@@ -6,12 +6,8 @@ use App\Models\Campaign;
 use App\Models\User;
 
 /**
- * Le campagne non danno poteri sui personaggi (decisione D1): servono a
- * mostrare quali tavoli sono aperti, quando ci sono le sessioni e a raccoglierne
- * i recap.
- *
- * Restano però di qualcuno: il DM che tiene il tavolo ne è il proprietario e
- * gli admin possono comunque intervenire.
+ * Le campagne non danno poteri sui personaggi (D1). Le gestisce il loro DM,
+ * e gli admin.
  */
 class CampaignPolicy
 {
@@ -25,7 +21,7 @@ class CampaignPolicy
         return true;
     }
 
-    /** Un DM apre i propri tavoli; un admin può aprirne per conto di altri. */
+    /** Un DM apre le proprie campagne; un admin anche per conto di altri. */
     public function create(User $user): bool
     {
         return $user->isDm() || $user->isAdmin();

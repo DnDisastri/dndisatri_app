@@ -6,14 +6,8 @@ use App\Models\Build;
 use App\Models\User;
 
 /**
- * Le build consigliate le scrivono **i dungeon master**, non solo gli admin.
- *
- * È la differenza con news ed eventi, che restano della redazione: una build è
- * consiglio di gioco, e chi conduce le serate è esattamente la persona che sa
- * quale personaggio funziona al proprio tavolo.
- *
- * Ognuno però risponde di quello che scrive: un DM modifica le proprie, gli
- * admin tutte.
+ * Le build le scrivono anche i DM, a differenza di news ed eventi.
+ * Un DM modifica le proprie, gli admin tutte.
  */
 class BuildPolicy
 {

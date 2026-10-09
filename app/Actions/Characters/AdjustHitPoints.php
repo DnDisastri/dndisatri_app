@@ -8,14 +8,8 @@ use App\Models\Character;
 use InvalidArgumentException;
 
 /**
- * Danni e cure durante la serata (decisione D7).
- *
- * Li segna il giocatore da solo, come gli slot incantesimo: sono lo stato di
- * una serata, non una modifica alla scheda. Prima di questa azione l'unica
- * strada era una proposta da far approvare a un DM — per ogni colpo preso.
- *
- * Le variazioni restano comunque nel registro attività, quindi la traccia non
- * si perde: quello che salta è l'approvazione, non la memoria.
+ * Danni e cure durante la sessione (D7): senza approvazione, ma restano nel
+ * registro attività.
  */
 final class AdjustHitPoints
 {

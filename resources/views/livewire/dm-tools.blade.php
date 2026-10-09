@@ -62,7 +62,7 @@
         </x-modal>
     @endif
 
-    {{-- Irreversibile: serve la spunta. Racconto e serata sono facoltativi. --}}
+    {{-- Irreversibile: serve la spunta. Racconto e sessione sono facoltativi. --}}
     @if ($modaleMorte)
         <x-modal title="Dichiara caduto" close="annullaMorte">
             <div class="space-y-3 text-left text-sm">
@@ -81,7 +81,7 @@
                 </div>
 
                 <div>
-                    <label for="morte-sessione" class="block text-muted">In quale serata <span class="text-muted">(facoltativo)</span></label>
+                    <label for="morte-sessione" class="block text-muted">In quale sessione <span class="text-muted">(facoltativo)</span></label>
                     <select id="morte-sessione" wire:model="morteSessione"
                             class="mt-1 w-full rounded-md border border-line bg-page px-2 py-2 text-fg">
                         <option value="">Fra una sessione e l'altra</option>

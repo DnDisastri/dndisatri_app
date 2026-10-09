@@ -15,21 +15,9 @@ use Filament\Tables\Table;
 use UnitEnum;
 
 /**
- * Le azioni sotto vigilanza (M24, M25).
- *
- * La seconda bacheca, **separata da quella delle richieste** perché sono cose
- * diverse: lì si valuta se un personaggio può salire di livello, qui se una
- * compravendita è pulita. Tenerle insieme vorrebbe dire mescolare due mestieri
- * e due criteri in una fila sola.
- *
- * Come per i richiami, la logica c'era e la pagina no: le azioni venivano
- * create e messe in attesa, e **nessuno poteva approvarle o rifiutarle**. Un
- * giocatore sotto richiamo chiedeva di vendere e non succedeva niente, per
- * sempre.
- *
- * Qui c'è la pagina di dettaglio, al contrario dei richiami: un'azione di
- * mercato non si giudica dal riassunto di una riga — bisogna vedere cosa esce
- * e cosa entra, e da quale personaggio.
+ * Le azioni di mercato sotto vigilanza (M24, M25), separate dalle richieste
+ * sulla scheda. Hanno una pagina di dettaglio: per giudicarle serve vedere
+ * cosa esce, cosa entra e da quale personaggio.
  */
 class SupervisedActionResource extends Resource
 {
@@ -41,7 +29,7 @@ class SupervisedActionResource extends Resource
      * Accanto ai richiami, che è la loro causa: si finisce sotto vigilanza
      * perché si è preso un richiamo, e chi guarda l'una guarda spesso l'altra.
      */
-    protected static string|UnitEnum|null $navigationGroup = 'Tavoli';
+    protected static string|UnitEnum|null $navigationGroup = 'Gestione';
 
     protected static ?string $modelLabel = 'azione sotto vigilanza';
 

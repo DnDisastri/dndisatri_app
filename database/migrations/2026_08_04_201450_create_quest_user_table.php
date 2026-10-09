@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\QuestSeatStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -26,7 +25,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
 
             // Lo stato del posto: prenotato, confermato, in lista d'attesa…
-            $table->string('status', 20)->default(QuestSeatStatus::Booked->value);
+            $table->string('status', 20)->default('booked');
 
             $table->timestamp('joined_at')->nullable();
             // Quando il posto è stato confermato, o quando ci si è ritirati.

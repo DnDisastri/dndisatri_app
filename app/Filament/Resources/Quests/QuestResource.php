@@ -21,7 +21,7 @@ class QuestResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Icon::Quests;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Tavoli';
+    protected static string|UnitEnum|null $navigationGroup = 'Gestione';
 
     protected static ?string $modelLabel = 'quest';
 

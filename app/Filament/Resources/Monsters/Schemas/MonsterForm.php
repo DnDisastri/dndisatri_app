@@ -14,12 +14,8 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 /**
- * Il modulo con cui si scrive un mostro.
- *
- * Due sezioni: **l'essenziale** che serve a farlo combattere — quello che nel
- * tracker si vede in riga — e lo **statblock esteso**, che nel tracker si apre
- * solo al clic. Riempire l'essenziale basta; il resto vale la pena per i mostri
- * che si rivedono.
+ * Il modulo del mostro: l'essenziale per il tracker, e lo statblock esteso
+ * (facoltativo) che si apre al clic.
  */
 class MonsterForm
 {
@@ -27,7 +23,7 @@ class MonsterForm
     {
         return $schema->components([
             Section::make('Dove si usa')
-                ->description('Pubblico per tutti i tavoli, oppure riservato a una tua campagna.')
+                ->description('Visibile in tutte le campagne, oppure solo in una delle tue.')
                 ->schema([
                     Toggle::make('pubblico')
                         ->label('Pubblico')

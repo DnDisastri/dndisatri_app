@@ -48,18 +48,18 @@ class CampaignController extends Controller
             'nextSession' => $campaign->sessions()->upcoming()->first(),
 
             // Solo le aperte: le concluse stanno nel Libro Mastro.
-            'quests' => $campaign->quests()->active()->latest('id')->get(),
+            'quests' => $campaign->quests()->active()->with('session')->withCount('interested')->latest('id')->get(),
 
             // Il link al Libro Mastro compare solo se non porta a zero righe.
             'questsConcluse' => $campaign->quests()->archived()->count(),
 
             // Solo le ultime: l'archivio completo è il Libro Mastro.
             'sessions' => $campaign->sessions()->past()->limit(6)->get(),
-            'serateGiocate' => $campaign->sessions()->past()->count(),
+            'sessioniGiocate' => $campaign->sessions()->past()->count(),
 
             'maps' => Map::forCampaign($campaign)->orderBy('title')->get(),
 
-            // Si ricava dalle presenze alle serate, senza ripetizioni.
+            // Si ricava dalle presenze alle sessioni, senza ripetizioni.
             'characters' => Character::query()
                 ->whereHas('sessions', fn ($query) => $query->where('campaign_id', $campaign->getKey()))
                 ->with('user')

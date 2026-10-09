@@ -43,8 +43,8 @@ final class BuyFromShop
             $buyer->recordInLedger(
                 LedgerAction::Buy,
                 $qty > 1
-                    ? "Acquisto di {$qty}× {$item->name} dal negozio della gilda"
-                    : "Acquisto di {$item->name} dal negozio della gilda",
+                    ? "Acquisto di {$qty}× {$item->name} dall'Emporio"
+                    : "Acquisto di {$item->name} dall'Emporio",
                 $paid,
                 $actor,
                 // Per l'annullamento: dalla frase del messaggio non si torna indietro.

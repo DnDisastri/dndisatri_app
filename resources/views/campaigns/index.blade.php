@@ -6,7 +6,7 @@
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="\App\Enums\Icon::Campaigns" class="h-7 w-7" /> Campagne
     </h2>
-    <p class="mb-6 text-sm text-muted">Mondi da esplorare, avventure da vivere e leggende da scrivere. Scegli la tua prossima campagna.</p>
+    <x-intro :page="\App\Enums\IntroPage::Campaigns" class="mb-6" />
 
     @if (count($seasons) > 1)
         <div class="mb-6 flex flex-wrap gap-2">

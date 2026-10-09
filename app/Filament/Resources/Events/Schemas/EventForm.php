@@ -60,7 +60,7 @@ class EventForm
                 ]),
 
             Section::make('Quando')
-                ->description('Data della serata e momento della pubblicazione.')
+                ->description('Data dell\'evento e momento della pubblicazione.')
                 ->columns(2)
                 ->schema([
                     DateTimePicker::make('starts_at')

@@ -41,16 +41,16 @@
 
     @php
         $haStoria = filled($campaign->description) || $campaign->hasQuestGiver();
-        $haSerata = $lastSession || $nextSession;
+        $haSessione = $lastSession || $nextSession;
         $haQuest = $quests->isNotEmpty() || $questsConcluse > 0;
-        $haSerate = $sessions->isNotEmpty();
+        $haSessioni = $sessions->isNotEmpty();
         $haCompagnia = $characters->isNotEmpty();
         $haMappe = $maps->isNotEmpty();
     @endphp
 
     {{-- Righe a due colonne: un blocco rimasto solo prende tutta la riga. --}}
-    @if ($haStoria || $haSerata)
-        <div @class(['space-y-6 lg:grid lg:items-start lg:gap-6 lg:space-y-0', 'lg:grid-cols-2' => $haStoria && $haSerata])>
+    @if ($haStoria || $haSessione)
+        <div @class(['space-y-6 lg:grid lg:items-start lg:gap-6 lg:space-y-0', 'lg:grid-cols-2' => $haStoria && $haSessione])>
         @if (filled($campaign->description) || $campaign->hasQuestGiver())
             <x-panel>
                 @if (filled($campaign->description))
@@ -81,11 +81,11 @@
             </x-panel>
         @endif
 
-        @if ($haSerata)
+        @if ($haSessione)
             <div class="space-y-4">
             @if ($lastSession)
                 <x-card :href="route('sessions.show', $lastSession)">
-                    <p class="text-xs uppercase tracking-wide text-muted">L'ultima serata</p>
+                    <p class="text-xs uppercase tracking-wide text-muted">L'ultima sessione</p>
                     <p class="mt-1 text-lg font-semibold text-fg">{{ $lastSession->displayTitle() }}</p>
                     <p class="text-sm text-muted">{{ $lastSession->played_at->translatedFormat('j F Y') }}</p>
 
@@ -99,7 +99,7 @@
 
             @if ($nextSession)
                 <x-card :href="route('sessions.show', $nextSession)">
-                    <p class="text-xs uppercase tracking-wide text-muted">La prossima serata</p>
+                    <p class="text-xs uppercase tracking-wide text-muted">La prossima sessione</p>
                     <p class="mt-1 text-lg font-semibold text-fg">{{ $nextSession->displayTitle() }}</p>
                     <p class="text-sm text-muted">
                         {{ $nextSession->played_at->translatedFormat('l j F Y, H:i') }}
@@ -111,8 +111,8 @@
         </div>
     @endif
 
-    @if ($haQuest || $haSerate)
-        <div @class(['space-y-6 lg:grid lg:items-start lg:gap-6 lg:space-y-0', 'lg:grid-cols-2' => $haQuest && $haSerate])>
+    @if ($haQuest || $haSessioni)
+        <div @class(['space-y-6 lg:grid lg:items-start lg:gap-6 lg:space-y-0', 'lg:grid-cols-2' => $haQuest && $haSessioni])>
         @if ($quests->isNotEmpty() || $questsConcluse > 0)
             <div>
                 <h3 class="mb-3 flex items-center gap-2 text-lg font-semibold text-fg">
@@ -132,8 +132,8 @@
                         <a href="{{ route('ledger.index', ['campagna' => $campaign->slug]) }}"
                            class="text-sm text-muted hover:underline">
                             {{ $questsConcluse === 1
-                                ? 'La quest conclusa di questo tavolo'
-                                : 'Le '.$questsConcluse.' quest concluse di questo tavolo' }}
+                                ? 'La quest conclusa di questa campagna'
+                                : 'Le '.$questsConcluse.' quest concluse di questa campagna' }}
                         </a>
                     </p>
                 @endif
@@ -143,7 +143,7 @@
         @if ($sessions->isNotEmpty())
             <div>
                 <h3 class="mb-3 flex items-center gap-2 text-lg font-semibold text-fg">
-                    <x-icona :is="\App\Enums\Icon::Sessions" class="h-5 w-5" /> Le serate giocate
+                    <x-icona :is="\App\Enums\Icon::Sessions" class="h-5 w-5" /> Le sessioni giocate
                 </h3>
 
                 <div class="grid grid-cols-2 gap-3">
@@ -160,7 +160,7 @@
                     @endforeach
                 </div>
 
-                @if ($serateGiocate > $sessions->count())
+                @if ($sessioniGiocate > $sessions->count())
                     <p class="mt-3 text-center">
                         <a href="{{ route('ledger.index', ['campagna' => $campaign->slug]) }}#serate"
                            class="text-sm text-muted hover:underline">

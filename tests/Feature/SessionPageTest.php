@@ -9,7 +9,8 @@ use App\Models\Character;
 use App\Models\Event;
 use App\Models\GameSession;
 use App\Models\User;
-
+use App\Notifications\SessionClosedBySubstitute;
+use Illuminate\Support\Facades\Notification;
 
 beforeEach(function () {
     $this->giocatore = User::factory()->player()->create();
@@ -17,15 +18,15 @@ beforeEach(function () {
     $this->campagna = Campaign::factory()->create(['dm_id' => $this->dm->getKey()]);
 });
 
-it('racconta la serata', function () {
-    $serata = GameSession::factory()->for($this->campagna)->create([
+it('racconta la sessione', function () {
+    $sessione = GameSession::factory()->for($this->campagna)->create([
         'number' => 12,
         'title' => 'La Torre Nera',
         'played_at' => now()->subWeek(),
     ]);
 
     $this->actingAs($this->giocatore)
-        ->get(route('sessions.show', $serata))
+        ->get(route('sessions.show', $sessione))
         ->assertOk()
         ->assertSee('Sessione 12')
         ->assertSee('La Torre Nera')
@@ -33,31 +34,30 @@ it('racconta la serata', function () {
 });
 
 it('mostra il resoconto e chi l\'ha scritto', function () {
-    $serata = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
-    app(WriteRecap::class)->handle($serata, $this->dm, 'La torre è crollata, e noi eravamo dentro.');
+    $sessione = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
+    app(WriteRecap::class)->handle($sessione, $this->dm, 'La torre è crollata, e noi eravamo dentro.');
 
     $this->actingAs($this->giocatore)
-        ->get(route('sessions.show', $serata->fresh()))
+        ->get(route('sessions.show', $sessione->fresh()))
         ->assertOk()
         ->assertSee('La torre è crollata, e noi eravamo dentro.')
         ->assertSee($this->dm->name);
 });
 
 it('dice quando il resoconto non c\'è ancora', function () {
-    $serata = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
+    $sessione = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
 
     $this->actingAs($this->giocatore)
-        ->get(route('sessions.show', $serata))
+        ->get(route('sessions.show', $sessione))
         ->assertOk()
         ->assertSee('Il resoconto non è ancora stato scritto.');
 });
 
-
-it('su una serata da giocare non parla di presenze né di resoconto mancante', function () {
-    $serata = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->addWeek()]);
+it('su una sessione da giocare non parla di presenze né di resoconto mancante', function () {
+    $sessione = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->addWeek()]);
 
     $this->actingAs($this->giocatore)
-        ->get(route('sessions.show', $serata))
+        ->get(route('sessions.show', $sessione))
         ->assertOk()
         ->assertSee('Da giocare')
         ->assertDontSee('Chi c\'era', false)
@@ -65,32 +65,31 @@ it('su una serata da giocare non parla di presenze né di resoconto mancante', f
 });
 
 it('mostra chi c\'era, col personaggio quando c\'è', function () {
-    $serata = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
+    $sessione = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
     $personaggio = Character::factory()->for($this->giocatore)->create(['name' => 'Grimm']);
 
-    app(RecordAttendance::class)->handle($serata, [$this->giocatore->getKey() => $personaggio->getKey()]);
+    app(RecordAttendance::class)->handle($sessione, [$this->giocatore->getKey() => $personaggio->getKey()]);
 
     $this->actingAs($this->giocatore)
-        ->get(route('sessions.show', $serata))
+        ->get(route('sessions.show', $sessione))
         ->assertOk()
         ->assertSee($this->giocatore->name)
         ->assertSee('Grimm');
 });
 
-
 it('lascia scrivere il resoconto a chi conduce, e lo firma', function () {
-    $serata = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
+    $sessione = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
 
     $this->actingAs($this->dm)
-        ->get(route('sessions.show', $serata))
+        ->get(route('sessions.show', $sessione))
         ->assertOk()
         ->assertSee('Scrivi il resoconto');
 
     $this->actingAs($this->dm)
-        ->post(route('sessions.recap', $serata), ['recap' => 'Il drago dormiva. Non più.'])
+        ->post(route('sessions.recap', $sessione), ['recap' => 'Il drago dormiva. Non più.'])
         ->assertRedirect();
 
-    $fresca = $serata->fresh();
+    $fresca = $sessione->fresh();
 
     expect($fresca->recap)->toBe('Il drago dormiva. Non più.')
         ->and($fresca->recap_written_by)->toBe($this->dm->getKey())
@@ -98,146 +97,172 @@ it('lascia scrivere il resoconto a chi conduce, e lo firma', function () {
 });
 
 it('lascia correggere un resoconto già scritto', function () {
-    $serata = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
-    app(WriteRecap::class)->handle($serata, $this->dm, 'Prima versione.');
+    $sessione = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
+    app(WriteRecap::class)->handle($sessione, $this->dm, 'Prima versione.');
 
     $this->actingAs($this->dm)
-        ->get(route('sessions.show', $serata->fresh()))
+        ->get(route('sessions.show', $sessione->fresh()))
         ->assertOk()
         ->assertSee('Correggi il resoconto');
 
     $this->actingAs($this->dm)
-        ->post(route('sessions.recap', $serata), ['recap' => 'Seconda versione.']);
+        ->post(route('sessions.recap', $sessione), ['recap' => 'Seconda versione.']);
 
-    expect($serata->fresh()->recap)->toBe('Seconda versione.');
+    expect($sessione->fresh()->recap)->toBe('Seconda versione.');
 });
 
 it('segna le presenze, e le sostituisce invece di sommarle', function () {
-    $serata = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
+    $sessione = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
     $altro = User::factory()->player()->create();
 
     $this->actingAs($this->dm)
-        ->post(route('sessions.attendance', $serata), [
+        ->post(route('sessions.attendance', $sessione), [
             'presenti' => [$this->giocatore->getKey(), $altro->getKey()],
         ])
         ->assertRedirect();
 
-    expect($serata->fresh()->attendees)->toHaveCount(2);
+    expect($sessione->fresh()->attendees)->toHaveCount(2);
 
     $this->actingAs($this->dm)
-        ->post(route('sessions.attendance', $serata), [
+        ->post(route('sessions.attendance', $sessione), [
             'presenti' => [$this->giocatore->getKey()],
         ]);
 
-    expect($serata->fresh()->attendees)->toHaveCount(1);
+    expect($sessione->fresh()->attendees)->toHaveCount(1);
 });
 
 it('segna anche con quale personaggio', function () {
-    $serata = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
+    $sessione = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
     $personaggio = Character::factory()->for($this->giocatore)->create();
 
-    $this->actingAs($this->dm)->post(route('sessions.attendance', $serata), [
+    $this->actingAs($this->dm)->post(route('sessions.attendance', $sessione), [
         'presenti' => [$this->giocatore->getKey()],
         'personaggi' => [$this->giocatore->getKey() => $personaggio->getKey()],
     ]);
 
-    expect($serata->fresh()->attendees->first()->pivot->character_id)->toBe($personaggio->getKey());
+    expect($sessione->fresh()->attendees->first()->pivot->character_id)->toBe($personaggio->getKey());
 });
 
 // Il select può restare valorizzato nel form: il personaggio conta solo se il giocatore è stato segnato presente.
 it('ignora il personaggio di chi non è stato spuntato', function () {
-    $serata = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
+    $sessione = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
     $assente = User::factory()->player()->create();
     $suo = Character::factory()->for($assente)->create();
 
-    $this->actingAs($this->dm)->post(route('sessions.attendance', $serata), [
+    $this->actingAs($this->dm)->post(route('sessions.attendance', $sessione), [
         'presenti' => [$this->giocatore->getKey()],
         'personaggi' => [$assente->getKey() => $suo->getKey()],
     ]);
 
-    expect($serata->fresh()->attendees)->toHaveCount(1)
-        ->and($serata->fresh()->attendees->first()->getKey())->toBe($this->giocatore->getKey());
+    expect($sessione->fresh()->attendees)->toHaveCount(1)
+        ->and($sessione->fresh()->attendees->first()->getKey())->toBe($this->giocatore->getKey());
 });
 
 // I valori del select sono input utente e vengono quindi rivalidati lato server.
 it('non lascia attribuire a un giocatore il personaggio di un altro', function () {
-    $serata = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
+    $sessione = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
     $altrui = Character::factory()->for(User::factory()->player()->create())->create();
 
     $this->actingAs($this->dm)
-        ->post(route('sessions.attendance', $serata), [
+        ->post(route('sessions.attendance', $sessione), [
             'presenti' => [$this->giocatore->getKey()],
             'personaggi' => [$this->giocatore->getKey() => $altrui->getKey()],
         ])
         ->assertRedirect()
         ->assertSessionHas('error');
 
-    expect($serata->fresh()->attendees)->toBeEmpty();
+    expect($sessione->fresh()->attendees)->toBeEmpty();
 });
-
 
 it('a un giocatore non dà i comandi di chi conduce', function () {
-    $serata = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
+    $sessione = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
 
     $this->actingAs($this->giocatore)
-        ->get(route('sessions.show', $serata))
+        ->get(route('sessions.show', $sessione))
         ->assertOk()
         ->assertDontSee('Conduci tu');
 
     $this->actingAs($this->giocatore)
-        ->post(route('sessions.recap', $serata), ['recap' => 'Non dovrei potere.'])
+        ->post(route('sessions.recap', $sessione), ['recap' => 'Non dovrei potere.'])
         ->assertForbidden();
 
     $this->actingAs($this->giocatore)
-        ->post(route('sessions.attendance', $serata), ['presenti' => [$this->giocatore->getKey()]])
+        ->post(route('sessions.attendance', $sessione), ['presenti' => [$this->giocatore->getKey()]])
         ->assertForbidden();
 });
 
-it('non dà i comandi al dungeon master di un altro tavolo', function () {
-    $serata = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
-    $estraneo = User::factory()->dm()->create();
+it('un DM che copre un collega chiude la sessione, e il titolare lo sa', function () {
+    Notification::fake();
+    $sessione = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
+    $sostituto = User::factory()->dm()->create(['name' => 'Morgana']);
 
-    $this->actingAs($estraneo)
-        ->get(route('sessions.show', $serata))
+    $this->actingAs($sostituto)
+        ->get(route('sessions.show', $sessione))
         ->assertOk()
-        ->assertDontSee('Conduci tu');
+        ->assertSee('Chiudi la sessione')
+        ->assertSee('Stai coprendo');
 
-    $this->actingAs($estraneo)
-        ->post(route('sessions.recap', $serata), ['recap' => 'Nemmeno io.'])
-        ->assertForbidden();
+    $this->actingAs($sostituto)
+        ->post(route('sessions.recap', $sessione), ['recap' => 'Il ponte è crollato.'])
+        ->assertSessionHasNoErrors();
+
+    Notification::assertSentTo($this->dm, SessionClosedBySubstitute::class);
+
+    $this->actingAs($this->giocatore)
+        ->get(route('sessions.show', $sessione))
+        ->assertSeeText('Scritto da Morgana, in sostituzione di '.$this->dm->name);
 });
 
+it('il titolare che chiude la sua sessione non avvisa sé stesso', function () {
+    Notification::fake();
+    $sessione = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
+
+    $this->actingAs($this->dm)->post(route('sessions.recap', $sessione), ['recap' => 'Tutto bene.']);
+    $this->actingAs(User::factory()->admin()->create())->post(route('sessions.recap', $sessione), ['recap' => 'Corretto.']);
+
+    Notification::assertNothingSent();
+
+    $this->actingAs($this->giocatore)
+        ->get(route('sessions.show', $sessione))
+        ->assertDontSee('in sostituzione di');
+});
+
+it('il sostituto non modifica né cancella la sessione', function () {
+    $sessione = GameSession::factory()->for($this->campagna)->create();
+    $sostituto = User::factory()->dm()->create();
+
+    expect($sostituto->can('update', $sessione))->toBeFalse()
+        ->and($sostituto->can('delete', $sessione))->toBeFalse();
+});
 
 it('non offre gli admin fra i presenti', function () {
-    $serata = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
+    $sessione = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->subWeek()]);
     $admin = User::factory()->admin()->create(['name' => 'Un Amministratore']);
 
     $this->actingAs($this->dm)
-        ->get(route('sessions.show', $serata))
+        ->get(route('sessions.show', $sessione))
         ->assertOk()
         ->assertSee($this->giocatore->name)
         ->assertDontSee('Un Amministratore');
 });
 
-
-it('dalla campagna e dalla Home si arriva alla serata', function () {
-    $serata = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->addWeek()]);
+it('dalla campagna e dalla Home si arriva alla sessione', function () {
+    $sessione = GameSession::factory()->for($this->campagna)->create(['played_at' => now()->addWeek()]);
 
     $this->actingAs($this->giocatore)
         ->get(route('campaigns.show', $this->campagna))
         ->assertOk()
-        ->assertSee(route('sessions.show', $serata));
+        ->assertSee(route('sessions.show', $sessione));
 
     $this->actingAs($this->giocatore)
         ->get('/')
         ->assertOk()
-        ->assertSee(route('sessions.show', $serata));
+        ->assertSee(route('sessions.show', $sessione));
 });
 
-
 describe('il calendario', function () {
-    it('mostra il mese corrente e le sue serate', function () {
-        $serata = GameSession::factory()->for($this->campagna)->create([
+    it('mostra il mese corrente e le sue sessioni', function () {
+        $sessione = GameSession::factory()->for($this->campagna)->create([
             'played_at' => now()->startOfMonth()->addDays(9)->setTime(21, 0),
         ]);
 
@@ -246,7 +271,7 @@ describe('il calendario', function () {
             ->assertOk()
             ->assertSee(now()->translatedFormat('F Y'), false)
             ->assertSee($this->campagna->title)
-            ->assertSee(route('sessions.show', $serata));
+            ->assertSee(route('sessions.show', $sessione));
     });
 
     it('si sposta di mese dall\'indirizzo', function () {
@@ -275,11 +300,11 @@ describe('il calendario', function () {
         $this->actingAs($this->giocatore)
             ->get(route('sessions.index'))
             ->assertOk()
-            ->assertSee('Nessuna serata in questo mese.');
+            ->assertSee('Nessuna sessione in questo mese.');
     });
 
-// Due serate nello stesso giorno non devono generare due elementi con lo stesso `id` HTML.
-    it('non ripete l\'ancora quando due tavoli girano la stessa sera', function () {
+    // Due sessioni nello stesso giorno non devono generare due elementi con lo stesso `id` HTML.
+    it('non ripete l\'ancora quando due sessioni si giocano la stessa sera', function () {
         $sera = now()->startOfMonth()->addDays(14)->setTime(21, 0);
         $altra = Campaign::factory()->create();
 
@@ -312,8 +337,9 @@ describe('il calendario', function () {
             ->assertDontSee('La bacheca del bardo');
     });
 
+    it('lascia chiedere il posto solo alle sessioni ancora da giocare', function () {
+        Character::factory()->for($this->giocatore)->create();
 
-    it('segna quali serate sono ancora da giocare', function () {
         GameSession::factory()->for($this->campagna)->create([
             'played_at' => now()->startOfMonth()->addDays(2),
         ]);
@@ -323,7 +349,7 @@ describe('il calendario', function () {
         $this->actingAs($this->giocatore)
             ->get(route('sessions.index', ['mese' => $primaDelMese->format('Y-m')]))
             ->assertOk()
-            ->assertDontSee('Da giocare');
+            ->assertDontSee('name="sessioni[]"', false);
 
         GameSession::factory()->for($this->campagna)->create([
             'played_at' => now()->addDays(3)->setTime(21, 0),
@@ -332,7 +358,7 @@ describe('il calendario', function () {
         $this->actingAs($this->giocatore)
             ->get(route('sessions.index', ['mese' => now()->addDays(3)->format('Y-m')]))
             ->assertOk()
-            ->assertSee('Da giocare');
+            ->assertSee('name="sessioni[]"', false);
     });
 
     it('dalla Home si arriva al calendario', function () {
@@ -343,8 +369,7 @@ describe('il calendario', function () {
     });
 });
 
-
-describe('la serata prima e quella dopo', function () {
+describe('la sessione prima e quella dopo', function () {
     beforeEach(function () {
         $this->prima = GameSession::factory()->for($this->campagna)
             ->create(['number' => 1, 'title' => 'Il pozzo', 'played_at' => now()->subWeeks(3)]);
@@ -388,7 +413,7 @@ describe('la serata prima e quella dopo', function () {
             ->assertDontSee('Prossima');
     });
 
-    it('e le serate di un\'altra campagna non c\'entrano', function () {
+    it('e le sessioni di un\'altra campagna non c\'entrano', function () {
         $altra = Campaign::factory()->create();
         GameSession::factory()->for($altra)
             ->create(['number' => 9, 'title' => 'Estranea', 'played_at' => now()->subWeeks(2)]);
@@ -405,7 +430,7 @@ describe('la serata prima e quella dopo', function () {
     });
 });
 
-// L'origine viaggia in `?da=` così il ritorno e la navigazione tra serate mantengono il contesto di partenza.
+// L'origine viaggia in `?da=` così il ritorno e la navigazione tra sessioni mantengono il contesto di partenza.
 describe('la freccia indietro', function () {
     beforeEach(function () {
         $this->serata = GameSession::factory()->for($this->campagna)
@@ -432,15 +457,15 @@ describe('la freccia indietro', function () {
             ->assertDontSee('Torna a '.$this->campagna->title);
     });
 
-    it('dalle serate riporta alle serate', function () {
+    it('dalle sessioni riporta alle sessioni', function () {
         $this->actingAs($this->giocatore)
             ->get(route('sessions.show', ['session' => $this->serata, 'da' => 'serate']))
             ->assertOk()
-            ->assertSee('Torna alle serate')
+            ->assertSee('Torna alle sessioni')
             ->assertSee(route('sessions.index'), false);
     });
 
-    it('e le serate vicine si portano dietro l\'origine', function () {
+    it('e le sessioni vicine si portano dietro l\'origine', function () {
         $vicina = GameSession::factory()->for($this->campagna)
             ->create(['number' => 6, 'played_at' => now()->subDays(2)]);
 

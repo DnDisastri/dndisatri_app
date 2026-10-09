@@ -121,7 +121,7 @@ class Shop extends Component
         }
 
         $this->chiudi();
-        $this->esito("Baratto proposto: {$given->name} per {$wanted->name}. Lo approva un DM, lo trovi in «Le mie richieste».");
+        $this->esito("Baratto proposto: {$given->name} per {$wanted->name}. Lo approva un dungeon master, lo trovi in «Le mie richieste».");
     }
 
     /**

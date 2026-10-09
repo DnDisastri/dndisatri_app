@@ -50,7 +50,7 @@ class ViewPendingChange extends ViewRecord
             ->modalHeading('Applicare la modifica?')
             ->modalDescription(fn () => match (true) {
                 $this->record->isStale() => 'Attenzione: la scheda è cambiata dopo questa proposta.',
-                $this->record->type === PendingChangeType::Barter => 'Il giocatore riceve l\'articolo e il suo oggetto entra nel magazzino del negozio.',
+                $this->record->type === PendingChangeType::Barter => 'Il giocatore riceve l\'articolo e il suo oggetto entra nel magazzino dell\'Emporio.',
                 default => 'La scheda verrà aggiornata e il movimento finirà nel Registro.',
             })
             ->schema(fn () => [

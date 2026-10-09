@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Actions\Quests\BookQuestSeat;
+use App\Actions\Quests\ScheduleQuest;
 use App\Enums\QuestDifficulty;
 use App\Models\Campaign;
+use App\Models\GameSession;
 use App\Models\Quest;
 use App\Models\User;
 
@@ -28,7 +29,6 @@ it('mescola gli incarichi aperti di tutte le campagne', function () {
 
         ->assertSee('La Rotta del Sale');
 });
-
 
 it('non mostra gli incarichi conclusi', function () {
     Quest::factory()->inCampaign($this->campagna)->completed()->create(['title' => 'Roba Finita']);
@@ -111,72 +111,43 @@ it('su un filtro senza senso mostra tutto', function () {
         ->assertSee('Scortare la carovana');
 });
 
-// L'ordinamento privilegia le quest dove un nuovo partecipante può ancora contribuire al tavolo.
-it('mette davanti chi ha bisogno di gente e in fondo i pieni', function () {
-    $pieno = Quest::factory()->inCampaign($this->campagna)->slots(1)->create([
-        'title' => 'Incarico Pieno',
-        'min_participants' => 1,
-    ]);
-    app(BookQuestSeat::class)->handle($pieno, User::factory()->player()->create());
+it('mette davanti quelle già in una sessione, dalla più vicina', function () {
+    Quest::factory()->inCampaign($this->campagna)->create(['title' => 'Quest Senza Data']);
 
-    Quest::factory()->inCampaign($this->campagna)->slots(5)->create([
-        'title' => 'Incarico Pronto',
-        'min_participants' => 0,
-    ]);
-
-    Quest::factory()->inCampaign($this->campagna)->slots(5)->create([
-        'title' => 'Incarico Che Cerca Gente',
-        'min_participants' => 3,
-    ]);
+    foreach (['Quest Lontana' => 20, 'Quest Vicina' => 3] as $titolo => $giorni) {
+        $sessione = GameSession::factory()->inCampaign($this->campagna)->create(['played_at' => now()->addDays($giorni)]);
+        app(ScheduleQuest::class)->handle(Quest::factory()->inCampaign($this->campagna)->create(['title' => $titolo]), $sessione);
+    }
 
     $html = $this->actingAs($this->giocatore)->get(route('quests.index'))->assertOk()->getContent();
 
-    expect(strpos($html, 'Incarico Che Cerca Gente'))
-        ->toBeLessThan(strpos($html, 'Incarico Pronto'))
-        ->and(strpos($html, 'Incarico Pronto'))
-        ->toBeLessThan(strpos($html, 'Incarico Pieno'));
-});
-
-it('dice quanti ne mancano perché la serata parta', function () {
-    Quest::factory()->inCampaign($this->campagna)->slots(5)->create([
-        'title' => 'Scortare la carovana',
-        'min_participants' => 3,
-    ]);
-
-    $this->actingAs($this->giocatore)
-        ->get(route('quests.index'))
-        ->assertOk()
-        ->assertSee('Mancano 3 giocatori');
+    expect(strpos($html, 'Quest Vicina'))
+        ->toBeLessThan(strpos($html, 'Quest Lontana'))
+        ->and(strpos($html, 'Quest Lontana'))
+        ->toBeLessThan(strpos($html, 'Quest Senza Data'));
 });
 
 // Il singolare viene gestito esplicitamente perché il pluralizzatore di Laravel è orientato all'inglese.
-it('al singolare cambia sia il verbo sia il nome', function () {
-    $quest = Quest::factory()->inCampaign($this->campagna)->slots(5)->create([
-        'title' => 'Scortare la carovana',
-        'min_participants' => 2,
-    ]);
-    app(BookQuestSeat::class)->handle($quest, User::factory()->player()->create());
+it('dice a quanti interessa, al singolare e al plurale', function () {
+    $una = Quest::factory()->inCampaign($this->campagna)->create();
+    $una->interested()->attach(User::factory()->player()->create(), ['joined_at' => now()]);
 
     $this->actingAs($this->giocatore)
         ->get(route('quests.index'))
         ->assertOk()
-        ->assertSee('Manca 1 giocatore')
-        ->assertDontSee('Mancano 1');
+        ->assertSee('Interessa a 1 giocatore')
+        ->assertDontSee('Interessa a 1 giocatori');
 });
 
-
-it('mostra il proprio posto', function () {
-    $quest = Quest::factory()->inCampaign($this->campagna)->slots(4)->create([
-        'title' => 'Scortare la carovana',
-    ]);
-    app(BookQuestSeat::class)->handle($quest, $this->giocatore);
+it('mostra se ti interessa', function () {
+    $quest = Quest::factory()->inCampaign($this->campagna)->create();
+    $quest->interested()->attach($this->giocatore, ['joined_at' => now()]);
 
     $this->actingAs($this->giocatore)
         ->get(route('quests.index'))
         ->assertOk()
-        ->assertSee('Hai prenotato');
+        ->assertSee('Ti interessa');
 });
-
 
 it('spiega perché l\'elenco è vuoto', function () {
     $this->actingAs($this->giocatore)
@@ -199,7 +170,6 @@ it('dalla Home si arriva all\'elenco', function () {
         ->assertOk()
         ->assertSee(route('quests.index'));
 });
-
 
 it('nel filtro non mette le campagne senza incarichi aperti', function () {
     $vuota = Campaign::factory()->create(['title' => 'Campagna Senza Niente']);

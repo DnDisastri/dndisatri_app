@@ -59,6 +59,12 @@
                     </div>
                 @endcan
             @endif
+
+            @can('viewAbout', [App\Models\PlayerNote::class, $character->user])
+                <div class="mt-4 border-t border-line pt-4">
+                    <livewire:player-notes :player="$character->user" :key="'note-' . $character->user_id" />
+                </div>
+            @endcan
         </x-panel>
 
         <div class="min-w-0 space-y-4">

@@ -6,10 +6,7 @@
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="\App\Enums\Icon::Builds" class="h-7 w-7" /> Build consigliate
     </h2>
-    <p class="mb-6 text-sm text-muted">
-        Personaggi di 1° già pensati, per partire senza studiarsi il manuale.
-        Le sfogli sempre; per usarne una serve non avere già un personaggio.
-    </p>
+    <x-intro :page="\App\Enums\IntroPage::Builds" class="mb-6" />
 
     <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
     @forelse ($builds as $build)

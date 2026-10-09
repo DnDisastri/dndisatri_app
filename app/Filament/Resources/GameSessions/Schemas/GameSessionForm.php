@@ -14,11 +14,8 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 /**
- * Il modulo della serata: tavolo, numero, quando, e il resoconto.
- *
- * Il resoconto non è mass-assignable: le pagine Create/Edit lo salvano tramite
- * `WriteRecap`, così il testo si porta dietro chi l'ha scritto e quando, invece
- * di restare senza firma.
+ * Il modulo della sessione. Resoconto e presenze non sono mass-assignable:
+ * le pagine Create/Edit li salvano con `WriteRecap` e `RecordAttendance`.
  */
 class GameSessionForm
 {
@@ -26,8 +23,8 @@ class GameSessionForm
     {
         return $schema
             ->components([
-                Section::make('La serata')
-                    ->description('Le presenze si segnano dalla pagina della serata, a fine partita.')
+                Section::make('La sessione')
+                    ->description('Le presenze si segnano dalla pagina della sessione, a fine partita.')
                     ->schema([
                         Select::make('campaign_id')
                             ->label('Campagna')
@@ -50,11 +47,30 @@ class GameSessionForm
                             ->label('Quando si gioca')
                             ->seconds(false)
                             ->required(),
+
+                        TextInput::make('max_players')
+                            ->label('Posti')
+                            ->helperText('I posti da offrire. Si può chiedere un posto anche quando sono pieni.')
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(30)
+                            ->default(6)
+                            ->required(),
+
+                        TextInput::make('min_players')
+                            ->label('Minimo')
+                            ->helperText('Sotto questo numero forse non vale la pena giocare. Non blocca niente.')
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(30)
+                            ->lte('max_players')
+                            ->default(3)
+                            ->required(),
                     ])
                     ->columns(2),
 
                 Section::make('Il resoconto')
-                    ->description('Il racconto della serata che leggono i giocatori. Di solito si scrive dalla pagina della serata, ma puoi scriverlo o correggerlo anche qui.')
+                    ->description('Il racconto della sessione che leggono i giocatori. Di solito si scrive dalla pagina della sessione, ma puoi scriverlo o correggerlo anche qui.')
                     ->schema([
                         Textarea::make('recap')
                             ->label('Resoconto')
@@ -64,7 +80,7 @@ class GameSessionForm
                     ]),
 
                 Section::make('Le presenze')
-                    ->description('Chi c\'era e con quale personaggio. Si può segnare anche dopo, non solo a fine serata. Il personaggio è facoltativo.')
+                    ->description('Chi c\'era e con quale personaggio. Si può segnare anche dopo, non solo a fine sessione. Il personaggio è facoltativo.')
                     ->schema([
                         Repeater::make('presenze')
                             ->hiddenLabel()

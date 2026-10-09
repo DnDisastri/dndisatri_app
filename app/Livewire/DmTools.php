@@ -123,7 +123,7 @@ class DmTools extends Component
         $this->modaleMorte = false;
     }
 
-    /** Irreversibile: si passa solo con la spunta. Racconto e serata sono facoltativi. */
+    /** Irreversibile: si passa solo con la spunta. Racconto e sessione sono facoltativi. */
     public function dichiaraCaduto(): void
     {
         $character = $this->character();

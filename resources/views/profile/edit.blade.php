@@ -12,8 +12,7 @@
             <span class="font-semibold">Sei sotto richiamo</span> dal
             {{ $activeWarning->created_at->translatedFormat('j F Y') }}.
             Mettere in vendita, comprare da un annuncio, proporre uno scambio e
-            accettarne uno passano dal via libera di un dungeon master. Il
-            negozio della gilda resta libero.
+            accettarne uno passano dal via libera di un dungeon master. L'Emporio resta libero.
             <a href="{{ route('market.supervision') }}" class="mt-1 inline-block font-semibold underline">
                 Le tue azioni in attesa →
             </a>
@@ -27,6 +26,10 @@
 
             <x-field name="name" label="Nome utente" :value="$user->name" autocomplete="username" required />
             <x-field name="email" label="Email" type="email" :value="$user->email" autocomplete="email" required />
+            <div>
+                <x-field name="phone" label="Telefono (facoltativo)" type="tel" :value="$user->phone" autocomplete="tel" />
+                <p class="mt-1 text-xs text-muted">Lo vedono solo i dungeon master, per contattarti se si libera un posto.</p>
+            </div>
 
             <p class="text-xs text-muted">
                 Il nome è quello con cui ti vedono gli altri nella Gilda, ed è

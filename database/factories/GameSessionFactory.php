@@ -36,6 +36,11 @@ class GameSessionFactory extends Factory
         return $this->state(fn () => ['played_at' => now()->addWeek()]);
     }
 
+    public function seats(int $max, int $min = 1): static
+    {
+        return $this->state(fn () => ['max_players' => $max, 'min_players' => $min]);
+    }
+
     public function playedOn(DateTimeInterface|string $when): static
     {
         return $this->state(fn () => ['played_at' => $when]);

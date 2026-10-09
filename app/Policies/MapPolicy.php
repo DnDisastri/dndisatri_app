@@ -6,12 +6,8 @@ use App\Models\Map;
 use App\Models\User;
 
 /**
- * Le mappe le vedono tutti; le carica chi conduce.
- *
- * Una mappa legata a una campagna la gestisce il DM di quel tavolo, come le
- * quest e le sessioni. Una mappa generale, senza campagna, la può caricare
- * qualsiasi DM: vale per tutto il gruppo e non è materiale di nessuno in
- * particolare.
+ * Le mappe le vedono tutti. Quella di una campagna la gestisce il suo DM;
+ * quella generale, senza campagna, qualsiasi DM.
  */
 class MapPolicy
 {
@@ -50,7 +46,7 @@ class MapPolicy
             return false;
         }
 
-        // Mappa generale: qualsiasi DM. Mappa di un tavolo: il suo DM.
+        // Mappa generale: qualsiasi DM. Mappa di una campagna: il suo DM.
         return $map->isGeneral() || $map->campaign?->dm_id === $user->getKey();
     }
 }

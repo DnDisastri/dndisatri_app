@@ -249,7 +249,7 @@ describe('il modulo', function () {
             ->get(route('proposals.level-up', [$character, 'classe' => 'Mago']))
             ->assertOk()
             ->assertSee('Non hai i requisiti per Mago')
-            ->assertSee('sarà un DM a decidere');
+            ->assertSee('sarà un dungeon master a decidere');
     });
 
     it('con tre classi non ne propone altre', function () {

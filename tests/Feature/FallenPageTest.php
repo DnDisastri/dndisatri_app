@@ -8,7 +8,6 @@ use App\Models\Character;
 use App\Models\GameSession;
 use App\Models\User;
 
-
 beforeEach(function () {
     $this->chiGuarda = User::factory()->player()->create();
 
@@ -18,10 +17,10 @@ beforeEach(function () {
     ]);
 });
 
-function uccidi(Character $character, ?string $racconto = null, ?GameSession $serata = null): Character
+function uccidi(Character $character, ?string $racconto = null, ?GameSession $sessione = null): Character
 {
     return app(KillCharacter::class)->handle(
-        $character, User::factory()->dm()->create(), $racconto, $serata,
+        $character, User::factory()->dm()->create(), $racconto, $sessione,
     );
 }
 
@@ -39,14 +38,14 @@ describe('il memoriale di un caduto', function () {
             ->assertSee('Caduto il')
             ->assertSee('Si è messo in mezzo fra il drago e la bambina.');
     });
-// Il memoriale può collegarsi a una serata, ma la morte deve poter essere registrata anche senza sessione.
-    it('e quando è morto a un tavolo, porta a quella serata', function () {
+    // Il memoriale può collegarsi a una sessione, ma la morte deve poter essere registrata anche senza sessione.
+    it('e quando è morto in una sessione, porta a quella sessione', function () {
         $campagna = Campaign::factory()->create(['title' => 'I Tre Regni']);
-        $serata = GameSession::factory()->for($campagna)->create([
+        $sessione = GameSession::factory()->for($campagna)->create([
             'number' => 12, 'title' => 'La Torre Nera',
         ]);
 
-        uccidi($this->yorick, 'Caduto dalla torre.', $serata);
+        uccidi($this->yorick, 'Caduto dalla torre.', $sessione);
 
         $this->actingAs($this->chiGuarda)
             ->get(route('fallen.show', $this->yorick))
@@ -54,10 +53,10 @@ describe('il memoriale di un caduto', function () {
             ->assertSee('Sessione 12')
             ->assertSee('La Torre Nera')
             ->assertSee('I Tre Regni')
-            ->assertSee(route('sessions.show', $serata), false);
+            ->assertSee(route('sessions.show', $sessione), false);
     });
 
-    it('e quando è morto fuori dal tavolo, la serata non si inventa', function () {
+    it('e quando è morto fuori da una sessione, la sessione non si inventa', function () {
         uccidi($this->yorick, 'Un incidente stupido, in una locanda.');
 
         $this->actingAs($this->chiGuarda)
@@ -75,7 +74,7 @@ describe('il memoriale di un caduto', function () {
             ->assertSee('Com\'è andata')
             ->assertSee('non è rimasto scritto niente');
     });
-// Anche il racconto scritto dal DM è testo libero e deve essere mostrato senza eseguire HTML arbitrario.
+    // Anche il racconto scritto dal DM è testo libero e deve essere mostrato senza eseguire HTML arbitrario.
     it('e il racconto non esegue HTML', function () {
 
         uccidi($this->yorick, '<script>alert(1)</script> morte onorevole');
@@ -86,7 +85,7 @@ describe('il memoriale di un caduto', function () {
             ->assertDontSee('<script>alert(1)</script>', escape: false)
             ->assertSee('morte onorevole');
     });
-// Il memoriale esiste solo per i personaggi effettivamente caduti.
+    // Il memoriale esiste solo per i personaggi effettivamente caduti.
     it('ma di chi è vivo non c\'è nessun memoriale', function () {
         $this->actingAs($this->chiGuarda)
             ->get(route('fallen.show', $this->yorick))

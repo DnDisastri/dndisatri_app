@@ -38,7 +38,7 @@ final class GrantCoins
             $delta = $take ? $purse->take($target, $coins) : $purse->receive($target, $coins);
 
             $verb = $take ? 'Tolte' : 'Assegnate';
-            $message = "{$verb} ".$coins->format().($reason !== null ? " ({$reason})" : ' dal DM');
+            $message = "{$verb} ".$coins->format().($reason !== null ? " ({$reason})" : ' dal dungeon master');
 
             $target->recordInLedger(LedgerAction::DmGold, $message, $delta, $actor);
 

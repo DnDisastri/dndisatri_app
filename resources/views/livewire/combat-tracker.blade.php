@@ -5,8 +5,11 @@
     {{-- 1. Round e turno. --}}
     @php $diTurno = collect($combattenti)->firstWhere('id', $turnoId); @endphp
     <div class="flex items-center justify-between gap-3">
-        <span class="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-semibold text-fg">
-            Round <span class="font-display text-lg leading-none text-active">{{ $round }}</span>
+        <span class="flex items-center gap-2">
+            <span class="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-semibold text-fg">
+                Round <span class="font-display text-lg leading-none text-active">{{ $round }}</span>
+            </span>
+            <x-badge :tone="$scontro->status->tone()">{{ $scontro->status->label() }}</x-badge>
         </span>
 
         <x-button type="button" wire:click="prossimo" :disabled="empty($combattenti)">
@@ -15,18 +18,29 @@
         </x-button>
     </div>
 
-    <p class="mt-2 text-sm text-muted">
-        @if ($diTurno)
-            Tocca a <span class="font-semibold text-fg">{{ $diTurno['nome'] }}</span>.
-        @else
-            Non ancora iniziato.
+    <div class="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
+        <p>
+            @if ($scontro->isEnded())
+                Concluso al round {{ $round }}.
+            @elseif ($diTurno)
+                Tocca a <span class="font-semibold text-fg">{{ $diTurno['nome'] }}</span>.
+            @else
+                Non ancora iniziato.
+            @endif
+        </p>
+
+        @if ($scontro->isEnded())
+            <button type="button" wire:click="riapri" class="font-semibold text-active hover:underline">Riapri</button>
+        @elseif ($turnoId !== null)
+            <button type="button" wire:click="concludi" wire:confirm="Concludo il combattimento?"
+                    class="font-semibold text-active hover:underline">Concludi il combattimento</button>
         @endif
-    </p>
+    </div>
 
     {{-- 2. Comporre la fila. --}}
     <div class="mt-4 flex flex-wrap gap-2">
-        <x-button size="sm" variant="quiet" type="button" wire:click="popolaDalTavolo">
-            <x-icona :is="Icon::Characters" class="mr-1.5 h-4 w-4" /> Popola dal tavolo
+        <x-button size="sm" variant="quiet" type="button" wire:click="aggiungiEroi">
+            <x-icona :is="Icon::Characters" class="mr-1.5 h-4 w-4" /> Aggiungi gli eroi
         </x-button>
         <x-button size="sm" variant="quiet" type="button" wire:click="$toggle('mostraAggiungiMostro')">
             Aggiungi mostro
@@ -161,13 +175,15 @@
                                 'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase',
                                 'bg-primary text-on-primary' => $isPg,
                                 'bg-accent-soft text-on-accent-soft' => ! $isPg,
-                            ])>{{ $isPg ? 'eroe' : 'mostro' }}</span>
+                            ])>{{ $isPg ? 'eroe' : ($c['tipo'] === 'ospite' ? 'ospite' : 'mostro') }}</span>
                         </p>
                         <p class="truncate text-xs text-muted">
                             @if ($isPg && $pg)
                                 {{ $pg->class }} · liv. {{ $pg->level }} · PF veri della scheda
                             @elseif ($isPg)
-                                eroe non più al tavolo
+                                scheda non più disponibile
+                            @elseif ($c['tipo'] === 'ospite')
+                                ospite senza scheda: PF e CA a mano
                             @else
                                 effimero
                             @endif
@@ -203,6 +219,21 @@
                         </span>
                     @endif
                 </div>
+
+                @if ($c['tipo'] === 'ospite')
+                    <div class="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted">
+                        <label class="flex items-center gap-1.5">
+                            PF max
+                            <input type="number" inputmode="numeric" min="0" max="999" wire:model.blur="combattenti.{{ $i }}.hpMax"
+                                   class="w-16 rounded-md border border-line bg-page px-2 py-1 text-sm text-fg">
+                        </label>
+                        <label class="flex items-center gap-1.5">
+                            CA
+                            <input type="number" inputmode="numeric" min="0" max="40" wire:model.blur="combattenti.{{ $i }}.ac"
+                                   class="w-14 rounded-md border border-line bg-page px-2 py-1 text-sm text-fg">
+                        </label>
+                    </div>
+                @endif
 
                 {{-- Tiri contro morte: lo stesso dato che il giocatore segna sulla scheda. --}}
                 @if ($isPg && $pg && $aTerra)
@@ -280,7 +311,7 @@
             </div>
         @empty
             <div class="rounded-card border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
-                Nessun combattente. «Popola dal tavolo» mette gli eroi, poi aggiungi i mostri.
+                Nessun combattente. «Aggiungi gli eroi» mette in fila chi gioca la sessione, poi aggiungi i mostri.
             </div>
         @endforelse
     </div>

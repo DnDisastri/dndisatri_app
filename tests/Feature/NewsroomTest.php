@@ -80,7 +80,7 @@ describe('le mappe', function () {
             ->and(User::factory()->player()->create()->can('create', Map::class))->toBeFalse();
     });
 
-    it('una mappa di un tavolo la gestisce il suo DM', function () {
+    it('una mappa di una campagna la gestisce il suo DM', function () {
         $owner = User::factory()->dm()->create();
         $map = Map::factory()->forCampaign(Campaign::factory()->runBy($owner)->create())->create();
 
@@ -96,7 +96,7 @@ describe('le mappe', function () {
         expect($map->isGeneral())->toBeTrue()
             ->and(User::factory()->dm()->create()->can('update', $map))->toBeTrue();
     });
-// Le mappe legate a una campagna sopravvivono alla sua cancellazione e diventano risorse generali.
+    // Le mappe legate a una campagna sopravvivono alla sua cancellazione e diventano risorse generali.
     it('sopravvivono alla cancellazione della campagna, diventando generali', function () {
         $campaign = Campaign::factory()->create();
         $map = Map::factory()->forCampaign($campaign)->create();

@@ -15,7 +15,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * Una build consigliata: un personaggio di 1° già pensato.
  *
  * Serve a chi si affaccia al gioco e non ha voglia di studiarsi il manuale
- * prima di sedersi al tavolo. La scrive un dungeon master dal pannello.
+ * prima della prima sessione. La scrive un dungeon master dal pannello.
  */
 #[Fillable([
     'title', 'slug', 'tag', 'summary', 'body', 'abilities_advice', 'progression',

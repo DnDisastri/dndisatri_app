@@ -9,10 +9,7 @@
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="Icon::Faq" class="h-7 w-7" /> FAQs
     </h2>
-    <p class="mb-4 text-sm text-muted">
-        Come funziona l'app e cosa puoi fare, sezione per sezione. Tocca una
-        domanda per aprire la risposta.
-    </p>
+    <x-intro :page="\App\Enums\IntroPage::Faq" class="mb-4" />
 
     {{-- Apre il <dialog> del tutorial; niente pulsante senza passi. --}}
     @if ($passi->isNotEmpty())

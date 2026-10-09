@@ -33,6 +33,7 @@ enum Icon: string implements Icona, ScalableIcon
     // Menu utente.
     case Profile = 'profile';
     case Faq = 'faq';
+    case Manual = 'manual';
     case Install = 'install';
     case Panel = 'panel';
     case Logout = 'logout';
@@ -48,6 +49,7 @@ enum Icon: string implements Icona, ScalableIcon
     case Listings = 'listings';
     case Trades = 'trades';
     case Sessions = 'sessions';
+    case Bookings = 'bookings';
     case DmRequests = 'dm-requests';
     case Bestiary = 'bestiary';
     case News = 'news';
@@ -135,6 +137,7 @@ enum Icon: string implements Icona, ScalableIcon
 
             self::Profile => Phosphor::UserCircle,
             self::Faq => Phosphor::Info,
+            self::Manual => Phosphor::BookOpenText,
             self::Install => Phosphor::DownloadSimple,
             self::Panel => Phosphor::SlidersHorizontal,
             self::Logout => Phosphor::SignOut,
@@ -149,6 +152,7 @@ enum Icon: string implements Icona, ScalableIcon
             self::Listings => Phosphor::Article,
             self::Trades => Phosphor::ArrowsLeftRight,
             self::Sessions => Phosphor::CalendarDots,
+            self::Bookings => Phosphor::CalendarStar,
             self::DmRequests => Phosphor::ShieldCheck,
             self::Bestiary => Phosphor::Ghost,
             self::News => Phosphor::Newspaper,

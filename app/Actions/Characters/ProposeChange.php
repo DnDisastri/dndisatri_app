@@ -63,7 +63,7 @@ final class ProposeChange
         }
 
         if ($coins->value() > self::LOOT_MAX_CP) {
-            throw new InvalidArgumentException('Al massimo '.Coins::formatValue(self::LOOT_MAX_CP).' di monete per richiesta: per somme più alte chiedi al DM.');
+            throw new InvalidArgumentException('Al massimo '.Coins::formatValue(self::LOOT_MAX_CP).' di monete per richiesta: per somme più alte chiedi a un dungeon master.');
         }
 
         if (count($items) > self::LOOT_MAX_ITEMS) {

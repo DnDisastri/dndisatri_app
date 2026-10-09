@@ -5,7 +5,6 @@ namespace App\Models;
 use App\Domain\Dnd\Coins;
 use App\Enums\QuestDifficulty;
 use App\Enums\QuestOutcome;
-use App\Enums\QuestSeatStatus;
 use App\Enums\QuestType;
 use App\Models\Concerns\HasReactions;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -20,7 +19,7 @@ use Spatie\Activitylog\Support\LogOptions;
 #[Fillable([
     'campaign_id', 'title', 'slug', 'description',
     'setting', 'rewards', 'reward_coins', 'reward_items', 'difficulty', 'type',
-    'min_participants', 'max_participants', 'created_by',
+    'created_by',
 ])]
 class Quest extends Model
 {
@@ -45,7 +44,6 @@ class Quest extends Model
             'reward_items' => 'array',
             'completed_at' => 'datetime',
             'closed_at' => 'datetime',
-            'night_confirmed_at' => 'datetime',
         ];
     }
 
@@ -64,7 +62,7 @@ class Quest extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /** Il capogilda del tavolo: vive sulla campagna (uno per campagna), le quest lo leggono da lì. */
+    /** Il capogilda sta sulla campagna, uno per campagna. */
     public function questGiver(): ?string
     {
         return $this->campaign?->quest_giver;
@@ -88,38 +86,30 @@ class Quest extends Model
         return $this->type === QuestType::Campaign;
     }
 
-    /** Tutte le prenotazioni, ritirati compresi (lo storico non si cancella). Per i partecipanti veri: `seatHolders()`. */
-    public function participants(): BelongsToMany
+    /** La sessione in cui il DM l'ha messa; null finché non si sa quando si gioca. */
+    public function session(): BelongsTo
+    {
+        return $this->belongsTo(GameSession::class, 'game_session_id');
+    }
+
+    /** Chi ha detto «mi interessa»: non è una prenotazione, ci si prenota alla sessione. */
+    public function interested(): BelongsToMany
     {
         return $this->belongsToMany(User::class)
-            ->withPivot(['status', 'joined_at', 'decided_at'])
-            ->withTimestamps();
-    }
-
-    public function seatHolders(): BelongsToMany
-    {
-        return $this->participants()->wherePivotIn('status', [
-            QuestSeatStatus::Booked->value,
-            QuestSeatStatus::Confirmed->value,
-        ]);
-    }
-
-    public function booked(): BelongsToMany
-    {
-        return $this->participants()->wherePivot('status', QuestSeatStatus::Booked->value);
-    }
-
-    public function confirmed(): BelongsToMany
-    {
-        return $this->participants()->wherePivot('status', QuestSeatStatus::Confirmed->value);
-    }
-
-    /** La lista d'attesa, in ordine di arrivo: chi ci ha pensato prima entra prima. */
-    public function waiting(): BelongsToMany
-    {
-        return $this->participants()
-            ->wherePivot('status', QuestSeatStatus::Waiting->value)
+            ->withPivot('joined_at')
+            ->withTimestamps()
             ->orderByPivot('joined_at');
+    }
+
+    public function isInterested(User $user): bool
+    {
+        return $this->interested()->whereKey($user->getKey())->exists();
+    }
+
+    /** Messa in una sessione che deve ancora giocarsi. */
+    public function isScheduled(): bool
+    {
+        return $this->session !== null && $this->session->isUpcoming();
     }
 
     // === Ciclo di vita ===
@@ -141,62 +131,6 @@ class Quest extends Model
     public function isArchived(): bool
     {
         return $this->outcome()->isArchived();
-    }
-
-    // === Posti ===
-
-    public function participantCount(): int
-    {
-        return $this->seatHolders()->count();
-    }
-
-    public function freeSlots(): int
-    {
-        return max(0, $this->max_participants - $this->participantCount());
-    }
-
-    public function isFull(): bool
-    {
-        return $this->freeSlots() === 0;
-    }
-
-    /** Il minimo è un'indicazione, non un divieto: dice al DM se la serata sta in piedi. */
-    public function hasMinimum(): bool
-    {
-        return $this->participantCount() >= $this->min_participants;
-    }
-
-    public function missingToMinimum(): int
-    {
-        return max(0, $this->min_participants - $this->participantCount());
-    }
-
-    /** Il DM ha dichiarato che la serata si fa: è una proprietà, non si deduce dai confermati (uno che si ritira non l'annulla). */
-    public function isNightConfirmed(): bool
-    {
-        return $this->night_confirmed_at !== null;
-    }
-
-    // === Il posto di un giocatore ===
-
-    public function seatOf(User $user): ?QuestSeatStatus
-    {
-        $stato = $this->participants()
-            ->whereKey($user->getKey())
-            ->first()?->pivot?->status;
-
-        return $stato === null ? null : QuestSeatStatus::from($stato);
-    }
-
-    /** Occupa un posto o è in lista: chi si è ritirato non conta. */
-    public function hasParticipant(User $user): bool
-    {
-        return $this->seatOf($user)?->isActive() ?? false;
-    }
-
-    public function holdsSeat(User $user): bool
-    {
-        return $this->seatOf($user)?->takesSeat() ?? false;
     }
 
     // === Query ===
@@ -222,7 +156,7 @@ class Quest extends Model
         $query->whereNotNull('closed_at');
     }
 
-    /** Solo da conclusa: si applaude com'è andata (su una aperta il gesto è già «voglio partecipare»). */
+    /** Solo da conclusa: si applaude com'è andata (su una aperta il gesto è già «mi interessa»). */
     public function acceptsReactions(): bool
     {
         return $this->isArchived();

@@ -5,16 +5,8 @@ declare(strict_types=1);
 namespace App\Enums;
 
 /**
- * Quanto costa usare una capacità, nel proprio turno.
- *
- * È la distinzione che serve davvero al tavolo: quando tocca a te hai
- * un'azione, un'azione bonus e il movimento, e la domanda non è «cosa so
- * fare» ma «cosa ci sta in questo turno».
- *
- * `Passivo` non vuol dire inutile: vuol dire che ce l'hai sempre e non devi
- * spendere niente. Vanno in fondo perché non entrano nella scelta del turno,
- * ma restano scritte perché sono metà di quello che rende un personaggio
- * diverso da un altro.
+ * Quanto costa usare una capacità nel proprio turno. `Passivo` è sempre attivo
+ * e non costa niente: va in fondo, ma resta scritto.
  */
 enum ActionCost: string
 {
@@ -32,7 +24,6 @@ enum ActionCost: string
             self::Passive => 'Sempre attive',
         };
     }
-
 
     /** L'ordine in cui si guardano quando è il tuo turno. */
     public static function ordered(): array

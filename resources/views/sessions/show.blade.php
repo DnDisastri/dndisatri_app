@@ -9,14 +9,14 @@
     $scrive = auth()->user()->can('writeRecap', $session);
     $segna = auth()->user()->can('recordAttendance', $session);
 
-    // Conserva l'origine nell'URL per mantenere coerenti il tasto indietro e la navigazione tra serate.
+    // Conserva l'origine nell'URL per mantenere coerenti il tasto indietro e la navigazione tra sessioni.
     // Se manca, una pagina aperta direttamente torna alla campagna.
     $da = request()->string('da')->toString() ?: null;
 
     $ritorno = match ($da) {
         'libro-mastro' => ['url' => route('ledger.index'), 'testo' => 'Torna al Libro Mastro'],
-        'serate' => ['url' => route('sessions.index'), 'testo' => 'Torna alle serate'],
-        'regia' => ['url' => route('dm.home', ['campagna' => $campagna->slug]), 'testo' => 'Torna alla Regia'],
+        'serate' => ['url' => route('sessions.index'), 'testo' => 'Torna alle sessioni'],
+        'regia' => ['url' => route('dm.home', ['campagna' => $campagna->slug]), 'testo' => 'Torna all\'Area Master'],
         default => ['url' => route('campaigns.show', $campagna), 'testo' => 'Torna a '.$campagna->title],
     };
 
@@ -55,158 +55,137 @@
         </p>
     </div>
 
-    {{-- I blocchi riempiono la griglia in ordine: una serata senza resoconto non lascia una colonna vuota. --}}
-    <div class="grid gap-6 lg:grid-cols-2 lg:items-start">
-    @if ($session->hasRecap())
-        <x-panel>
-            <p class="text-xs uppercase tracking-wide text-muted">Com'è andata</p>
-{{-- Blade esegue l'escape del resoconto; `whitespace-pre-line` conserva gli a capo senza renderizzare HTML. --}}
-            <p class="mt-2 whitespace-pre-line text-sm text-fg">{{ $session->recap }}</p>
+    {{-- Due colonne fisse: a sinistra le persone (chi gioca, chi c'era, chiudere), a destra preparazione e racconto.
+         Senza niente a destra, la colonna sola si centra sotto il titolo. --}}
+    @php
+        $destra = auth()->user()->isDm() || $session->quests->isNotEmpty() || $session->hasRecap() || ! $session->isUpcoming();
+    @endphp
 
-            @if ($session->recapWrittenBy)
-                <p class="mt-3 border-t border-line pt-3 text-xs text-muted">
-                    Scritto da {{ $session->recapWrittenBy->name }},
-                    {{ $session->recap_written_at?->translatedFormat('j F Y') }}
-                </p>
-            @endif
+    <div @class(['grid gap-6 lg:items-start', 'lg:grid-cols-2' => $destra, 'mx-auto w-full max-w-xl' => ! $destra])>
+        <div class="min-w-0 space-y-6">
+        @if ($session->isUpcoming())
+            @include('sessions.partials.prenotazioni')
+        @endif
 
-            <x-reactions :for="$session" class="mt-4 border-t border-line pt-3" />
-        </x-panel>
-    @elseif (! $session->isUpcoming())
-        <x-empty>Il resoconto non è ancora stato scritto.</x-empty>
-    @endif
-
-{{-- Le presenze vengono mostrate solo dopo la serata: una prenotazione alla quest non equivale a una presenza. --}}
-    @unless ($session->isUpcoming())
-        <x-panel>
-            <h3 class="flex items-center gap-2 text-lg font-semibold text-fg">
-                <x-icona :is="Icon::Characters" class="h-5 w-5" /> Chi c'era
-            </h3>
-
-            @if ($session->attendees->isNotEmpty())
-                <ul class="mt-3 space-y-1">
-                    @foreach ($session->attendees as $presente)
-                        @php $personaggio = $presente->characters->firstWhere('id', $presente->pivot->character_id); @endphp
-
-                        <li class="flex items-center justify-between gap-3 text-sm">
-                            <span class="text-fg">{{ $presente->name }}</span>
-
-                            @if ($personaggio)
-                                <a href="{{ route('characters.show', $personaggio) }}"
-                                   class="text-xs text-muted hover:underline">{{ $personaggio->name }}</a>
-                            @endif
-                        </li>
-                    @endforeach
-                </ul>
-            @else
-                <p class="mt-3 text-sm italic text-muted">Le presenze non sono ancora state segnate.</p>
-            @endif
-        </x-panel>
-    @endunless
-
-    @if (auth()->user()->isDm())
-        <x-panel>
-            <div class="flex flex-wrap items-center justify-between gap-3">
+    {{-- Le presenze vengono mostrate solo dopo la sessione: una prenotazione non equivale a una presenza. --}}
+        @unless ($session->isUpcoming())
+            <x-panel>
                 <h3 class="flex items-center gap-2 text-lg font-semibold text-fg">
-                    <x-icona :is="Icon::Characters" class="h-5 w-5" /> Il tavolo
+                    <x-icona :is="Icon::Characters" class="h-5 w-5" /> Chi c'era
                 </h3>
 
-                <a href="{{ route('dm.prepare', $session) }}"
-                   class="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1.5
-                          text-sm font-semibold text-fg transition hover:border-active">
-                    <x-icona :is="Icon::Sessions" class="h-4 w-4" />
-                    Prepara la serata
-                </a>
-            </div>
-
-            <div class="mt-3">
-                @include('dm.partials.tavolo', ['tavolo' => $tavolo])
-            </div>
-
-            <p class="mt-3 text-xs text-muted">
-                Tocca un eroe per la sua scheda: lì hai i comandi da DM (punti ferita, monete, «dichiara caduto»).
-            </p>
-        </x-panel>
-    @endif
-
-    @if ($scrive || $segna)
-
-        {{-- Usa `ring` per evidenziare il pannello senza introdurre una seconda classe `border-*` concorrente. --}}
-        <x-panel class="ring-1 ring-active">
-            <h3 class="text-lg font-semibold text-fg">Conduci tu</h3>
-
-            @can('writeRecap', $session)
-                <form method="POST" action="{{ route('sessions.recap', $session) }}" class="mt-3">
-                    @csrf
-
-                    <label for="recap" class="text-xs uppercase tracking-wide text-muted">
-                        {{ $session->hasRecap() ? 'Correggi il resoconto' : 'Scrivi il resoconto' }}
-                    </label>
-
-                    <textarea name="recap" id="recap" rows="10" maxlength="20000"
-                              class="mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-fg"
-                              placeholder="Cosa è successo, chi ha fatto cosa, com'è finita.">{{ old('recap', $session->recap) }}</textarea>
-
-                    @error('recap')
-                        <p class="mt-1 text-sm text-on-danger-soft">{{ $message }}</p>
-                    @enderror
-
-                    <x-button class="mt-2">Salva il resoconto</x-button>
-                </form>
-            @endcan
-
-            @can('recordAttendance', $session)
-                <form method="POST" action="{{ route('sessions.attendance', $session) }}"
-                      class="mt-4 border-t border-line pt-3">
-                    @csrf
-
-                    <p class="text-xs uppercase tracking-wide text-muted">Chi c'era</p>
-                    <p class="mt-1 text-xs text-muted">
-                        Chi si è presentato, non chi si era prenotato: sono due cose diverse.
-                        Il personaggio si può lasciare vuoto.
-                    </p>
-
-                    <div class="mt-3 space-y-2">
-                        @foreach ($candidates as $candidato)
-                            @php
-                                $presente = $session->attendees->firstWhere('id', $candidato->id);
-                                $scelto = $presente?->pivot->character_id;
-                            @endphp
-
-                            <x-inset padding="sm" class="flex flex-wrap items-center justify-between gap-2">
-                                <label class="flex items-center gap-2 text-sm text-fg">
-                                    <input type="checkbox" name="presenti[]" value="{{ $candidato->id }}"
-                                           @checked($presente)
-                                           class="rounded border-line accent-[var(--ui-active)]">
-                                    {{ $candidato->name }}
-                                </label>
-{{-- Offre solo i personaggi del partecipante; la stessa regola viene comunque validata lato server. --}}
-                                @if ($candidato->characters->isNotEmpty())
-                                    <select name="personaggi[{{ $candidato->id }}]"
-                                            class="rounded-md border border-line bg-surface px-2 py-1 text-sm text-fg">
-                                        <option value="">Senza personaggio</option>
-                                        @foreach ($candidato->characters as $personaggio)
-                                            <option value="{{ $personaggio->id }}" @selected($scelto === $personaggio->id)>
-                                                {{ $personaggio->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                @endif
-                            </x-inset>
+                @if ($session->attendees->isNotEmpty() || $ospitiPresenti->isNotEmpty())
+                    <ul class="mt-3 space-y-1">
+                        @foreach ($ospitiPresenti as $ospite)
+                            <li class="text-sm">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-fg">{{ $ospite->guest_name }} <span class="text-xs text-muted">· ospite</span></span>
+                                    @if (filled($ospite->guest_character))
+                                        <span class="text-xs text-muted">{{ $ospite->guest_character }}</span>
+                                    @endif
+                                </div>
+                                @can('manageGuests', $session)
+                                    @include('sessions.partials.ospite-comandi', ['ospite' => $ospite])
+                                @endcan
+                            </li>
                         @endforeach
+
+                        @foreach ($session->attendees as $presente)
+                            @php $personaggio = $presente->characters->firstWhere('id', $presente->pivot->character_id); @endphp
+
+                            <li class="flex items-center justify-between gap-3 text-sm">
+                                <span class="text-fg">{{ $presente->name }}</span>
+
+                                @if ($personaggio)
+                                    <a href="{{ route('characters.show', $personaggio) }}"
+                                       class="text-xs text-muted hover:underline">{{ $personaggio->name }}</a>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                @else
+                    <p class="mt-3 text-sm italic text-muted">Le presenze non sono ancora state segnate.</p>
+                @endif
+            </x-panel>
+        @endunless
+
+        @if ($scrive || $segna)
+            @include('sessions.partials.chiudi')
+        @endif
+        </div>
+
+        @if ($destra)
+            <div class="min-w-0 space-y-6">
+            @if (auth()->user()->isDm())
+                <x-panel>
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <h3 class="flex items-center gap-2 text-lg font-semibold text-fg">
+                            <x-icona :is="Icon::Characters" class="h-5 w-5" /> Gli eroi della sessione
+                        </h3>
+
+                        <a href="{{ route('encounters.index', ['campagna' => $campagna->slug, 'serata' => $session->id]) }}"
+                           class="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1.5
+                                  text-sm font-semibold text-fg transition hover:border-active">
+                            <x-icona :is="Icon::Sessions" class="h-4 w-4" />
+                            Combattimenti
+                        </a>
                     </div>
 
-                    <p class="mt-2 text-xs text-muted">
-                        L'elenco si sostituisce: quello che salvi è la lista definitiva,
-                        correzioni comprese.
+                    <div class="mt-3">
+                        @include('dm.partials.eroi', ['eroi' => $eroi, 'vuoto' => 'Gli eroi compariranno qui quando qualcuno avrà il posto confermato.'])
+                    </div>
+
+                    <p class="mt-3 text-xs text-muted">
+                        Tocca un eroe per la sua scheda: lì hai i comandi da DM (punti ferita, monete, «dichiara caduto»).
                     </p>
 
-                    <x-button variant="secondary" class="mt-2">Salva le presenze</x-button>
-                </form>
-            @endcan
-        </x-panel>
-    @endif
+                    @if ($combattimenti->isNotEmpty())
+                        <div class="mt-4 border-t border-line pt-3">
+                            <p class="text-xs uppercase tracking-wide text-muted">Combattimenti di questa sessione</p>
+                            <ul class="mt-2 space-y-1 text-sm">
+                                @foreach ($combattimenti as $scontro)
+                                    <li class="flex flex-wrap items-baseline justify-between gap-2">
+                                        <a href="{{ route('encounters.show', $scontro) }}" class="text-fg hover:underline">{{ $scontro->title }}</a>
+                                        <span class="text-xs text-muted">
+                                            {{ $scontro->status->label() }} · round {{ $scontro->round }}
+                                            @if ($scontro->defeated()) · a terra: {{ implode(', ', $scontro->defeated()) }} @endif
+                                        </span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
 
+                    <div class="mt-4 border-t border-line pt-3">
+                        <livewire:session-prep :session="$session" />
+                    </div>
+                </x-panel>
+            @endif
+
+            @if ($session->quests->isNotEmpty())
+                @include('sessions.partials.quest')
+            @endif
+
+            @if ($session->hasRecap())
+                <x-panel>
+                    <p class="text-xs uppercase tracking-wide text-muted">Com'è andata</p>
+        {{-- Blade esegue l'escape del resoconto; `whitespace-pre-line` conserva gli a capo senza renderizzare HTML. --}}
+                    <p class="mt-2 whitespace-pre-line text-sm text-fg">{{ $session->recap }}</p>
+
+                    @if ($session->recapWrittenBy)
+                        <p class="mt-3 border-t border-line pt-3 text-xs text-muted">
+                            Scritto da {{ $session->recapWrittenBy->name }}@if ($session->recapBySubstitute() && $campagna->dm), in sostituzione di {{ $campagna->dm->name }}@endif,
+                            {{ $session->recap_written_at?->translatedFormat('j F Y') }}
+                        </p>
+                    @endif
+
+                    <x-reactions :for="$session" class="mt-4 border-t border-line pt-3" />
+                </x-panel>
+            @elseif (! $session->isUpcoming())
+                <x-empty>Il resoconto non è ancora stato scritto.</x-empty>
+            @endif
+            </div>
+        @endif
     </div>
 
     @if ($precedente || $prossima)
@@ -246,4 +225,6 @@
         </nav>
     @endif
 </x-pagina>
+
+@include('partials.conferma')
 @endsection

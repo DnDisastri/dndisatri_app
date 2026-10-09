@@ -21,7 +21,7 @@ class MapResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Icon::Maps;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Tavoli';
+    protected static string|UnitEnum|null $navigationGroup = 'Gestione';
 
     protected static ?string $modelLabel = 'mappa';
 

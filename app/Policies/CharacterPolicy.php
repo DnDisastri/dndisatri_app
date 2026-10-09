@@ -6,12 +6,8 @@ use App\Models\Character;
 use App\Models\User;
 
 /**
- * I permessi dipendono dal ruolo, non dal tavolo (decisione D1 in
- * docs/PIANO.md): ogni DM agisce su ogni personaggio, perché prima o poi ogni
- * giocatore può finire al tavolo di ogni DM.
- *
- * Gli admin sono account di sola amministrazione: gestiscono tutto ma **non
- * hanno personaggi** e non giocano.
+ * I permessi dipendono dal ruolo, non dalla campagna (D1): ogni DM agisce su
+ * ogni personaggio. Gli admin gestiscono tutto ma non hanno personaggi.
  */
 class CharacterPolicy
 {
@@ -27,22 +23,9 @@ class CharacterPolicy
     }
 
     /**
-     * La scheda **per intero** (P14).
-     *
-     * Aprire la scheda di un compagno lo possono tutti — `view` dice di sì a
-     * chiunque — ma quello che ci si legge dentro non è lo stesso. Di un altro
-     * si vede chi è e cosa sa fare: nome, storia, specie, classi, livello,
-     * Classe Armatura, punti ferita, armi, incantesimi, talenti. Non si vedono
-     * le sei caratteristiche, i tiri salvezza, le abilità, lo zaino, l'oro e le
-     * note. **Le statistiche di un personaggio sono affare di chi lo gioca.**
-     *
-     * Non è pudore: è che sapere il Carisma altrui non serve a giocare
-     * insieme, e sapere cosa tiene in tasca un compagno toglie il gusto di
-     * chiederglielo al tavolo.
-     *
-     * Chi conduce le vede tutte, perché al tavolo gli servono per davvero: un
-     * giocatore assente, una prova da tirare al posto suo, una scheda da
-     * rimettere a posto.
+     * La scheda per intero (P14): caratteristiche, abilità, zaino, monete, note,
+     * storia privata. Al proprietario, ai DM e agli admin; gli altri vedono solo
+     * la parte pubblica.
      */
     public function viewFullSheet(User $user, Character $character): bool
     {
@@ -52,12 +35,8 @@ class CharacterPolicy
     }
 
     /**
-     * Il registro del personaggio (P11): l'estratto conto.
-     *
-     * **Non è pubblico come il Libro Mastro**, che è la memoria condivisa del
-     * gruppo: qui c'è quanto oro ha in tasca uno alla volta, cosa ha comprato e
-     * a chi l'ha venduto. Lo leggono il proprietario e chi conduce — un DM ci
-     * arriva quando c'è da capire dove è finito qualcosa.
+     * Il registro del personaggio (P11), con monete e compravendite: non è
+     * pubblico come il Libro Mastro. Proprietario, DM e admin.
      */
     public function viewLedger(User $user, Character $character): bool
     {
@@ -67,10 +46,8 @@ class CharacterPolicy
     }
 
     /**
-     * Gli admin non creano personaggi: i loro sono account di amministrazione.
-     *
-     * Un giocatore ne ha uno solo vivo alla volta. I DM sono esenti dal
-     * limite: giocano anche loro e possono averne più d'uno.
+     * Un giocatore ha un solo personaggio vivo alla volta; i DM più d'uno;
+     * gli admin nessuno.
      */
     public function create(User $user): bool
     {
@@ -100,23 +77,14 @@ class CharacterPolicy
         return $this->ownsAndAlive($user, $character);
     }
 
-    /**
-     * Slot incantesimo e riposi: li gestisce il proprietario senza chiedere
-     * niente a nessuno, perché sono lo stato di una serata e non una modifica
-     * alla scheda. Far approvare ogni Dardo Incantato sarebbe insostenibile.
-     */
+    /** Slot e riposi sono stato della sessione, non modifiche: niente approvazione. */
     public function manageSlots(User $user, Character $character): bool
     {
         return $this->playsOrRuns($user, $character);
     }
 
     /**
-     * Indossare e riporre l'equipaggiamento, per la stessa ragione: cambiare
-     * armatura in mezzo a un'avventura è una mossa di gioco.
-     *
-     * Cambia la Classe Armatura, ma la Classe Armatura non è un valore salvato:
-     * si ricalcola da quello che il personaggio indossa, quindi non c'è niente
-     * da approvare.
+     * Indossare e riporre: mossa di gioco, niente da approvare (la CA si ricalcola).
      */
     public function manageEquipment(User $user, Character $character): bool
     {
@@ -152,30 +120,14 @@ class CharacterPolicy
     }
 
     /**
-     * Mettere un oggetto in vetrina per gli scambi.
-     *
-     * **Solo il proprietario**, e qui il DM non entra: gli altri comandi
-     * dell'inventario sono mosse di gioco che qualcuno deve poter fare al posto
-     * di un giocatore assente, questo invece è dire agli altri «questo lo
-     * darei». È una volontà, e non si esprime per conto terzi.
+     * Vetrina degli scambi e note sugli oggetti: solo il proprietario, il DM no.
      */
     public function manageTradeable(User $user, Character $character): bool
     {
         return $this->ownsAndAlive($user, $character);
     }
 
-    /**
-     * Chi tiene la scheda in mano durante una serata: il proprietario, e chi
-     * conduce.
-     *
-     * I DM ci arrivano **per necessità**, non per abitudine: giocatore assente,
-     * qualcosa segnato storto, una serata da chiudere. Non è il modo normale di
-     * usare questi comandi — quello resta il giocatore — ma qualcuno deve poter
-     * rimettere le cose a posto senza aprire il database.
-     *
-     * Su un personaggio caduto non ci mette mano nessuno: la scheda di un morto
-     * è chiusa.
-     */
+    /** Il proprietario, o un DM per rimediare; su un caduto nessuno. */
     private function playsOrRuns(User $user, Character $character): bool
     {
         if (! $character->isAlive()) {

@@ -45,7 +45,7 @@ describe('le campagne', function () {
             ->assertSee($seconda->title)
             ->assertDontSee($prima->title);
     });
-// Una season non valida degrada all'elenco completo, così vecchi URL non diventano errori.
+    // Una season non valida degrada all'elenco completo, così vecchi URL non diventano errori.
     it('ricade su tutte se la season non esiste', function () {
         $campagna = Campaign::factory()->create(['season' => 1]);
 
@@ -55,7 +55,7 @@ describe('le campagne', function () {
             ->assertSee($campagna->title);
     });
 
-    it('apre il dettaglio con il capogilda e le serate', function () {
+    it('apre il dettaglio con il capogilda e le sessioni', function () {
         $campagna = Campaign::factory()->create([
             'quest_giver' => 'Berengario il Grigio',
             'description' => 'Una storia di taverne.',
@@ -175,10 +175,10 @@ describe('gli eventi', function () {
 });
 
 describe('il Libro Mastro', function () {
-    it('raccoglie serate e incarichi conclusi, e le voci portano alla loro pagina', function () {
+    it('raccoglie sessioni e incarichi conclusi, e le voci portano alla loro pagina', function () {
         $campagna = Campaign::factory()->create();
 
-        $serata = GameSession::factory()->for($campagna)->create([
+        $sessione = GameSession::factory()->for($campagna)->create([
             'played_at' => now()->subWeek(),
             'recap' => 'La torre è crollata.',
         ]);
@@ -193,7 +193,7 @@ describe('il Libro Mastro', function () {
             ->assertOk()
             ->assertSee('La torre è crollata.')
             ->assertSee('Il carico perduto')
-            ->assertSee(route('sessions.show', $serata), false)
+            ->assertSee(route('sessions.show', $sessione), false)
             ->assertSee(route('quests.show', $quest), false)
             ->assertSee('andata a buon fine')
             ->assertSee('abbandonata');
@@ -208,7 +208,6 @@ describe('il Libro Mastro', function () {
             ->assertDontSee('Povero Ulf')
             ->assertDontSee('Chi non è tornato');
     });
-
 
     it('tiene fuori gli incarichi ancora aperti', function () {
         $campagna = Campaign::factory()->create();

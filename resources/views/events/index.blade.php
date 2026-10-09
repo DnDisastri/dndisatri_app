@@ -6,10 +6,7 @@
     <h2 class="mb-1 flex items-center gap-2 text-2xl text-fg">
         <x-icona :is="\App\Enums\Icon::Events" class="h-7 w-7" /> Eventi
     </h2>
-    <p class="mb-6 text-sm text-muted">
-        Raduni, one-shot e serate speciali. Le serate di campagna stanno dentro
-        la loro storia.
-    </p>
+    <x-intro :page="\App\Enums\IntroPage::Events" class="mb-6" />
 
     @if ($upcoming->isEmpty() && $past->isEmpty())
         <x-empty size="lg">Non c'è ancora nessun evento in programma.</x-empty>

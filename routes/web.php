@@ -7,12 +7,15 @@ use App\Http\Controllers\BuildController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CharacterController;
 use App\Http\Controllers\DmController;
+use App\Http\Controllers\EncounterController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\FaqController;
 use App\Http\Controllers\GameSessionController;
+use App\Http\Controllers\GuestBookingController;
 use App\Http\Controllers\GuildController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LedgerController;
+use App\Http\Controllers\ManualController;
 use App\Http\Controllers\MarketController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PendingChangePhotoController;
@@ -21,14 +24,31 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProposalController;
 use App\Http\Controllers\QuestController;
 use App\Http\Controllers\ReactionController;
+use App\Http\Controllers\SessionBookingController;
 use App\Http\Controllers\SupervisionController;
 use App\Livewire\CharacterWizard;
+use App\Livewire\NpcManager;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // Pubblica: la si raggiunge dalla presentazione, prima dell'accesso.
 Route::get('chi-siamo', [AboutController::class, 'show'])->name('about');
+
+// Ospiti senza account: il modulo per chiedere un posto e la pagina personale col token.
+Route::get('calendario', [GuestBookingController::class, 'calendar'])->name('guest-bookings.calendar');
+Route::post('calendario', [GuestBookingController::class, 'storeCalendar'])
+    ->middleware('throttle:'.GuestBookingController::LIMITATORE)
+    ->name('guest-bookings.calendar.store');
+Route::get('serate/{session}/chiedi-un-posto', [GuestBookingController::class, 'create'])->name('guest-bookings.create');
+Route::post('serate/{session}/chiedi-un-posto', [GuestBookingController::class, 'store'])
+    ->middleware('throttle:'.GuestBookingController::LIMITATORE)
+    ->name('guest-bookings.store');
+Route::get('prenotazione/{token}', [GuestBookingController::class, 'show'])->whereUuid('token')->name('guest-bookings.show');
+Route::get('prenotazione/{token}/verifica', [GuestBookingController::class, 'verify'])->whereUuid('token')->name('guest-bookings.verify');
+Route::post('prenotazione/{token}/offerta', [GuestBookingController::class, 'answerOffer'])->whereUuid('token')->name('guest-bookings.answer-offer');
+Route::post('prenotazione/{token}/riserva', [GuestBookingController::class, 'answerReserve'])->whereUuid('token')->name('guest-bookings.answer-reserve');
+Route::post('prenotazione/{token}/ritira', [GuestBookingController::class, 'withdraw'])->whereUuid('token')->name('guest-bookings.withdraw');
 
 Route::middleware('auth')->group(function () {
 
@@ -58,9 +78,21 @@ Route::middleware('auth')->group(function () {
 
     Route::get('guida', [FaqController::class, 'index'])->name('faq.index');
 
-    Route::get('regia', [DmController::class, 'home'])->name('dm.home');
+    Route::get('area-master', [DmController::class, 'home'])->name('dm.home');
+    // I vecchi indirizzi della Regia, rimasti nei preferiti.
+    Route::redirect('regia', '/area-master');
+    Route::redirect('regia/serata/{session}/prepara', '/area-master/serata/{session}/prepara');
 
-    Route::get('regia/serata/{session}/prepara', [DmController::class, 'prepare'])->name('dm.prepare');
+    Route::get('area-master/serata/{session}/prepara', [DmController::class, 'prepare'])->name('dm.prepare');
+    Route::put('area-master/campagne/{campaign}/nota', [DmController::class, 'handover'])->name('dm.handover');
+    Route::get('area-master/png', NpcManager::class)->name('dm.npcs');
+    Route::get('area-master/manuale', [ManualController::class, 'show'])->name('dm.manual');
+
+    Route::get('area-master/combattimenti', [EncounterController::class, 'index'])->name('encounters.index');
+    Route::post('area-master/combattimenti', [EncounterController::class, 'store'])->name('encounters.store');
+    Route::get('area-master/combattimenti/{encounter}', [EncounterController::class, 'show'])->name('encounters.show');
+    Route::patch('area-master/combattimenti/{encounter}', [EncounterController::class, 'update'])->name('encounters.update');
+    Route::delete('area-master/combattimenti/{encounter}', [EncounterController::class, 'destroy'])->name('encounters.destroy');
     // Mantiene compatibili i vecchi link a `/caduti`; il redirect resta temporaneo per evitare cache permanenti.
     Route::redirect('caduti', '/gilda#caduti')->name('guild.fallen');
 
@@ -72,16 +104,25 @@ Route::middleware('auth')->group(function () {
     Route::get('incarichi', [QuestController::class, 'index'])->name('quests.index');
     Route::get('incarichi/{quest}', [QuestController::class, 'show'])->name('quests.show');
 
-    Route::post('incarichi/{quest}/prenota', [QuestController::class, 'book'])->name('quests.book');
-    Route::post('incarichi/{quest}/ritirati', [QuestController::class, 'withdraw'])->name('quests.withdraw');
-    Route::post('incarichi/{quest}/serata', [QuestController::class, 'confirmNight'])->name('quests.confirm-night');
-    Route::post('incarichi/{quest}/chiama', [QuestController::class, 'promote'])->name('quests.promote');
+    Route::post('incarichi/{quest}/interessa', [QuestController::class, 'interest'])->name('quests.interest');
+    Route::post('incarichi/{quest}/sessione', [QuestController::class, 'schedule'])->name('quests.schedule');
     Route::post('incarichi/{quest}/concludi', [QuestController::class, 'conclude'])->name('quests.conclude');
 
     Route::get('serate', [GameSessionController::class, 'index'])->name('sessions.index');
+    Route::post('serate/richiedi', [SessionBookingController::class, 'bookMany'])->name('sessions.book-many');
+    Route::get('le-mie-prenotazioni', [SessionBookingController::class, 'mine'])->name('sessions.mine');
     Route::get('serate/{session}', [GameSessionController::class, 'show'])->name('sessions.show');
+    Route::post('serate/{session}/prenota', [SessionBookingController::class, 'book'])->name('sessions.book');
+    Route::post('serate/{session}/ritirati', [SessionBookingController::class, 'withdraw'])->name('sessions.withdraw');
+    Route::post('serate/{session}/offerta', [SessionBookingController::class, 'answerOffer'])->name('sessions.answer-offer');
+    Route::post('serate/{session}/riserva', [SessionBookingController::class, 'answerReserve'])->name('sessions.answer-reserve');
+    Route::post('serate/{session}/offri', [SessionBookingController::class, 'offer'])->name('sessions.offer');
+    Route::post('serate/{session}/ospiti', [SessionBookingController::class, 'addGuest'])->name('sessions.guests.store');
+    Route::post('serate/{session}/ospiti/{booking}/togli', [SessionBookingController::class, 'removeGuest'])->whereNumber('booking')->name('sessions.guests.remove');
+    Route::post('serate/{session}/ospiti/{booking}/collega', [SessionBookingController::class, 'linkGuest'])->whereNumber('booking')->name('sessions.guests.link');
     Route::post('serate/{session}/resoconto', [GameSessionController::class, 'writeRecap'])->name('sessions.recap');
     Route::post('serate/{session}/presenze', [GameSessionController::class, 'recordAttendance'])->name('sessions.attendance');
+    Route::post('serate/{session}/ricompense', [GameSessionController::class, 'awardRewards'])->name('sessions.rewards');
 
     Route::post('reazioni/{tipo}/{id}', [ReactionController::class, 'store'])->name('reactions.store');
 

@@ -13,7 +13,7 @@ describe('creazione delle campagne', function () {
     });
 });
 
-describe('gestione del proprio tavolo', function () {
+describe('gestione della propria campagna', function () {
     it('il DM modifica e chiude solo le proprie campagne', function () {
         $dm = User::factory()->dm()->create();
         $mine = Campaign::factory()->runBy($dm)->create();

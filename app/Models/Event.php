@@ -12,9 +12,9 @@ use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
 /**
- * Un evento del gruppo: raduno, one-shot, serata speciale.
+ * Un evento del gruppo: raduno, one-shot, sessione speciale.
  *
- * Da non confondere con GameSession, che è la serata di gioco di una campagna
+ * Da non confondere con GameSession, che è la sessione di gioco di una campagna
  * e ha il suo recap.
  */
 #[Fillable([

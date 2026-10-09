@@ -44,11 +44,7 @@
             <h1 class="font-display text-3xl font-normal text-white lg:text-5xl lg:text-fg">{{ config('app.name') }}</h1>
         </div>
 
-        <p class="mt-5 text-sm leading-relaxed text-white/80 lg:mt-6 lg:text-base lg:text-muted">
-            Il destino ha tirato i dadi per te.<br>
-            Ora tocca a te decidere cosa farne.<br>
-            Prosegui, se l'avventura ti chiama.
-        </p>
+        <p class="mt-5 text-sm leading-relaxed text-white/80 lg:mt-6 lg:text-base lg:text-muted">{!! nl2br(e(\App\Enums\IntroPage::Prelogin->text())) !!}</p>
 
         @if (count($illustrazioni) > 1)
             <nav class="mt-6 flex justify-center gap-2" aria-label="Le illustrazioni">

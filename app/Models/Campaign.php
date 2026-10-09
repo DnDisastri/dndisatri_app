@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,7 +16,7 @@ use Spatie\Activitylog\Support\LogOptions;
 #[Fillable([
     'title', 'slug', 'description', 'cover_path', 'background_path', 'background_opacity', 'season',
     'quest_giver', 'quest_giver_description', 'quest_giver_photo',
-    'dm_id', 'created_by', 'ended_at',
+    'dm_id', 'created_by', 'ended_at', 'price_modifier',
 ])]
 class Campaign extends Model
 {
@@ -37,10 +38,38 @@ class Campaign extends Model
             'ended_at' => 'datetime',
             'season' => 'integer',
             'background_opacity' => 'integer',
+            'handover_updated_at' => 'datetime',
+            'price_modifier' => 'integer',
         ];
     }
 
-    /** Il dungeon master del tavolo: da lui derivano tutti i permessi. */
+    /** Limiti della percentuale del listino del Manuale. */
+    public const PRICE_MODIFIER_MIN = -50;
+
+    public const PRICE_MODIFIER_MAX = 100;
+
+    /** Il prezzo del listino per questa campagna, arrotondato al rame. Non tocca l'Emporio. */
+    public function adjustedPrice(int $baseCp): int
+    {
+        return (int) round($baseCp * (100 + (int) $this->price_modifier) / 100);
+    }
+
+    public function encounters(): HasMany
+    {
+        return $this->hasMany(Encounter::class);
+    }
+
+    public function npcs(): HasMany
+    {
+        return $this->hasMany(Npc::class);
+    }
+
+    public function handoverUpdatedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'handover_updated_by');
+    }
+
+    /** Il DM della campagna: da lui derivano i permessi su quest e sessioni. */
     public function dm(): BelongsTo
     {
         return $this->belongsTo(User::class, 'dm_id');
@@ -56,18 +85,17 @@ class Campaign extends Model
         return $this->hasMany(Quest::class);
     }
 
-    /** Le serate di gioco: calendario e storico dei recap. */
+    /** Le sessioni di gioco: calendario e storico dei recap. */
     public function sessions(): HasMany
     {
         return $this->hasMany(GameSession::class);
     }
 
     /**
-     * Il tavolo: i personaggi vivi che hanno giocato questa campagna. Non è un
-     * elenco fisso, si ricava dalle presenze (`game_session_user`). Carica
-     * oggetti ed effetti per i PF efficaci (la barra del DM deve dire il numero giusto).
+     * I personaggi vivi che hanno giocato la campagna, dalle presenze.
+     * Oggetti ed effetti servono ai PF efficaci.
      */
-    public function roster(): \Illuminate\Database\Eloquent\Collection
+    public function roster(): Collection
     {
         return Character::query()
             ->alive()

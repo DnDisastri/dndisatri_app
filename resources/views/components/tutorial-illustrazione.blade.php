@@ -73,9 +73,9 @@
                 <div class="h-3 w-28 rounded-full bg-white/30"></div>
                 <span class="rounded-full bg-white/15 px-2 py-0.5 text-xs font-semibold text-on-primary">Media</span>
             </div>
-            <p class="mt-3 text-xs text-on-primary-soft">2 posti su 4 liberi</p>
+            <p class="mt-3 text-xs text-on-primary-soft">Interessa a 3 giocatori</p>
             <span class="mt-3 inline-flex items-center justify-center rounded-full bg-active px-4 py-1.5 text-sm font-semibold text-on-active">
-                Prenotati
+                Mi interessa
             </span>
         </div>
         @break

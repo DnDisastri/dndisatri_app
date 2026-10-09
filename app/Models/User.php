@@ -15,7 +15,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'avatar_path', 'discovery_source', 'played_before'])]
+#[Fillable(['name', 'email', 'phone', 'password', 'avatar_path', 'discovery_source', 'played_before'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
@@ -69,6 +69,12 @@ class User extends Authenticatable implements FilamentUser
     public function characters(): HasMany
     {
         return $this->hasMany(Character::class);
+    }
+
+    /** I posti chiesti alle sessioni, ritirati compresi. */
+    public function sessionBookings(): HasMany
+    {
+        return $this->hasMany(SessionBooking::class);
     }
 
     /** Le campagne di cui è il dungeon master. */

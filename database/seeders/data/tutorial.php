@@ -15,7 +15,7 @@ return [
             ."[icona:campaigns] **Campagne**: le storie lunghe del gruppo.\n"
             ."[icona:ledger] **Libro Mastro**: la memoria della gilda.\n"
             ."[icona:characters] **Eroi** (il cerchio rosso al centro): i tuoi personaggi.\n"
-            ."[icona:market] **Mercato**: compra, vendi e scambia.\n"
+            ."[icona:market] **Mercato**: compra, vendi, scambia e baratta.\n"
             .'[icona:events] **Eventi**: cosa c\'è in programma.',
     ],
     [
@@ -25,49 +25,57 @@ return [
             ."[icona:guild] **Gilda**: i membri e gli eroi caduti.\n"
             ."[icona:builds] **Build consigliate**: idee per far crescere un eroe.\n"
             ."[icona:proposals] **Le mie richieste**: lo stato delle modifiche che hai chiesto.\n"
-            ."[icona:profile] **Il mio profilo**: i tuoi dati e la password.\n"
-            .'[icona:faq] **FAQs**: questa pagina.',
+            ."[icona:profile] **Il mio profilo**: i tuoi dati, la password e quali email ricevere.\n"
+            ."[icona:faq] **FAQs**: questa pagina.\n"
+            ."[icona:bug-reports] **Segnala un problema**: se qualcosa non funziona.\n\n"
+            .'In fondo al menù scegli il **tema**: chiaro, scuro o come il telefono.',
     ],
     [
         'illustration' => TutorialIllustration::Hero,
         'title' => 'Crea il tuo eroe',
-        'body' => "Tocca il cerchio rosso al centro della barra e scegli **Nuovo eroe**: una "
-            ."procedura guidata ti porta passo passo tra razza, classe, caratteristiche ed "
+        'body' => 'Tocca il cerchio rosso al centro della barra e poi **Crea il tuo personaggio**: '
+            .'una procedura guidata ti porta passo passo tra razza, classe, caratteristiche ed '
             ."equipaggiamento.\n\n"
-            ."Dopo, dalla scheda vedi tutto e apri il suo registro. Le modifiche importanti "
-            ."(**salire di livello**, **bottino**, un **oggetto magico**) le proponi con un "
-            .'pulsante e le approva chi conduce.',
+            .'Le modifiche importanti (**salire di livello**, **bottino**, un **oggetto magico**) '
+            .'le proponi dalla scheda e le approva un dungeon master. Nel bottino cerchi gli oggetti per nome: '
+            .'catalogo, Emporio e oggetti già trovati da altri riempiono il resto da soli.',
     ],
     [
         'illustration' => TutorialIllustration::Sheet,
         'title' => 'La scheda del personaggio',
-        'body' => "Ogni eroe ha una scheda divisa in linguette, così hai sotto mano solo quello "
+        'body' => 'Ogni eroe ha una scheda divisa in linguette, così hai sotto mano solo quello '
             ."che ti serve in quel momento:\n"
             ."**Turno**: cosa puoi fare al tuo turno (attacchi, azioni, trucchetti).\n"
             ."**Prove**: caratteristiche e abilità, per i tiri.\n"
             ."**Magia**: incantesimi e slot (solo per chi lancia).\n"
-            ."**Zaino**: equipaggiamento, oggetti e oro.\n"
+            .'**Zaino**: monete, oggetti ed equipaggiamento. Da qui **impugni** armi e scudi, '
+            ."**indossi** l'armatura e vai in **sintonia** con gli oggetti magici (al massimo tre). Con **Nota** scrivi "
+            ."da dove viene un oggetto o cosa ti ricorda.\n"
             ."**Storia**: chi è il tuo personaggio, privilegi e note.\n\n"
-            ."I **punti ferita** stanno sempre in alto, su tutte le linguette: prendere danni "
-            .'non ti costa un cambio di sezione.',
+            .'I **punti ferita** stanno sempre in alto, su tutte le linguette. Le monete sono '
+            .'quattro (mp, mo, ma, mr) e nello zaino le puoi cambiare fra loro.',
     ],
     [
         'illustration' => TutorialIllustration::Quest,
-        'title' => 'Trova un incarico',
-        'body' => "Gli **incarichi** sono le storie aperte a cui puoi partecipare. Apri quello "
-            ."che ti interessa e usa **Prenotati** con uno dei tuoi eroi, se ci sono posti "
-            ."liberi.\n\n"
-            ."Puoi **ritirarti** finché la serata non è fissata. Quando chi conduce sceglie la "
-            .'data, ricevi una notifica.',
+        'title' => 'Trova una quest',
+        'body' => 'Si gioca nelle **sessioni**, che escono a inizio mese. Apri il **Calendario** dal menù, '
+            ."**spunta le sessioni** a cui vorresti giocare (una al giorno), scegli l'eroe e tocca **Chiedo un posto**: "
+            .'la richiesta parte per tutte insieme, anche per quelle che sembrano piene. '
+            ."Se c'è posto per te ti arriverà un'email, e avrai **24 ore per confermarlo**. "
+            ."In **Le mie prenotazioni** trovi tutte le tue richieste: lì confermi, rinunci o resti fra le **riserve** se la sessione si riempie.\n\n"
+            .'Le **quest** sono le storie da giocare: le trovi nella Home e nelle campagne. '
+            .'Su una quest tocca **Mi interessa**: quando il dungeon master la mette in una sessione, '
+            .'ti arriverà un avviso per prenotarti.',
     ],
     [
         'illustration' => TutorialIllustration::Market,
         'title' => 'Il mercato',
-        'body' => "[icona:shop] **Emporio**: compri dal negozio della gilda.\n"
-            ."[icona:listings] **Annunci**: metti in vendita i tuoi oggetti.\n"
-            ."[icona:trades] **Scambi**: proponi uno scambio a un altro giocatore, che accetta "
-            ."o rifiuta.\n\n"
-            .'Tutto passa per l\'**oro** dei tuoi personaggi.',
+        'body' => '[icona:shop] **Emporio**: compri dalla gilda, oppure **baratti** '
+            ."un tuo oggetto che valga almeno il prezzo (lo approva un dungeon master).\n"
+            ."[icona:listings] **Annunci**: metti in vendita i tuoi oggetti agli altri giocatori.\n"
+            .'[icona:trades] **Scambi**: proponi uno scambio a un altro giocatore, che accetta '
+            ."o rifiuta. Con **Scambio** nello zaino metti un oggetto in vetrina: gli altri vedono cosa daresti.\n\n"
+            .'Si paga con le **monete** dei tuoi personaggi, e il resto lo calcola l\'app.',
     ],
     [
         'illustration' => TutorialIllustration::Closing,
