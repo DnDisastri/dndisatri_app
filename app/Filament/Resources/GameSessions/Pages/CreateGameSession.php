@@ -36,8 +36,12 @@ class CreateGameSession extends CreateRecord
     protected function afterCreate(): void
     {
         // Si avvisa solo per una sessione futura, non per una inserita a posteriori.
-        if ($this->record->isUpcoming()) {
-            app(AnnounceToPlayers::class)->handle($this->record, new GameSessionScheduled($this->record), auth()->user());
+        $annuncio = app(AnnounceToPlayers::class);
+
+        if ($this->record->isUpcoming() && ($this->data['notify_players'] ?? true)) {
+            $annuncio->handle($this->record, new GameSessionScheduled($this->record), auth()->user());
+        } else {
+            $annuncio->skip($this->record);
         }
 
         if (filled($this->recapNuovo)) {

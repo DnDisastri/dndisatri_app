@@ -111,14 +111,42 @@ describe('mettere una quest in una sessione', function () {
         expect($quest->fresh()->game_session_id)->toBeNull();
     });
 
-    it('solo in una sessione futura della stessa campagna', function () {
+    it('solo in una sessione della stessa campagna', function () {
         $quest = Quest::factory()->create();
 
         expect(fn () => app(ScheduleQuest::class)->handle($quest, GameSession::factory()->upcoming()->create()))
             ->toThrow(InvalidArgumentException::class);
+    });
 
-        expect(fn () => app(ScheduleQuest::class)->handle($quest, GameSession::factory()->inCampaign($quest->campaign)->create()))
-            ->toThrow(InvalidArgumentException::class);
+    it('anche in una sessione già giocata, senza avvisare nessuno', function () {
+        Notification::fake();
+
+        $quest = Quest::factory()->create();
+        $passata = GameSession::factory()->inCampaign($quest->campaign)->create(['played_at' => now()->subWeeks(2)]);
+        $quest->interested()->attach(User::factory()->player()->create(), ['joined_at' => now()]);
+
+        app(ScheduleQuest::class)->handle($quest, $passata);
+
+        expect($quest->fresh()->game_session_id)->toBe($passata->id)
+            ->and($quest->fresh()->isScheduled())->toBeFalse();
+        Notification::assertNothingSent();
+    });
+
+    it('il DM può scegliere di non avvisare', function () {
+        Notification::fake();
+
+        $dm = User::factory()->dm()->create();
+        $campagna = Campaign::factory()->runBy($dm)->create();
+        $quest = Quest::factory()->inCampaign($campagna)->create();
+        $sessione = GameSession::factory()->upcoming()->inCampaign($campagna)->create();
+        $quest->interested()->attach(User::factory()->player()->create(), ['joined_at' => now()]);
+
+        $this->actingAs($dm)
+            ->post(route('quests.schedule', $quest), ['game_session_id' => $sessione->id, 'notify_players' => '0'])
+            ->assertSessionHas('status', 'Quest messa nella sessione, senza avvisi.');
+
+        expect($quest->fresh()->game_session_id)->toBe($sessione->id);
+        Notification::assertNothingSent();
     });
 
     it('spetta al DM della campagna', function () {

@@ -70,6 +70,30 @@ it('al DM della campagna offre le sessioni in programma', function () {
         ->assertDontSee('Di un\'altra campagna', false);
 });
 
+it('offre anche le sessioni già giocate, e dice dove si è giocata', function () {
+    $passata = GameSession::factory()->inCampaign($this->campagna)->create([
+        'title' => 'Il ponte crollato',
+        'played_at' => now()->subWeeks(2),
+    ]);
+    $quest = Quest::factory()->inCampaign($this->campagna)->create();
+
+    $this->actingAs($this->dm)
+        ->get(route('quests.show', $quest))
+        ->assertOk()
+        ->assertSee('Già giocate')
+        ->assertSee('Il ponte crollato');
+
+    $this->actingAs($this->dm)
+        ->post(route('quests.schedule', $quest), ['game_session_id' => $passata->id, 'notify_players' => '1'])
+        ->assertSessionHas('status', 'Quest messa nella sessione, senza avvisi.');
+
+    $this->actingAs($this->giocatore)
+        ->get(route('quests.show', $quest))
+        ->assertOk()
+        ->assertSee('Giocata nella sessione di')
+        ->assertDontSee('Vai alla sessione e prenotati');
+});
+
 it('conclude la quest raccontando com\'è andata', function () {
     $quest = Quest::factory()->inCampaign($this->campagna)->create();
 
