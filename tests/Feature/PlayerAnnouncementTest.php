@@ -109,6 +109,64 @@ describe('gli eventi', function () {
 
         Notification::assertSentToTimes($giocatore, EventPublished::class, 1);
     });
+
+    it('un evento già passato non avvisa, neanche modificandolo dopo', function () {
+        Notification::fake();
+
+        $admin = User::factory()->admin()->create();
+        User::factory()->player()->create();
+
+        Livewire::actingAs($admin)
+            ->test(CreateEvent::class)
+            ->fillForm([
+                'title' => 'Apertura di stagione',
+                'slug' => 'apertura-di-stagione',
+                'starts_at' => now()->subWeeks(2),
+                'published_at' => now()->subMinute(),
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $evento = Event::where('slug', 'apertura-di-stagione')->firstOrFail();
+
+        Livewire::actingAs($admin)
+            ->test(EditEvent::class, ['record' => $evento->getRouteKey()])
+            ->fillForm(['starts_at' => now()->addWeek()])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        Notification::assertNothingSent();
+    });
+
+    it('con «Avvisa i giocatori» spento non avvisa, neanche dopo', function () {
+        Notification::fake();
+
+        $admin = User::factory()->admin()->create();
+        User::factory()->player()->create();
+
+        Livewire::actingAs($admin)
+            ->test(CreateEvent::class)
+            ->fillForm([
+                'title' => 'Serata a sorpresa',
+                'slug' => 'serata-a-sorpresa',
+                'starts_at' => now()->addWeek(),
+                'published_at' => now()->subMinute(),
+                'notify_players' => false,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $evento = Event::where('slug', 'serata-a-sorpresa')->firstOrFail();
+
+        Livewire::actingAs($admin)
+            ->test(EditEvent::class, ['record' => $evento->getRouteKey()])
+            ->fillForm(['title' => 'Serata a sorpresa, confermata'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        Notification::assertNothingSent();
+        expect($evento->fresh()->players_notified_at)->not->toBeNull();
+    });
 });
 
 describe('le sessioni', function () {
@@ -144,6 +202,26 @@ describe('le sessioni', function () {
                 'campaign_id' => $campaign->id,
                 'played_at' => now()->subWeek(),
                 'recap' => "Com'è andata.",
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        Notification::assertNotSentTo($giocatore, GameSessionScheduled::class);
+    });
+
+    it('una sessione futura con «Avvisa i giocatori» spento non avvisa', function () {
+        Notification::fake();
+
+        $dm = User::factory()->dm()->create();
+        $giocatore = User::factory()->player()->create();
+        $campaign = Campaign::factory()->create(['dm_id' => $dm->id]);
+
+        Livewire::actingAs($dm)
+            ->test(CreateGameSession::class)
+            ->fillForm([
+                'campaign_id' => $campaign->id,
+                'played_at' => now()->addWeek(),
+                'notify_players' => false,
             ])
             ->call('create')
             ->assertHasNoFormErrors();

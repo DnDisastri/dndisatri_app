@@ -32,6 +32,22 @@ final class AnnounceToPlayers
 
         Notification::send($giocatori, $notification);
 
+        $this->markAsHandled($record);
+    }
+
+    /**
+     * Chiude l'avviso senza mandarlo: chi inserisce il record ha scelto di non
+     * avvisare, e una modifica successiva non deve recuperare l'avviso saltato.
+     */
+    public function skip(Model $record): void
+    {
+        if ($record->players_notified_at === null) {
+            $this->markAsHandled($record);
+        }
+    }
+
+    private function markAsHandled(Model $record): void
+    {
         // saveQuietly: non è una modifica di contenuto, non va nel log attività.
         $record->forceFill(['players_notified_at' => now()])->saveQuietly();
     }

@@ -138,6 +138,11 @@
                 Nella sessione di {{ $quest->session->played_at->translatedFormat('l j F, H:i') }}.
             </p>
             <x-button size="sm" class="mt-3" :href="route('sessions.show', $quest->session)">Vai alla sessione e prenotati</x-button>
+        @elseif ($quest->session !== null)
+            <p class="mt-2 text-sm text-fg">
+                Giocata nella sessione di {{ $quest->session->played_at->translatedFormat('l j F') }}.
+            </p>
+            <x-button size="sm" variant="secondary" class="mt-3" :href="route('sessions.show', $quest->session)">Vai alla sessione</x-button>
         @elseif ($quest->isActive())
             <p class="mt-2 text-sm text-muted">
                 Il DM non l'ha ancora messa in una sessione. Se ti interessa, segnala: quando la mette, ti arriverà un avviso.
@@ -176,22 +181,33 @@
                     @csrf
                     <label for="game_session_id" class="text-xs uppercase tracking-wide text-muted">In quale sessione si gioca</label>
 
-                    @if ($sessioni->isEmpty() && ! $quest->isScheduled())
-                        <p class="mt-1 text-sm text-muted">Nessuna sessione in programma per questa campagna: creala dal Pannello.</p>
+                    @if ($sessioni->isEmpty() && $sessioniPassate->isEmpty())
+                        <p class="mt-1 text-sm text-muted">Nessuna sessione per questa campagna: creala dal Pannello.</p>
                     @else
                         <div class="mt-2 flex flex-wrap items-center gap-2">
                             <select name="game_session_id" id="game_session_id"
                                     class="min-w-0 max-w-full flex-1 rounded-md border border-line bg-surface px-3 py-2 text-sm text-fg">
                                 <option value="">Non ancora</option>
-                                @foreach ($sessioni as $sessione)
-                                    <option value="{{ $sessione->id }}" @selected($quest->game_session_id === $sessione->id)>
-                                        {{ $sessione->played_at->translatedFormat('D j F, H:i') }}{{ filled($sessione->title) ? ' · '.$sessione->title : '' }}
-                                    </option>
+                                @foreach (['In programma' => $sessioni, 'Già giocate' => $sessioniPassate] as $gruppo => $elenco)
+                                    @if ($elenco->isNotEmpty())
+                                        <optgroup label="{{ $gruppo }}">
+                                            @foreach ($elenco as $sessione)
+                                                <option value="{{ $sessione->id }}" @selected($quest->game_session_id === $sessione->id)>
+                                                    {{ $sessione->played_at->translatedFormat('D j F, H:i') }}{{ filled($sessione->title) ? ' · '.$sessione->title : '' }}
+                                                </option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
                                 @endforeach
                             </select>
                             <x-button variant="secondary">Salva</x-button>
                         </div>
-                        <p class="mt-1 text-xs text-muted">Chi l'ha segnata con «Mi interessa» riceve un avviso.</p>
+                        <input type="hidden" name="notify_players" value="0">
+                        <label class="mt-2 flex items-center gap-2 text-sm text-muted">
+                            <input type="checkbox" name="notify_players" value="1" checked class="accent-active">
+                            Avvisa chi l'ha segnata con «Mi interessa»
+                        </label>
+                        <p class="mt-1 text-xs text-muted">Per una sessione già giocata non parte nessun avviso.</p>
                     @endif
                 </form>
             @endcan

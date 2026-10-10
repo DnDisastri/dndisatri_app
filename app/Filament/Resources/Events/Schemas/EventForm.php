@@ -2,10 +2,12 @@
 
 namespace App\Filament\Resources\Events\Schemas;
 
+use App\Models\Event;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Str;
@@ -77,6 +79,14 @@ class EventForm
                         ->label('Pubblicato il')
                         ->seconds(false)
                         ->helperText('Vuoto = bozza. Una data futura lo pubblica da solo.'),
+
+                    Toggle::make('notify_players')
+                        ->label('Avvisa i giocatori')
+                        ->helperText('Quando l\'evento viene pubblicato. Gli eventi già passati non avvisano comunque.')
+                        // Non è una colonna: anche in modifica parte acceso.
+                        ->formatStateUsing(fn () => true)
+                        ->dehydrated(false)
+                        ->visible(fn (?Event $record) => $record?->players_notified_at === null),
                 ]),
         ])->columns(1);
     }

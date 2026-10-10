@@ -70,9 +70,13 @@ class QuestController extends Controller
             'interessati' => $quest->interested()->get(),
             'miInteressa' => $quest->isInterested(request()->user()),
 
-            // Solo a chi può metterla in una sessione: le prossime della sua campagna.
+            // Solo a chi può metterla in una sessione: quelle della sua campagna,
+            // anche le già giocate per registrare il passato.
             'sessioni' => request()->user()->can('schedule', $quest)
                 ? GameSession::where('campaign_id', $quest->campaign_id)->upcoming()->get()
+                : collect(),
+            'sessioniPassate' => request()->user()->can('schedule', $quest)
+                ? GameSession::where('campaign_id', $quest->campaign_id)->past()->get()
                 : collect(),
         ]);
     }
@@ -95,7 +99,7 @@ class QuestController extends Controller
         return back()->with('status', 'Segnato. Quando il DM la mette in una sessione, ti arriverà un avviso.');
     }
 
-    /** Mettere la quest in una sessione in programma della campagna, o toglierla. */
+    /** Mettere la quest in una sessione della campagna, o toglierla. */
     public function schedule(Request $request, Quest $quest): RedirectResponse
     {
         $this->authorize('schedule', $quest);
@@ -105,16 +109,19 @@ class QuestController extends Controller
         ]);
 
         $sessione = filled($dati['game_session_id'] ?? null) ? GameSession::findOrFail($dati['game_session_id']) : null;
+        $avvisa = $request->boolean('notify_players', true);
 
         try {
-            app(ScheduleQuest::class)->handle($quest, $sessione);
+            app(ScheduleQuest::class)->handle($quest, $sessione, $avvisa);
         } catch (InvalidArgumentException|QuestUnavailableException $e) {
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('status', $sessione
-            ? 'Quest messa nella sessione: chi l\'aveva segnata ha ricevuto l\'avviso.'
-            : 'Quest tolta dalla sessione.');
+        return back()->with('status', match (true) {
+            $sessione === null => 'Quest tolta dalla sessione.',
+            $sessione->isUpcoming() && $avvisa => 'Quest messa nella sessione: chi l\'aveva segnata ha ricevuto l\'avviso.',
+            default => 'Quest messa nella sessione, senza avvisi.',
+        });
     }
 
     /** Concludere la quest (M9); il racconto di com'è andata è facoltativo. */

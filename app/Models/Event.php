@@ -65,6 +65,12 @@ class Event extends Model
         return $this->starts_at->isFuture();
     }
 
+    /** Senza fine dichiarata vale l'inizio: un evento passato non si annuncia più. */
+    public function hasEnded(): bool
+    {
+        return ($this->ends_at ?? $this->starts_at)->isPast();
+    }
+
     public function scopePublished(Builder $query): void
     {
         $query->whereNotNull('published_at')->where('published_at', '<=', now());
