@@ -53,8 +53,9 @@ class HomeController extends Controller
             'posts' => $posts,
             'novita' => $this->novita($events->count(), $sessions->count(), $quests->count()),
 
-            // Banner del tutorial solo a chi non ha ancora un eroe.
-            'senzaEroe' => auth()->user()->characters()->doesntExist(),
+            // Banner del tutorial solo ai giocatori che non hanno ancora un eroe.
+            'senzaEroe' => ! auth()->user()->isDm() && ! auth()->user()->isAdmin()
+                && auth()->user()->characters()->doesntExist(),
         ]);
     }
 

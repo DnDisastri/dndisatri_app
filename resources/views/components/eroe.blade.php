@@ -23,7 +23,8 @@
         </span>
     @endif
 
-    <div class="flex flex-row-reverse w-full h-full gap-1 justify-between items-center">
+    {{-- `min-w-0` e `wrap-anywhere`: un nome lungo senza spazi andrebbe oltre la card. --}}
+    <div class="flex min-w-0 flex-row-reverse w-full h-full gap-1 justify-between items-center">
 
         {{-- Il livello in pillola: è il numero che si cerca scorrendo la gilda.
              Resta accent anche sui caduti (è un fatto); la morte si legge sotto. --}}
@@ -33,7 +34,7 @@
 
         <div class="min-w-0 flex-1 space-y-2">
             <h3 class="flex items-center gap-1.5 text-lg font-normal font-display text-fg ">
-                {{ $character->name }}
+                <span class="min-w-0 wrap-anywhere">{{ $character->name }}</span>
                 @unless ($vivo)
                     <x-icona :is="\App\Enums\Icon::Fallen" class="h-4 w-4 shrink-0 text-on-danger-soft" />
                 @endunless

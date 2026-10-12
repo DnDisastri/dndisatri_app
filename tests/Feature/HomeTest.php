@@ -191,6 +191,15 @@ describe('l\'invito al tutorial', function () {
             ->assertDontSee('Non hai ancora un eroe');
     });
 
+    it('non esce a DM e admin, anche senza eroi', function () {
+        foreach ([User::factory()->dm()->create(), User::factory()->admin()->create()] as $utente) {
+            $this->actingAs($utente)
+                ->get('/')
+                ->assertOk()
+                ->assertDontSee('Non hai ancora un eroe');
+        }
+    });
+
     it('in fondo alla Home rimanda sempre alle FAQs', function () {
         $this->actingAs($this->giocatore)
             ->get('/')

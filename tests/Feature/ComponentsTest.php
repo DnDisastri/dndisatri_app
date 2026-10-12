@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Models\Character;
 use App\Models\User;
 use Illuminate\Support\Facades\Blade;
-
 
 function resa(string $blade): string
 {
@@ -175,4 +175,12 @@ it('il manifesto senza scritta mostra la sola freccia', function () {
         ->and($nudo)->not->toContain('Entra')
         ->and($conScritta)->toContain('Entra')
         ->and($conScritta)->not->toContain('h-11 w-11');
+});
+
+it('nella card della Gilda un nome lungo va a capo invece di allargarla', function () {
+    $pg = Character::factory()->create(['name' => 'Bartholomeus-Vandersteenhuizen-Ironfoot']);
+
+    $html = (string) Blade::render('<x-eroe :character="$pg" />', ['pg' => $pg]);
+
+    expect($html)->toContain('<span class="min-w-0 wrap-anywhere">Bartholomeus-Vandersteenhuizen-Ironfoot</span>');
 });
