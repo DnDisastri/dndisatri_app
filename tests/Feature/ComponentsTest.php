@@ -155,7 +155,8 @@ it('il manifesto vela sempre l\'immagine, anche quando non ce n\'è una', functi
     $senza = resa('<x-poster href="#" title="Un evento" />');
 
     expect($conFoto)->toContain('bg-gradient-to-b')
-        ->and($conFoto)->toContain('<img src="/x.jpg"')
+        ->and($conFoto)->toContain('src="/x.jpg"')
+        ->and($conFoto)->toContain('loading="lazy"')
         ->and($senza)->toContain('bg-primary')
         ->and($senza)->not->toContain('<img');
 });

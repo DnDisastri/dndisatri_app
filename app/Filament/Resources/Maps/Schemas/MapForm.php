@@ -38,7 +38,7 @@ class MapForm
                     FileUpload::make('image_path')
                         ->label('Immagine')
                         ->image()
-                        ->acceptedFileTypes(['image/png', 'image/jpeg'])
+                        ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/webp'])
                         ->required()
                         ->disk('public')
                         ->directory('mappe')

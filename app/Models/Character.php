@@ -20,6 +20,8 @@ use App\Enums\EquipmentSlot;
 use App\Enums\LedgerAction;
 use App\Enums\PendingChangeStatus;
 use App\Enums\PendingChangeType;
+use App\Models\Concerns\ShrinksImages;
+use App\Support\ImageShrinker;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -44,7 +46,15 @@ use Spatie\Activitylog\Support\LogOptions;
 ])]
 class Character extends Model
 {
-    use HasFactory, LogsActivity;
+    use HasFactory, LogsActivity, ShrinksImages;
+
+    /** @return array<string, int> */
+    public function imageLimits(): array
+    {
+        return [
+            'photo_path' => ImageShrinker::PORTRAIT,
+        ];
+    }
 
     public function getActivitylogOptions(): LogOptions
     {

@@ -65,7 +65,7 @@
 
                         <div class="mt-3 flex gap-4">
                             @if ($campaign->questGiverPhotoUrl())
-                                <img src="{{ $campaign->questGiverPhotoUrl() }}" alt="{{ $campaign->quest_giver }}"
+                                <img loading="lazy" decoding="async" src="{{ $campaign->questGiverPhotoUrl() }}" alt="{{ $campaign->quest_giver }}"
                                      class="h-20 w-20 shrink-0 rounded-lg object-cover">
                             @endif
 
@@ -207,7 +207,7 @@
                            class="relative flex aspect-square items-center justify-center overflow-hidden
                                   rounded-poster rounded-br-poster-cut border border-line p-3
                                   transition hover:border-active">
-                            <img src="{{ $map->url() }}" alt=""
+                            <img loading="lazy" decoding="async" src="{{ $map->url() }}" alt=""
                                  class="absolute inset-0 h-full w-full object-cover">
                             <span class="absolute inset-0 bg-gradient-to-b from-black/75 via-black/40 to-black/75"></span>
 

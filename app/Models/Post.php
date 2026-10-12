@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasReactions;
+use App\Models\Concerns\ShrinksImages;
+use App\Support\ImageShrinker;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,7 +22,15 @@ use Spatie\Activitylog\Support\LogOptions;
 ])]
 class Post extends Model
 {
-    use HasFactory, HasReactions, LogsActivity;
+    use HasFactory, HasReactions, LogsActivity, ShrinksImages;
+
+    /** @return array<string, int> */
+    public function imageLimits(): array
+    {
+        return [
+            'cover_path' => ImageShrinker::COVER,
+        ];
+    }
 
     public function getActivitylogOptions(): LogOptions
     {

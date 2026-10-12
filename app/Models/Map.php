@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ShrinksImages;
+use App\Support\ImageShrinker;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +14,15 @@ use Illuminate\Support\Facades\Storage;
 #[Fillable(['campaign_id', 'uploaded_by', 'title', 'description', 'image_path'])]
 class Map extends Model
 {
-    use HasFactory;
+    use HasFactory, ShrinksImages;
+
+    /** @return array<string, int> */
+    public function imageLimits(): array
+    {
+        return [
+            'image_path' => ImageShrinker::MAP,
+        ];
+    }
 
     public function campaign(): BelongsTo
     {

@@ -17,7 +17,7 @@
             <x-card flush padding="none" :href="route('news.show', $post)">
                 @if ($post->cover_path)
                 {{-- La copertina è decorativa: il titolo della news è già presente come testo nella card. --}}
-                    <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($post->cover_path) }}"
+                    <img loading="lazy" decoding="async" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($post->cover_path) }}"
                          alt="" class="aspect-[21/9] w-full object-cover">
                 @endif
 

@@ -26,7 +26,7 @@
                ])>
                 <div class="flex items-center gap-3">
                     @if ($pg->photoUrl())
-                        <img src="{{ $pg->photoUrl() }}" alt="{{ $pg->name }}"
+                        <img loading="lazy" decoding="async" src="{{ $pg->photoUrl() }}" alt="{{ $pg->name }}"
                              class="h-11 w-11 shrink-0 rounded-lg object-cover">
                     @else
                         <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-page">

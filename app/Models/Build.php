@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ShrinksImages;
+use App\Support\ImageShrinker;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -25,7 +27,15 @@ use Spatie\Activitylog\Support\LogOptions;
 ])]
 class Build extends Model
 {
-    use HasFactory, LogsActivity;
+    use HasFactory, LogsActivity, ShrinksImages;
+
+    /** @return array<string, int> */
+    public function imageLimits(): array
+    {
+        return [
+            'cover_path' => ImageShrinker::COVER,
+        ];
+    }
 
     public function getActivitylogOptions(): LogOptions
     {

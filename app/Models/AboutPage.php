@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ShrinksImages;
+use App\Support\ImageShrinker;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
@@ -12,7 +14,15 @@ use Spatie\Activitylog\Support\LogOptions;
 #[Fillable(['body', 'cover_path', 'socials'])]
 class AboutPage extends Model
 {
-    use LogsActivity;
+    use LogsActivity, ShrinksImages;
+
+    /** @return array<string, int> */
+    public function imageLimits(): array
+    {
+        return [
+            'cover_path' => ImageShrinker::COVER,
+        ];
+    }
 
     public function coverUrl(): ?string
     {

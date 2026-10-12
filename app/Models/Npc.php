@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ShrinksImages;
+use App\Support\ImageShrinker;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,7 +15,15 @@ use Illuminate\Support\Facades\Storage;
 #[Fillable(['name', 'location', 'wants', 'notes'])]
 class Npc extends Model
 {
-    use HasFactory;
+    use HasFactory, ShrinksImages;
+
+    /** @return array<string, int> */
+    public function imageLimits(): array
+    {
+        return [
+            'photo_path' => ImageShrinker::PORTRAIT,
+        ];
+    }
 
     public function campaign(): BelongsTo
     {

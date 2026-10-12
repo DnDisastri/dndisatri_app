@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ShrinksImages;
+use App\Support\ImageShrinker;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -20,7 +22,17 @@ use Spatie\Activitylog\Support\LogOptions;
 ])]
 class Campaign extends Model
 {
-    use HasFactory, LogsActivity;
+    use HasFactory, LogsActivity, ShrinksImages;
+
+    /** @return array<string, int> */
+    public function imageLimits(): array
+    {
+        return [
+            'cover_path' => ImageShrinker::COVER,
+            'background_path' => ImageShrinker::BACKGROUND,
+            'quest_giver_photo' => ImageShrinker::PORTRAIT,
+        ];
+    }
 
     public function getActivitylogOptions(): LogOptions
     {

@@ -3,8 +3,8 @@
 namespace App\Filament\Resources\AboutPages\Schemas;
 
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -25,7 +25,7 @@ class AboutPageForm
                     FileUpload::make('cover_path')
                         ->label('Copertina')
                         ->image()
-                        ->acceptedFileTypes(['image/png', 'image/jpeg'])
+                        ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/webp'])
                         ->disk('public')
                         ->directory('chi-siamo')
                         ->maxSize(4096)

@@ -31,7 +31,7 @@
                 <button type="button" wire:click="modifica({{ $npc->id }})"
                         class="flex gap-3 rounded-card border border-line bg-surface p-3 text-left transition hover:border-active">
                     @if ($npc->photoUrl())
-                        <img src="{{ $npc->photoUrl() }}" alt="" class="h-14 w-14 shrink-0 rounded-lg object-cover">
+                        <img loading="lazy" decoding="async" src="{{ $npc->photoUrl() }}" alt="" class="h-14 w-14 shrink-0 rounded-lg object-cover">
                     @endif
                     <span class="min-w-0">
                         <span class="block font-semibold text-fg">

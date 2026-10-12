@@ -14,7 +14,7 @@
    ])>
     @if ($character->photoUrl())
         {{-- In grigio per i caduti: il segno che si vede prima di leggere. --}}
-        <img src="{{ $character->photoUrl() }}" alt="{{ $character->name }}"
+        <img loading="lazy" decoding="async" src="{{ $character->photoUrl() }}" alt="{{ $character->name }}"
              @class(['h-20 w-20 shrink-0 rounded-lg object-cover', 'grayscale' => ! $vivo])>
     @else
         {{-- Il segnaposto tiene la misura della foto, così le card restano in fila. --}}

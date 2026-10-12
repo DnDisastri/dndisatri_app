@@ -79,7 +79,7 @@
 
             <div class="mt-3 flex items-center gap-4">
                 @if ($campagna->questGiverPhotoUrl())
-                    <img src="{{ $campagna->questGiverPhotoUrl() }}" alt="{{ $campagna->quest_giver }}"
+                    <img loading="lazy" decoding="async" src="{{ $campagna->questGiverPhotoUrl() }}" alt="{{ $campagna->quest_giver }}"
                          class="h-16 w-16 shrink-0 rounded-lg object-cover">
                 @endif
 
