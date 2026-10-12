@@ -19,9 +19,9 @@ class SubraceForm
             Section::make()
                 ->schema([
                     Select::make('race')
-                        ->label('Razza')
+                        ->label('Specie')
                         ->required()
-                        // Le razze del manuale: non si aggiungono dal pannello,
+                        // Le specie del manuale: non si aggiungono dal pannello,
                         // solo le loro varianti.
                         ->options(fn () => collect(array_keys(config('dnd.species', [])))
                             ->mapWithKeys(fn (string $r) => [$r => $r])
@@ -47,14 +47,14 @@ class SubraceForm
                         ->keyLabel('Caratteristica')
                         ->valueLabel('Bonus')
                         ->keyPlaceholder(collect(Ability::cases())->map(fn (Ability $a) => $a->value)->join(', '))
-                        ->helperText('Si sommano a quelli della razza. Vuoto per discendenze draconiche ed etnie.')
+                        ->helperText('Si sommano a quelli della specie. Vuoto per discendenze draconiche ed etnie.')
                         ->columnSpanFull(),
 
                     TextInput::make('speed')
                         ->label('Velocità in metri')
                         ->numeric()
                         ->step(0.5)
-                        ->helperText('Solo se diversa da quella della razza, come l\'elfo dei boschi. Vuoto = quella della razza.'),
+                        ->helperText('Solo se diversa da quella della specie, come l\'elfo dei boschi. Vuoto = quella della specie.'),
 
                     Toggle::make('is_homebrew')
                         ->label('Fatta in casa')
@@ -64,7 +64,7 @@ class SubraceForm
                     Textarea::make('traits')
                         ->label('Tratti')
                         ->rows(4)
-                        ->helperText('Finiscono sulla scheda sotto quelli della razza: resistenze, competenze, incantesimi.')
+                        ->helperText('Finiscono sulla scheda sotto quelli della specie: resistenze, competenze, incantesimi.')
                         ->columnSpanFull(),
 
                     TextInput::make('position')

@@ -38,7 +38,7 @@ class SubracesTable
 
                 TextColumn::make('speed')
                     ->label('Velocità')
-                    ->placeholder('Come la razza')
+                    ->placeholder('Come la specie')
                     ->suffix(' m')
                     ->toggleable(),
 
@@ -55,7 +55,7 @@ class SubracesTable
             ])
             ->filters([
                 SelectFilter::make('race')
-                    ->label('Razza')
+                    ->label('Specie')
                     ->options(fn () => collect(array_keys(config('dnd.species', [])))
                         ->mapWithKeys(fn (string $r) => [$r => $r])
                         ->all()),
@@ -76,7 +76,7 @@ class SubracesTable
                     DeleteBulkAction::make(),
                 ]),
             ])
-            ->emptyStateHeading('Nessuna sottorazza')
+            ->emptyStateHeading('Nessuna sottospecie')
             ->emptyStateDescription('Il catalogo del manuale arriva col seeder; qui si aggiungono le vostre.');
     }
 }

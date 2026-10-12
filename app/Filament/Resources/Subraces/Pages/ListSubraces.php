@@ -13,7 +13,7 @@ class ListSubraces extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make()->label('Nuova sottorazza'),
+            CreateAction::make()->label('Nuova sottospecie'),
         ];
     }
 }

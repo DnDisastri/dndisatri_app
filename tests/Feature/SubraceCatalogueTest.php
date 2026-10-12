@@ -162,7 +162,7 @@ describe('il wizard', function () {
 
         expect($componente->instance()->subspeciesLabel())->toBe($atteso);
     })->with([
-        'elfo' => ['Elfo', 'Sottorazza'],
+        'elfo' => ['Elfo', 'Sottospecie'],
         'dragonide' => ['Dragonide', 'Discendenza draconica'],
         'umano' => ['Umano', 'Etnia'],
     ]);

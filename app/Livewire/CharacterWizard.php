@@ -210,7 +210,7 @@ class CharacterWizard extends Component
         return match ($this->species) {
             'Dragonide' => 'Discendenza draconica',
             'Umano', 'Umano (Variante)' => 'Etnia',
-            default => 'Sottorazza',
+            default => 'Sottospecie',
         };
     }
 
@@ -417,6 +417,7 @@ class CharacterWizard extends Component
         return collect(ClassRules::skillChoices($this->class))
             ->mapWithKeys(fn (string $key) => [$key => [
                 'name' => $names[$key] ?? $key,
+                'ability' => Ability::from(config("dnd.character.skills.{$key}"))->label(),
                 // Quelle del background arrivano comunque: sceglierle di
                 // nuovo sprecherebbe una scelta di classe.
                 'fromBackground' => in_array($key, $fromBackground, true),

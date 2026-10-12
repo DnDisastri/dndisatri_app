@@ -47,7 +47,7 @@ describe('il point buy', function () {
         $this->actingAs(User::factory()->player()->create());
 
         $component = Livewire::test(CharacterWizard::class)
-            ->call('increase', 'str')  
+            ->call('increase', 'str')
             ->assertSet('scores.str', 9);
 
         expect($component->instance()->remainingPoints())->toBe(26);
@@ -96,10 +96,10 @@ describe('l\'avanzamento fra i passi', function () {
         Livewire::test(CharacterWizard::class)
             ->assertSet('step', 1)
             ->call('next')
-            ->assertSet('step', 1)           
+            ->assertSet('step', 1)
             ->set('name', 'Kaeleth')
             ->call('next')
-            ->assertSet('step', 1)          
+            ->assertSet('step', 1)
             ->set('class', 'Guerriero')
             ->call('next')
             ->assertSet('step', 2);
@@ -114,7 +114,7 @@ describe('l\'avanzamento fra i passi', function () {
             ->set('class', 'Guerriero')
             ->set('species', 'Umano (Variante)')
             ->call('next')
-            ->assertSet('step', 2);        
+            ->assertSet('step', 2);
 
         $component->set('speciesChoices', ['str', 'con'])
             ->call('next')
@@ -125,7 +125,7 @@ describe('l\'avanzamento fra i passi', function () {
         $this->actingAs(User::factory()->player()->create());
 
         Livewire::test(CharacterWizard::class)
-            ->set('class', 'Guerriero')     
+            ->set('class', 'Guerriero')
             ->set('step', 5)
             ->set('skills', ['athletics'])
             ->call('next')
@@ -133,6 +133,17 @@ describe('l\'avanzamento fra i passi', function () {
             ->set('skills', ['athletics', 'perception'])
             ->call('next')
             ->assertSet('step', 6);
+    });
+
+    it('accanto a ogni abilità scrive la caratteristica', function () {
+        $this->actingAs(User::factory()->player()->create());
+
+        Livewire::test(CharacterWizard::class)
+            ->set('class', 'Guerriero')
+            ->set('step', 5)
+            ->assertSee('Atletica')
+            ->assertSee('(FOR)')
+            ->assertSee('(SAG)');
     });
 
     it('azzera le scelte se si torna indietro a cambiare classe', function () {
@@ -172,7 +183,7 @@ describe('la creazione', function () {
         expect($character)->not->toBeNull()
             ->and($character->user_id)->toBe($player->id)
             ->and($character->level)->toBe(1)
-            ->and($character->str)->toBe(17)         
+            ->and($character->str)->toBe(17)
             ->and($character->items()->count())->toBeGreaterThan(0);
     });
 
@@ -219,12 +230,12 @@ describe('il riepilogo e le build', function () {
         $this->actingAs(User::factory()->player()->create());
 
         Livewire::test(CharacterWizard::class)
-            ->set('class', 'Guerriero')   
+            ->set('class', 'Guerriero')
             ->set('step', 6)
             ->call('next')
-            ->assertSet('step', 8)       
+            ->assertSet('step', 8)
             ->call('previous')
-            ->assertSet('step', 6);      
+            ->assertSet('step', 6);
     });
 
     it('un incantatore invece passa dal settimo', function () {
@@ -272,7 +283,7 @@ describe('il riepilogo e le build', function () {
         Livewire::withQueryParams(['build' => 'il-muro'])
             ->test(CharacterWizard::class)
             ->assertSet('step', 8)
-            ->call('save')               
+            ->call('save')
             ->assertHasErrors('creazione');
 
         expect(Character::query()->where('user_id', $player->id)->exists())->toBeFalse();

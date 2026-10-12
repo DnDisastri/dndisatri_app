@@ -16,8 +16,8 @@ use Filament\Tables\Table;
 use UnitEnum;
 
 /**
- * Sottorazze, discendenze draconiche ed etnie: tre nomi per la stessa scelta,
- * quella che viene subito dopo la razza.
+ * Sottospecie, discendenze draconiche ed etnie: tre nomi per la stessa scelta,
+ * quella che viene subito dopo la specie.
  */
 class SubraceResource extends Resource
 {
@@ -27,11 +27,11 @@ class SubraceResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Gestione';
 
-    protected static ?string $navigationLabel = 'Sottorazze';
+    protected static ?string $navigationLabel = 'Sottospecie';
 
-    protected static ?string $modelLabel = 'sottorazza';
+    protected static ?string $modelLabel = 'sottospecie';
 
-    protected static ?string $pluralModelLabel = 'sottorazze';
+    protected static ?string $pluralModelLabel = 'sottospecie';
 
     protected static ?string $recordTitleAttribute = 'name';
 
