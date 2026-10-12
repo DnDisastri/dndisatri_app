@@ -101,6 +101,12 @@ class Quest extends Model
             ->orderByPivot('joined_at');
     }
 
+    /** «Mi interessa» dell'utente in una query sola, per gli elenchi: si legge da `interested_by_viewer`. */
+    public function scopeWithInterestOf(Builder $query, ?User $user): void
+    {
+        $query->withExists(['interested as interested_by_viewer' => fn (Builder $q) => $q->whereKey($user?->getKey())]);
+    }
+
     public function isInterested(User $user): bool
     {
         return $this->interested()->whereKey($user->getKey())->exists();

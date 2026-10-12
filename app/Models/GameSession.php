@@ -24,6 +24,9 @@ class GameSession extends Model
 {
     use HasFactory, HasReactions, LogsActivity;
 
+    /** @var array<int, SessionBooking|null> posti già letti dagli elenchi, per utente */
+    private array $postiNoti = [];
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
@@ -142,7 +145,8 @@ class GameSession extends Model
 
     public function confirmedCount(): int
     {
-        return $this->bookings()->confirmed()->count();
+        // Negli elenchi arriva da `withCount`, senza una query per riga.
+        return $this->confirmed_bookings_count ?? $this->bookings()->confirmed()->count();
     }
 
     public function freeSlots(): int
@@ -175,7 +179,24 @@ class GameSession extends Model
 
     public function bookingOf(User $user): ?SessionBooking
     {
+        if (array_key_exists($user->getKey(), $this->postiNoti)) {
+            return $this->postiNoti[$user->getKey()];
+        }
+
         return $this->bookings()->where('user_id', $user->getKey())->first();
+    }
+
+    /**
+     * Gli elenchi leggono in una volta i posti dell'utente su tutte le sessioni
+     * e li consegnano qui: `bookingOf` e i permessi non rifanno la query per riga.
+     *
+     * @param  Collection<int, GameSession>  $sessions
+     */
+    public static function rememberBookingsOf(User $user, Collection $sessions): void
+    {
+        $posti = $user->sessionBookings()->whereIn('game_session_id', $sessions->modelKeys())->get()->keyBy('game_session_id');
+
+        $sessions->each(fn (GameSession $s) => $s->postiNoti[$user->getKey()] = $posti->get($s->getKey()));
     }
 
     public function seatOf(User $user): ?SeatStatus

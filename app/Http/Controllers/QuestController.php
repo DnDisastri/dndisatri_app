@@ -43,6 +43,7 @@ class QuestController extends Controller
             ->when($difficolta, fn ($query) => $query->where('difficulty', $difficolta))
             ->with(['campaign', 'session'])
             ->withCount('interested')
+            ->withInterestOf($request->user())
             ->latest('id')
             ->get()
             // Prima quelle già in una sessione in programma, dalla più vicina; poi le altre, le più recenti in cima.

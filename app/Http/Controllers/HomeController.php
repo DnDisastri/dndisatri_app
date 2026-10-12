@@ -32,12 +32,16 @@ class HomeController extends Controller
         $sessions = GameSession::query()
             ->upcoming()
             ->with('campaign')
+            ->withCount(['bookings as confirmed_bookings_count' => fn ($q) => $q->confirmed()])
             ->limit(5)
             ->get();
+
+        GameSession::rememberBookingsOf(auth()->user(), $sessions);
 
         $quests = Quest::query()
             ->active()
             ->withCount('interested')
+            ->withInterestOf(auth()->user())
             ->with(['campaign', 'session'])
             ->latest('id')
             ->limit(3)

@@ -1,3 +1,19 @@
+# Testo compresso: CSS, JS e pagine pesano circa un quinto.
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json image/svg+xml application/manifest+json
+</IfModule>
+
+<IfModule mod_headers.c>
+    # I file di build/ hanno l'impronta nel nome: cambiano nome quando cambiano, si tengono un anno.
+    <If "%{REQUEST_URI} =~ m#^/build/#">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </If>
+    # Icone, logo e immagini caricate: una settimana.
+    <ElseIf "%{REQUEST_URI} =~ m#\.(png|jpe?g|webp|gif|ico|svg|woff2?)$#i">
+        Header set Cache-Control "public, max-age=604800"
+    </ElseIf>
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

@@ -8,6 +8,7 @@ use App\Models\Campaign;
 use App\Models\GameSession;
 use App\Models\Quest;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {
     $this->giocatore = User::factory()->player()->create();
@@ -184,4 +185,22 @@ it('nel filtro non mette le campagne senza incarichi aperti', function () {
         ->assertOk()
         ->assertSee(route('quests.index', ['campagna' => $altra->slug]))
         ->assertDontSee(route('quests.index', ['campagna' => $vuota->slug]));
+});
+
+it('non rifà la query del «mi interessa» per ogni quest', function () {
+    $conta = function () {
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $this->actingAs($this->giocatore)->get(route('quests.index'))->assertOk();
+
+        return count(DB::getQueryLog());
+    };
+
+    Quest::factory()->inCampaign($this->campagna)->count(2)->create();
+    $conta(); // la prima richiesta riempie le cache di permessi e testi
+    $poche = $conta();
+
+    Quest::factory()->inCampaign($this->campagna)->count(8)->create();
+
+    expect($conta())->toBe($poche);
 });
