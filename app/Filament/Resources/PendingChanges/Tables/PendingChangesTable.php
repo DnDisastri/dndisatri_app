@@ -15,8 +15,9 @@ class PendingChangesTable
     public static function configure(Table $table): Table
     {
         return $table
-            // Le più vecchie per prime: chi aspetta da più tempo va servito prima.
-            ->defaultSort('created_at', 'asc')
+            // In attesa le più vecchie per prime, chi aspetta da più tempo va servito prima;
+            // nello storico le più recenti, che sono quelle che si cercano.
+            ->defaultSort('created_at', fn ($livewire) => ($livewire->activeTab ?? 'in_attesa') === 'in_attesa' ? 'asc' : 'desc')
             ->columns([
                 TextColumn::make('type')
                     ->label('Tipo')

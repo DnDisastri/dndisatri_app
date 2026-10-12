@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\PendingChangeStatus;
 use App\Enums\PendingChangeType;
+use App\Filament\Resources\PendingChanges\Pages\ListPendingChanges;
 use App\Filament\Resources\PendingChanges\Pages\ViewPendingChange;
 use App\Filament\Resources\PendingChanges\PendingChangeResource;
 use App\Models\Character;
@@ -31,6 +32,20 @@ describe('la bacheca', function () {
         PendingChange::factory()->count(4)->create();
 
         expect(PendingChangeResource::getNavigationBadge())->toBe('4');
+    });
+
+    it('in attesa parte dalla più vecchia, le approvate dalla più recente', function () {
+        $dm = User::factory()->dm()->create();
+        $vecchia = PendingChange::factory()->create(['created_at' => now()->subDays(3)]);
+        $nuova = PendingChange::factory()->create(['created_at' => now()->subDay()]);
+        $approvataVecchia = PendingChange::factory()->approvedBy($dm)->create(['created_at' => now()->subDays(3)]);
+        $approvataNuova = PendingChange::factory()->approvedBy($dm)->create(['created_at' => now()->subDay()]);
+
+        Livewire::actingAs($dm)
+            ->test(ListPendingChanges::class)
+            ->assertCanSeeTableRecords([$vecchia, $nuova], inOrder: true)
+            ->set('activeTab', 'approvate')
+            ->assertCanSeeTableRecords([$approvataNuova, $approvataVecchia], inOrder: true);
     });
 
     it('non ha pagine di creazione o modifica', function () {

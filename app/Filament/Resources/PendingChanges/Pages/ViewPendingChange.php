@@ -16,6 +16,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Utilities\Get;
 use RuntimeException;
 
 class ViewPendingChange extends ViewRecord
@@ -98,14 +99,18 @@ class ViewPendingChange extends ViewRecord
                     ->options(EquipmentSlot::bases())
                     ->placeholder('Nessuno')
                     ->default($item['base'] ?? (EquipmentSlot::isBase($item['name']) ? $item['name'] : null))
+                    ->live()
                     ->columnSpan(['default' => 1, 'sm' => 2]),
+                // Senza tipo il bonus non ha effetto: nascosto non arriva, e l'approvazione lo tratta come 0.
                 TextInput::make("oggetti.{$i}.magic_bonus")
                     ->label('Bonus magico')
+                    ->helperText('Solo per armi e armature magiche (+1, +2, +3). Lascia 0 per gli oggetti normali.')
                     ->numeric()
                     ->minValue(0)
                     ->maxValue(CharacterItem::MAX_MAGIC_BONUS)
                     ->prefix('+')
-                    ->default((int) ($item['magic_bonus'] ?? 0)),
+                    ->default((int) ($item['magic_bonus'] ?? 0))
+                    ->visible(fn (Get $get) => filled($get("oggetti.{$i}.base"))),
             ]))
             ->values()
             ->all();
