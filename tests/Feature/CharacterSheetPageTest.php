@@ -2,15 +2,20 @@
 
 declare(strict_types=1);
 
+use App\Actions\Characters\EquipItem;
 use App\Domain\Dnd\Ability;
 use App\Livewire\CastableSpells;
+use App\Livewire\EquipmentSummary;
+use App\Livewire\InventoryManager;
 use App\Livewire\SpellBook;
+use App\Livewire\WeaponAttacks;
 use App\Models\Character;
 use App\Models\CharacterItem;
 use App\Models\CharacterItemEffect;
 use App\Models\CharacterSpell;
 use App\Models\CharacterWeapon;
 use App\Models\User;
+use Livewire\Livewire;
 
 // Il Turno usa `characters.show`; le altre sezioni hanno route dedicate per mantenere compatibili i link alla scheda.
 function sezione(Character $character, string $quale): string
@@ -170,9 +175,10 @@ describe('la scheda', function () {
             ->assertSee('non è ancora stato scritto niente');
     });
 
-    it('mostra il bonus di attacco delle armi', function () {
+    it('mostra il bonus di attacco delle armi in mano', function () {
         $character = Character::factory()->create(['str' => 18, 'level' => 5]);
         $character->addToInventory('Spadone');
+        app(EquipItem::class)->equip($character->items()->where('name', 'Spadone')->firstOrFail());
         CharacterWeapon::factory()->for($character)->create([
             'name' => 'Spadone', 'attack_ability' => Ability::Str,
             'weapon_bonus' => 1, 'damage' => '2d6+4',
@@ -184,6 +190,38 @@ describe('la scheda', function () {
             ->assertSee('Spadone')
             ->assertSee('+8')
             ->assertSee('2d6+4');
+    });
+
+    it('nel Turno non mostra le armi nello zaino, ma il colpo senz\'armi', function () {
+        $character = Character::factory()->create(['str' => 16, 'level' => 1]);
+        $character->addToInventory('Spadone');
+
+        // Lo zaino sta nella stessa pagina: si guarda solo il riquadro degli attacchi.
+        Livewire::actingAs(suoi($character))
+            ->test(WeaponAttacks::class, ['character' => $character])
+            ->assertDontSee('Spadone')
+            ->assertSee('Colpo senz\'armi')
+            ->assertSee('Nessuna arma in mano: impugnala dallo zaino.');
+    });
+
+    it('impugnando dallo zaino, attacchi ed equipaggiamento si aggiornano', function () {
+        $character = Character::factory()->create(['str' => 16, 'level' => 1]);
+        $character->addToInventory('Spadone');
+        $spadone = $character->items()->where('name', 'Spadone')->firstOrFail();
+
+        Livewire::actingAs(suoi($character))
+            ->test(InventoryManager::class, ['character' => $character])
+            ->call('equip', $spadone->id)
+            ->assertDispatched(InventoryManager::EQUIPAGGIAMENTO_CAMBIATO);
+
+        Livewire::actingAs(suoi($character))
+            ->test(WeaponAttacks::class, ['character' => $character])
+            ->assertSee('Spadone')
+            ->assertDontSee('Colpo senz\'armi');
+
+        Livewire::actingAs(suoi($character))
+            ->test(EquipmentSummary::class, ['character' => $character])
+            ->assertSee('Spadone');
     });
 
     it('e la descrizione di un incantesimo si legge, non si scopre col mouse', function () {

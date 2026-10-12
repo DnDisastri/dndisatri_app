@@ -676,4 +676,21 @@ class Character extends Model
             ->sortByDesc('equipped')
             ->values();
     }
+
+    /**
+     * Il colpo senz'armi: chiunque ne è competente, danni 1 + Forza.
+     *
+     * @return array{name: string, attack: int, damage: string}
+     */
+    public function unarmedStrike(): array
+    {
+        $scores = $this->effectiveScores();
+        $mod = $scores->modifier(Ability::Str);
+
+        return [
+            'name' => 'Colpo senz\'armi',
+            'attack' => Checks::weaponAttack($scores, Ability::Str, $this->proficiencyBonus()),
+            'damage' => $mod === 0 ? '1' : '1'.Ability::format($mod),
+        ];
+    }
 }

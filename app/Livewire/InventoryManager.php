@@ -20,6 +20,8 @@ use Livewire\Component;
 /** Borsa e inventario con i comandi: cambiare monete, indossare, riporre, andare in sintonia. */
 class InventoryManager extends Component
 {
+    public const EQUIPAGGIAMENTO_CAMBIATO = 'equipaggiamento-cambiato';
+
     /** L'id non deve essere manomettibile dal browser: qui vive il permesso. */
     #[Locked]
     public int $characterId;
@@ -167,6 +169,7 @@ class InventoryManager extends Component
         ])->save();
 
         $this->modificaId = null;
+        $this->dispatch(self::EQUIPAGGIAMENTO_CAMBIATO);
     }
 
     /** Il ricordo del giocatore: è suo, e non passa a chi riceve l'oggetto. */
@@ -202,17 +205,17 @@ class InventoryManager extends Component
 
     public function equip(int $itemId): void
     {
-        $this->run($itemId, fn (CharacterItem $item) => app(EquipItem::class)->equip($item));
+        $this->runAndAnnounce($itemId, fn (CharacterItem $item) => app(EquipItem::class)->equip($item));
     }
 
     public function unequip(int $itemId): void
     {
-        $this->run($itemId, fn (CharacterItem $item) => app(EquipItem::class)->unequip($item));
+        $this->runAndAnnounce($itemId, fn (CharacterItem $item) => app(EquipItem::class)->unequip($item));
     }
 
     public function attune(int $itemId): void
     {
-        $this->run(
+        $this->runAndAnnounce(
             $itemId,
             fn (CharacterItem $item) => app(AttuneItem::class)->attune($item),
             ability: 'manageAttunement',
@@ -221,11 +224,19 @@ class InventoryManager extends Component
 
     public function release(int $itemId): void
     {
-        $this->run(
+        $this->runAndAnnounce(
             $itemId,
             fn (CharacterItem $item) => app(AttuneItem::class)->release($item),
             ability: 'manageAttunement',
         );
+    }
+
+    /** Equipaggiamento, attacchi e CA stanno fuori da questo componente: si avvisano. */
+    private function runAndAnnounce(int $itemId, callable $do, string $ability = 'manageEquipment'): void
+    {
+        if ($this->run($itemId, $do, $ability)) {
+            $this->dispatch(self::EQUIPAGGIAMENTO_CAMBIATO);
+        }
     }
 
     /**
@@ -249,7 +260,7 @@ class InventoryManager extends Component
      * suoi**: senza quel vincolo un id qualsiasi arrivato dal browser
      * lascerebbe spostare la roba di un altro.
      */
-    private function run(int $itemId, callable $do, string $ability = 'manageEquipment'): void
+    private function run(int $itemId, callable $do, string $ability = 'manageEquipment'): bool
     {
         $character = Character::findOrFail($this->characterId);
         $this->authorize($ability, $character);
@@ -260,7 +271,11 @@ class InventoryManager extends Component
             $do($item);
         } catch (\RuntimeException $e) {
             $this->addError('inventario', $e->getMessage());
+
+            return false;
         }
+
+        return true;
     }
 
     public function render()

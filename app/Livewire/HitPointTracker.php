@@ -8,6 +8,7 @@ use App\Actions\Characters\TakeRest;
 use App\Enums\RestType;
 use App\Models\Character;
 use Livewire\Attributes\Locked;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 /**
@@ -49,6 +50,13 @@ class HitPointTracker extends Component
     public function mount(Character $character): void
     {
         $this->characterId = $character->getKey();
+    }
+
+    /** Armatura, scudo e sintonia cambiano CA e caratteristiche: basta ridisegnarsi. */
+    #[On(InventoryManager::EQUIPAGGIAMENTO_CAMBIATO)]
+    public function rinfresca(): void
+    {
+        //
     }
 
     /** Apre il riquadro: non spende ancora niente, chiede il tiro. */
