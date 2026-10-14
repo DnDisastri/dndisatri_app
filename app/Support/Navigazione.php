@@ -67,7 +67,6 @@ final class Navigazione
         $voci = [
             // In cima: chiedere un posto e seguire le proprie richieste dev'essere a un tocco.
             self::voce('Calendario', 'sessions.index', Icon::Sessions, ['sessions.index', 'sessions.show']),
-            self::voce('Le mie prenotazioni', 'sessions.mine', Icon::Bookings, ['sessions.mine']),
             self::voce('Gilda', 'guild.index', Icon::Guild, ['guild.*', 'fallen.*']),
             self::voce('Build consigliate', 'builds.index', Icon::Builds),
             self::voce('Le mie richieste', 'proposals.index', Icon::Proposals),
@@ -76,6 +75,11 @@ final class Navigazione
             self::voce('Chi siamo', 'about', Icon::General),
             self::voce('Segnala un problema', 'bug-reports.create', Icon::BugReports),
         ];
+
+        // A DM e admin servono solo se giocano anche loro, con prenotazioni proprie.
+        if ((! $utente->isDm() && ! $utente->isAdmin()) || $utente->sessionBookings()->exists()) {
+            array_splice($voci, 1, 0, [self::voce('Le mie prenotazioni', 'sessions.mine', Icon::Bookings, ['sessions.mine'])]);
+        }
 
         if ($utente->isDm()) {
             array_unshift($voci, self::voce('Manuale', 'dm.manual', Icon::Manual, ['dm.manual']));

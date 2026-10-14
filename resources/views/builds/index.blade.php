@@ -14,7 +14,7 @@
             {{-- La fascia c'è sempre: la pillola resta nello stesso punto anche senza copertina. --}}
             <div class="relative h-24">
                 @if ($build->coverUrl())
-                    <img src="{{ $build->coverUrl() }}" alt="" class="h-full w-full object-cover">
+                    <img loading="lazy" decoding="async" src="{{ $build->coverUrl() }}" alt="" class="h-full w-full object-cover">
                 @else
                     <span class="flex h-full w-full items-center justify-center bg-page">
                         <x-icona :is="\App\Enums\Icon::Builds" class="h-8 w-8 text-muted" />

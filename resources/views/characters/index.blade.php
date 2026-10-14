@@ -37,7 +37,7 @@
                     {{-- `flex-1`: nella griglia i pulsanti restano allineati anche se le card hanno altezze diverse. --}}
                     <div class="flex flex-1 items-center justify-center gap-3">
                         @if ($character->photoUrl())
-                            <img src="{{ $character->photoUrl() }}" alt="{{ $character->name }}"
+                            <img loading="lazy" decoding="async" src="{{ $character->photoUrl() }}" alt="{{ $character->name }}"
                                 class="h-20 w-20 shrink-0 rounded-lg object-cover md:h-28 md:w-28">
                         @else
                             <span class="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg bg-page md:h-28 md:w-28">

@@ -63,7 +63,8 @@ trait ActsAsCharacter
     /** @return Collection<int,Character> */
     public function myCharacters(): Collection
     {
-        return auth()->user()?->characters()->alive()->orderBy('name')->get() ?? collect();
+        // Una lettura per richiesta: la usano sia la scelta del personaggio sia la barra.
+        return once(fn () => auth()->user()?->characters()->alive()->orderBy('name')->get() ?? collect());
     }
 
     protected function resolveCharacter(): void

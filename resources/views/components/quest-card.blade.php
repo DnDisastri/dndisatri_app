@@ -8,7 +8,7 @@
 {{-- La card di una quest in Home, campagna ed elenco. `campaign`: mostra il nome
      della campagna; `rewards`: le ricompense; `dim`: la card spenta. --}}
 @php
-    $miInteressa = $quest->isActive() && $quest->isInterested(auth()->user());
+    $miInteressa = $quest->isActive() && ($quest->interested_by_viewer ?? $quest->isInterested(auth()->user()));
     $interessati = $quest->interested_count ?? $quest->interested()->count();
 @endphp
 

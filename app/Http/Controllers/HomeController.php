@@ -32,12 +32,16 @@ class HomeController extends Controller
         $sessions = GameSession::query()
             ->upcoming()
             ->with('campaign')
+            ->withCount(['bookings as confirmed_bookings_count' => fn ($q) => $q->confirmed()])
             ->limit(5)
             ->get();
+
+        GameSession::rememberBookingsOf(auth()->user(), $sessions);
 
         $quests = Quest::query()
             ->active()
             ->withCount('interested')
+            ->withInterestOf(auth()->user())
             ->with(['campaign', 'session'])
             ->latest('id')
             ->limit(3)
@@ -53,8 +57,9 @@ class HomeController extends Controller
             'posts' => $posts,
             'novita' => $this->novita($events->count(), $sessions->count(), $quests->count()),
 
-            // Banner del tutorial solo a chi non ha ancora un eroe.
-            'senzaEroe' => auth()->user()->characters()->doesntExist(),
+            // Banner del tutorial solo ai giocatori che non hanno ancora un eroe.
+            'senzaEroe' => ! auth()->user()->isDm() && ! auth()->user()->isAdmin()
+                && auth()->user()->characters()->doesntExist(),
         ]);
     }
 

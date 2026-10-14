@@ -113,7 +113,7 @@
         </div>
 
         <div class="mt-2 flex gap-2">
-            <input type="number" wire:model="amount" min="1" aria-label="Quanti punti ferita"
+            <input type="number" wire:model="amount" data-sopra-tastiera min="1" aria-label="Quanti punti ferita"
                    class="w-24 shrink-0 rounded-md border border-line bg-page px-2 py-2 text-center text-sm text-fg">
             <x-button full type="button" wire:click="applica"
                       :variant="$modo === 'cure' ? 'secondary' : 'primary'">Applica</x-button>
@@ -129,7 +129,7 @@
 
         @if ($mostraTemp)
             <div class="mt-2 flex gap-2">
-                <input type="number" wire:model="tempAmount" min="1" aria-label="Quanti temporanei"
+                <input type="number" wire:model="tempAmount" data-sopra-tastiera min="1" aria-label="Quanti temporanei"
                        class="w-24 shrink-0 rounded-md border border-line bg-page px-2 py-2 text-center text-sm text-fg">
                 <x-button full type="button" variant="quiet" wire:click="aggiungiTemporanei"
                           title="Non si sommano: vince il valore più alto">Aggiungi temporanei</x-button>
@@ -192,7 +192,7 @@
                     <label for="dado-vita" class="block text-muted">
                         Quanto hai fatto col d{{ $character->hit_die }}?
                     </label>
-                    <input id="dado-vita" type="number" wire:model="dadoVita"
+                    <input id="dado-vita" type="number" data-sopra-tastiera wire:model="dadoVita"
                            min="1" max="{{ $character->hit_die }}" autofocus
                            class="mt-1 w-full rounded-md border border-line bg-page px-2 py-2
                                   text-center text-lg text-fg">

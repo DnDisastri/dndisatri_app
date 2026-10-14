@@ -44,6 +44,8 @@ class GameSessionController extends Controller
             ->get();
 
         $utente = $request->user();
+        GameSession::rememberBookingsOf($utente, $sessions);
+
         $mieiPosti = $utente->sessionBookings()
             ->whereIn('game_session_id', $sessions->pluck('id'))
             ->whereNotIn('status', [SeatStatus::Withdrawn->value, SeatStatus::Unverified->value])

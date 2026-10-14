@@ -6,7 +6,6 @@
 
     $capacita = Features::perCosto($character);
     $senzaPrivilegi = Features::sottoclassiSenzaPrivilegi($character);
-    $attacchi = $character->attacks();
     $trucchetti = $character->casterType()->castsSpells()
         ? $character->spells->where('level', 0)->sortBy('name')
         : collect();
@@ -31,24 +30,8 @@
 
 <x-panel :title="ActionCost::Action->label()" :icon="Icon::Action">
 
-    @if ($attacchi->isNotEmpty())
-        <p class="{{ $sotto }}"><x-icona :is="Icon::Attacks" class="h-3.5 w-3.5" /> Attacchi</p>
-        <div>
-            @foreach ($attacchi as $attacco)
-                <div class="flex items-baseline justify-between gap-3 border-t border-line py-2 first:border-t-0">
-                    <span class="font-medium text-fg">
-                        {{ $attacco['name'] }}
-                        @if ($attacco['equipped'])
-                            <span class="text-xs text-muted">· in mano</span>
-                        @endif
-                    </span>
-                    <span class="whitespace-nowrap text-sm text-muted">
-                        <span class="font-bold text-fg">{{ Ability::format($attacco['attack']) }} colpire</span> · {{ $attacco['damage'] }}
-                    </span>
-                </div>
-            @endforeach
-        </div>
-    @endif
+    {{-- Componente a sé: si aggiorna quando si impugna o si ripone dall'inventario. --}}
+    <livewire:weapon-attacks :character="$character" :key="'att-'.$character->id" />
 
     @if ($trucchetti->isNotEmpty())
         <p class="{{ $sotto }}"><x-icona :is="Icon::Cantrips" class="h-3.5 w-3.5" /> Trucchetti </p>

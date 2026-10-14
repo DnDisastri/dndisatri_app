@@ -54,10 +54,11 @@ class EventForm
                     FileUpload::make('cover_path')
                         ->label('Immagine')
                         ->image()
-                        ->acceptedFileTypes(['image/png', 'image/jpeg'])
+                        ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/webp'])
                         ->disk('public')
                         ->directory('eventi')
                         ->maxSize(4096)
+                        ->helperText('Soggetto al centro: nell\'elenco degli eventi si vede tagliata a quadrato. Viene ridotta da sola a 1600 px.')
                         ->columnSpanFull(),
                 ]),
 

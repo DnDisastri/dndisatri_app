@@ -8,7 +8,8 @@
 
         {{-- `min-w-0`: senza, il carosello delle sezioni allargherebbe la colonna. --}}
         <div class="space-y-4 xl:grid xl:grid-cols-[20rem_minmax(0,1fr)] xl:items-start xl:gap-6 xl:space-y-0">
-        <x-panel class="xl:sticky xl:top-8 xl:max-h-[calc(100dvh-4rem)] xl:overflow-y-auto">
+        {{-- Colonna fissa solo col mouse: su iPad la tastiera la schiaccerebbe e i campi finirebbero sotto. --}}
+        <x-panel class="pointer-fine:xl:sticky pointer-fine:xl:top-8 pointer-fine:xl:max-h-[calc(100dvh-4rem)] pointer-fine:xl:overflow-y-auto">
             <div class="flex flex-row justify-between items-center gap-1 mb-1">
                 <h2 class="text-xl text-fg  ">{{ $character->name }}</h2>
 

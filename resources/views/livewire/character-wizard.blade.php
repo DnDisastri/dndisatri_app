@@ -387,7 +387,7 @@
                         {{-- Fuori da `wire:model`: non deve contare fra le scelte di classe. --}}
                         <div class="flex items-center gap-2 rounded-md border border-line bg-page px-3 py-2 text-sm">
                             <input type="checkbox" checked disabled class="accent-active">
-                            <span class="text-muted">{{ $skill['name'] }}</span>
+                            <span class="text-muted">{{ $skill['name'] }} ({{ $skill['ability'] }})</span>
                             <x-badge tone="own" class="ml-auto">dal background</x-badge>
                         </div>
                     @else
@@ -398,7 +398,7 @@
                             ])>
                             <input type="checkbox" wire:model.live="skills" value="{{ $key }}" class="accent-active"
                                    @disabled(! in_array($key, $skills, true) && count($skills) >= ClassRules::skillCount($class))>
-                            <span class="text-fg">{{ $skill['name'] }}</span>
+                            <span class="text-fg">{{ $skill['name'] }} <span class="text-muted">({{ $skill['ability'] }})</span></span>
                         </label>
                     @endif
                 @endforeach

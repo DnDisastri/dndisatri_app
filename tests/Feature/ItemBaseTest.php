@@ -186,6 +186,29 @@ describe('il bottino', function () {
             ->and($change->fresh()->grant_items[0]['base'])->toBe('Armatura a Piastre');
     });
 
+    it('il bonus magico compare solo per gli oggetti con un tipo', function () {
+        $change = app(ProposeChange::class)->loot($this->pg, $this->giocatore, items: [
+            ['name' => 'Lama di Thalia', 'qty' => 1, 'base' => 'Spada Lunga'],
+            ['name' => 'Corda', 'qty' => 1],
+        ]);
+
+        $this->actingAs($this->dm);
+
+        Livewire::test(ViewPendingChange::class, ['record' => $change->getRouteKey()])
+            ->mountAction('approva')
+            ->assertActionDataSet(['oggetti.0.base' => 'Spada Lunga'])
+            // Il bonus della corda è nascosto: anche se arrivasse un valore, non passa.
+            ->setActionData(['oggetti' => [
+                0 => ['base' => 'Spada Lunga', 'magic_bonus' => 2],
+                1 => ['base' => null, 'magic_bonus' => 3],
+            ]])
+            ->callMountedAction()
+            ->assertHasNoActionErrors();
+
+        expect($this->pg->items()->where('name', 'Lama di Thalia')->value('magic_bonus'))->toBe(2)
+            ->and($this->pg->items()->where('name', 'Corda')->value('magic_bonus'))->toBe(0);
+    });
+
     it('un tipo inventato o un bonus esagerato non passano', function () {
         $change = app(ProposeChange::class)->loot($this->pg, $this->giocatore, items: [['name' => 'Bastone', 'qty' => 1]]);
 

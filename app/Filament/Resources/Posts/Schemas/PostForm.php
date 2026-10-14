@@ -67,7 +67,7 @@ class PostForm
                     FileUpload::make('cover_path')
                         ->label('Immagine')
                         ->image()
-                        ->acceptedFileTypes(['image/png', 'image/jpeg'])
+                        ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/webp'])
                         ->disk('public')
                         ->directory('news')
                         ->maxSize(4096)

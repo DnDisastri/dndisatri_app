@@ -51,7 +51,7 @@
    ]) }}>
 
     @if ($image)
-        <img src="{{ $image }}" alt="" class="absolute inset-0 h-full w-full object-cover">
+        <img loading="lazy" decoding="async" src="{{ $image }}" alt="" class="absolute inset-0 h-full w-full object-cover">
     @endif
 
     {{-- Sopra l'immagine, sotto il testo. --}}

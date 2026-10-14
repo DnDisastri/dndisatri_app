@@ -48,7 +48,7 @@ class CampaignController extends Controller
             'nextSession' => $campaign->sessions()->upcoming()->first(),
 
             // Solo le aperte: le concluse stanno nel Libro Mastro.
-            'quests' => $campaign->quests()->active()->with('session')->withCount('interested')->latest('id')->get(),
+            'quests' => $campaign->quests()->active()->with('session')->withCount('interested')->withInterestOf(auth()->user())->latest('id')->get(),
 
             // Il link al Libro Mastro compare solo se non porta a zero righe.
             'questsConcluse' => $campaign->quests()->archived()->count(),

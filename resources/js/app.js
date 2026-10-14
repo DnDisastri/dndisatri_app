@@ -191,14 +191,17 @@ if (tutorial) {
 
 // Al focus la barra sale in cima, così i risultati (live) non finiscono sotto
 // la tastiera. Delega su `document`: sopravvive ai ridisegni di Livewire.
+// `data-sopra-tastiera` fa lo stesso per i campi piccoli, come i punti ferita: al centro, non in cima.
 document.addEventListener('focusin', (evento) => {
-    const campo = evento.target.closest('[data-cerca]');
+    const campo = evento.target.closest('[data-cerca], [data-sopra-tastiera]');
 
     // Col mouse non c'è tastiera a schermo: scorrere sarebbe solo uno scatto.
     if (!campo || !window.matchMedia('(pointer: coarse)').matches) return;
 
+    const dove = campo.matches('[data-cerca]') ? 'start' : 'center';
+
     // Ritardo: lascia aprire la tastiera prima di misurare dove scorrere.
-    setTimeout(() => campo.scrollIntoView({ block: 'start', behavior: 'smooth' }), 300);
+    setTimeout(() => campo.scrollIntoView({ block: dove, behavior: 'smooth' }), 300);
 });
 
 // Invio chiude la tastiera; la ricerca è già viva mentre si scrive.
@@ -236,7 +239,19 @@ const sfogliabile = (scheda, tab) => {
     // Il passo include il `gap` fra le sezioni.
     const passo = () => scheda.clientWidth + (parseFloat(getComputedStyle(scheda).columnGap) || 0);
 
-    const indice = () => Math.round(scheda.scrollLeft / passo());
+    // Safari durante lo snap può lasciare `scrollLeft` indietro: vale prima la sezione davvero a vista.
+    let aVista = null;
+    const indice = () => aVista ?? Math.round(scheda.scrollLeft / passo());
+
+    // Mentre si sfoglia l'altezza cresce subito fino alla più alta delle due a cavallo: niente sezione tagliata.
+    const altezzaFra = (a, b) => Math.max(...[a, b]
+        .map((j) => sezioni[Math.max(0, Math.min(sezioni.length - 1, j))]?.offsetHeight ?? 0));
+
+    const allargaA = (altezza) => {
+        if (altezza > scheda.offsetHeight) {
+            scheda.style.height = `${altezza}px`;
+        }
+    };
 
     const adattaAltezza = () => {
         const corrente = sezioni[Math.max(0, Math.min(sezioni.length - 1, indice()))];
@@ -297,11 +312,28 @@ const sfogliabile = (scheda, tab) => {
 
         attesa = requestAnimationFrame(() => {
             attesa = null;
+            const posizione = scheda.scrollLeft / passo();
+            allargaA(altezzaFra(Math.floor(posizione), Math.ceil(posizione)));
             segnaPill();
         });
     }, { passive: true });
 
-    const vaiA = (j) => scheda.scrollTo({ left: j * passo(), behavior: 'smooth' });
+    const vista = new IntersectionObserver((voci) => {
+        voci.forEach((voce) => {
+            if (voce.intersectionRatio >= 0.6) {
+                aVista = sezioni.indexOf(voce.target);
+                segnaPill();
+                clearTimeout(fine);
+                fine = setTimeout(assesta, 150);
+            }
+        });
+    }, { root: scheda, threshold: 0.6 });
+    sezioni.forEach((s) => vista.observe(s));
+
+    const vaiA = (j) => {
+        allargaA(altezzaFra(indice(), j));
+        scheda.scrollTo({ left: j * passo(), behavior: 'smooth' });
+    };
 
     tab.forEach((t, j) => t.addEventListener('click', () => vaiA(j)));
 
