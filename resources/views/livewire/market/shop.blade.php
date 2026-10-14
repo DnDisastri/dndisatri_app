@@ -4,10 +4,13 @@
 
     <x-market-search placeholder="Cerca nell'Emporio">
         <select wire:model.live="ordine" aria-label="Ordina" title="Ordina"
-                class="shrink-0 rounded-xl border border-line bg-surface px-2 py-2 text-sm text-fg focus:border-active focus:outline-none">
-            @foreach (\App\Livewire\Market\Shop::ORDINI as $valore => $etichetta)
-                <option value="{{ $valore }}">{{ $etichetta }}</option>
-            @endforeach
+                class="w-32 shrink-0 rounded-xl border border-line bg-surface px-2 py-2 text-sm text-fg focus:border-active sm:w-auto focus:outline-none">
+            {{-- Ordina e basta, non filtra: il gruppo lo dice anche a menu aperto. --}}
+            <optgroup label="Ordina">
+                @foreach (\App\Livewire\Market\Shop::ORDINI as $valore => $etichetta)
+                    <option value="{{ $valore }}">{{ $etichetta }}</option>
+                @endforeach
+            </optgroup>
         </select>
     </x-market-search>
 

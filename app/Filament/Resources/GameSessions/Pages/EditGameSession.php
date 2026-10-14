@@ -5,6 +5,7 @@ namespace App\Filament\Resources\GameSessions\Pages;
 use App\Actions\Sessions\RecordAttendance;
 use App\Actions\Sessions\WriteRecap;
 use App\Filament\Resources\GameSessions\GameSessionResource;
+use App\Models\GameSession;
 use App\Models\User;
 use Filament\Actions\DeleteAction;
 use Filament\Notifications\Notification;
@@ -36,6 +37,7 @@ class EditGameSession extends EditRecord
         $data['presenze'] = $this->record->attendees->map(fn (User $user) => [
             'user_id' => $user->id,
             'character_id' => $user->pivot->character_id,
+            'session_table_id' => $user->pivot->session_table_id,
         ])->all();
 
         return $data;
@@ -45,6 +47,8 @@ class EditGameSession extends EditRecord
     // dopo con le rispettive azioni, che tengono in ordine firma e pivot.
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        $data = GameSession::withoutSpecialFieldsUnlessSpecial($data);
+
         $nuovo = (string) ($data['recap'] ?? '');
         unset($data['recap']);
 
@@ -78,8 +82,13 @@ class EditGameSession extends EditRecord
             ->filter(fn ($riga) => filled($riga['user_id'] ?? null))
             ->mapWithKeys(fn ($riga) => [(int) $riga['user_id'] => $riga['character_id'] ?? null]);
 
+        $tavoli = collect($this->presenze)
+            ->filter(fn ($riga) => filled($riga['user_id'] ?? null) && filled($riga['session_table_id'] ?? null))
+            ->mapWithKeys(fn ($riga) => [(int) $riga['user_id'] => (int) $riga['session_table_id']])
+            ->all();
+
         try {
-            app(RecordAttendance::class)->handle($this->record, $mappa);
+            app(RecordAttendance::class)->handle($this->record, $mappa, $tavoli);
         } catch (InvalidArgumentException $e) {
             Notification::make()->title($e->getMessage())->danger()->send();
         }

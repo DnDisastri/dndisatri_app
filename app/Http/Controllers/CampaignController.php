@@ -26,6 +26,8 @@ class CampaignController extends Controller
             ->with('dm')
             // `ended_at` nullo = attiva: in SQL il nullo non si ordina da solo.
             ->orderByRaw('CASE WHEN ended_at IS NULL THEN 0 ELSE 1 END')
+            // La speciale dopo le campagne aperte: è un archivio di serate, non un tavolo.
+            ->orderBy('is_special')
             ->orderByDesc('season')
             ->orderBy('title')
             ->get();

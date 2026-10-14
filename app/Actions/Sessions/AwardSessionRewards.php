@@ -14,7 +14,8 @@ use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 /**
- * Le monete di fine sessione, uguali per tutti i personaggi segnati presenti.
+ * Le monete di fine sessione, uguali per tutti i personaggi segnati presenti,
+ * per i presenti di un tavolo o per uno solo.
  * Tutto o niente: una borsa che rifiuta annulla anche le altre. Ogni consegna
  * resta nella sessione, così si vede se sono già state date.
  */
@@ -23,15 +24,25 @@ final class AwardSessionRewards
     public function __construct(private readonly GrantCoins $grant) {}
 
     /** @return Collection<int, Character> chi le ha ricevute */
-    public function handle(GameSession $session, User $actor, Coins $perHead, string $reason): Collection
+    public function handle(GameSession $session, User $actor, Coins $perHead, string $reason, ?int $tableId = null, ?int $characterId = null): Collection
     {
         if ($perHead->isEmpty() || $perHead->hasNegative()) {
             throw new InvalidArgumentException('Indica quante monete a testa.');
         }
 
+        // Niente `when()`: passerebbe la query sottostante, che non conosce `wherePivot`.
+        $relazione = $session->attendees();
+
+        if ($tableId !== null) {
+            $relazione->wherePivot('session_table_id', $tableId);
+        }
+
+        $presenti = $relazione->pluck('game_session_user.character_id')->filter();
+
         $personaggi = Character::query()
             ->alive()
-            ->whereIn('id', $session->attendees()->pluck('game_session_user.character_id')->filter())
+            ->whereIn('id', $presenti)
+            ->when($characterId !== null, fn ($q) => $q->whereKey($characterId))
             ->orderBy('name')
             ->get();
 
@@ -41,7 +52,7 @@ final class AwardSessionRewards
 
         $motivo = "{$reason}, {$session->displayTitle()}";
 
-        DB::transaction(function () use ($session, $actor, $perHead, $motivo, $reason, $personaggi) {
+        DB::transaction(function () use ($session, $actor, $perHead, $motivo, $reason, $personaggi, $tableId) {
             foreach ($personaggi as $personaggio) {
                 $this->grant->give($personaggio, $perHead, $actor, $motivo);
             }
@@ -52,6 +63,7 @@ final class AwardSessionRewards
                     [
                         'coins' => $perHead->nonZero(),
                         'reason' => $reason,
+                        'table' => $tableId === null ? null : $session->tables()->whereKey($tableId)->value('name'),
                         'by' => $actor->name,
                         'at' => now()->toIso8601String(),
                         'characters' => $personaggi->pluck('name')->all(),

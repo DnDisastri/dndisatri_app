@@ -123,6 +123,14 @@ describe('cercare nel mercato', function () {
         'valore manomesso' => ['drop table', ['Ascia', 'Borraccia', 'Corda']],
     ]);
 
+    it('il menu dice che ordina, non che filtra', function () {
+        Livewire::actingAs(giocatoreCon()->user)
+            ->test(Shop::class)
+            ->assertSeeHtml('<optgroup label="Ordina">')
+            ->assertSee('Per categoria')
+            ->assertSee('Prezzo crescente');
+    });
+
     it('anche fra gli annunci', function () {
         $venditore = giocatoreCon();
         $venditore->addToInventory('Spada Lunga', valueCp: 1500);

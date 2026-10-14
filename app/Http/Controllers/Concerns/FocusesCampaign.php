@@ -12,11 +12,14 @@ trait FocusesCampaign
     /** @return array{0: Collection<int, Campaign>, 1: Collection<int, Campaign>} le mie e quelle degli altri */
     protected function campagneDelDm(User $user): array
     {
-        $mie = Campaign::query()->active()->runBy($user)
-            ->orderByDesc('season')->orderBy('title')->get();
+        // La speciale è di tutti i DM: sta fra le mie, in fondo.
+        $mie = Campaign::query()->active()
+            ->where(fn ($q) => $q->where('dm_id', $user->getKey())->orWhere('is_special', true))
+            ->orderBy('is_special')->orderByDesc('season')->orderBy('title')->get();
 
         $altre = Campaign::query()->active()
-            ->where('dm_id', '!=', $user->getKey())
+            ->where('is_special', false)
+            ->where(fn ($q) => $q->whereNull('dm_id')->orWhere('dm_id', '!=', $user->getKey()))
             ->with('dm')
             ->orderByDesc('season')->orderBy('title')->get();
 

@@ -30,7 +30,7 @@ class CampaignsTable
                 TextColumn::make('dm.name')
                     ->label('Dungeon master')
                     ->searchable()
-                    ->placeholder('Vuoto')
+                    ->placeholder(fn (Campaign $record) => $record->isSpecial() ? 'Tutti i DM' : 'Vuoto')
                     ->visibleFrom('md'),
 
                 TextColumn::make('stato')

@@ -63,6 +63,6 @@ class QuestPolicy
     private function runsTheTable(User $user, Campaign $campaign): bool
     {
         return $user->isAdmin()
-            || ($user->isDm() && $campaign->dm_id === $user->getKey());
+            || ($user->isDm() && ($campaign->isSpecial() || $campaign->dm_id === $user->getKey()));
     }
 }

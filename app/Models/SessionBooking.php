@@ -39,6 +39,12 @@ class SessionBooking extends Model
         return $this->belongsTo(User::class);
     }
 
+    /** Il tavolo assegnato dai DM, nelle sessioni speciali. */
+    public function table(): BelongsTo
+    {
+        return $this->belongsTo(SessionTable::class, 'session_table_id');
+    }
+
     public function character(): BelongsTo
     {
         return $this->belongsTo(Character::class);

@@ -31,7 +31,7 @@ class HomeController extends Controller
 
         $sessions = GameSession::query()
             ->upcoming()
-            ->with('campaign')
+            ->with(['campaign', 'dms', 'tables.dms'])
             ->withCount(['bookings as confirmed_bookings_count' => fn ($q) => $q->confirmed()])
             ->limit(5)
             ->get();

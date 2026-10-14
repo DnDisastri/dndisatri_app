@@ -34,7 +34,7 @@ class GameSessionPolicy
 
     public function update(User $user, GameSession $session): bool
     {
-        return $this->runsTheTable($user, $session->campaign);
+        return $this->runsTheTable($user, $session->campaign) || ($user->isDm() && $session->isRunBy($user));
     }
 
     /**
@@ -58,6 +58,7 @@ class GameSessionPolicy
     {
         return $session->acceptsBookings()
             && $session->campaign?->dm_id !== $user->getKey()
+            && ! $session->isRunBy($user)
             && ! $session->hasParticipant($user);
     }
 
@@ -86,12 +87,13 @@ class GameSessionPolicy
 
     public function delete(User $user, GameSession $session): bool
     {
-        return $this->runsTheTable($user, $session->campaign);
+        return $this->runsTheTable($user, $session->campaign) || ($user->isDm() && $session->isRunBy($user));
     }
 
+    /** La campagna speciale non ha titolare: le sue sessioni le gestisce qualsiasi DM. */
     private function runsTheTable(User $user, Campaign $campaign): bool
     {
         return $user->isAdmin()
-            || ($user->isDm() && $campaign->dm_id === $user->getKey());
+            || ($user->isDm() && ($campaign->isSpecial() || $campaign->dm_id === $user->getKey()));
     }
 }

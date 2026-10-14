@@ -53,6 +53,12 @@
                 <x-badge tone="accent">Da giocare</x-badge>
             @endif
         </p>
+
+        {{-- Solo se c'è qualcuno oltre al titolare: altrimenti lo dice già la campagna. --}}
+        @if ($session->dms->isNotEmpty())
+            @php $conducono = $session->conductors(); @endphp
+            <p class="mt-1 text-sm text-muted">{{ $conducono->count() === 1 ? 'Conduce' : 'Conducono' }} {{ $conducono->pluck('name')->join(', ', ' e ') }}</p>
+        @endif
     </div>
 
     {{-- Due colonne fisse: a sinistra le persone (chi gioca, chi c'era, chiudere), a destra preparazione e racconto.
@@ -67,8 +73,13 @@
             @include('sessions.partials.prenotazioni')
         @endif
 
+        {{-- Con i tavoli, chi c'era si legge tavolo per tavolo. --}}
+        @if ($session->tables->isNotEmpty())
+            @include('sessions.partials.tavoli')
+        @endif
+
     {{-- Le presenze vengono mostrate solo dopo la sessione: una prenotazione non equivale a una presenza. --}}
-        @unless ($session->isUpcoming())
+        @if (! $session->isUpcoming() && $session->tables->isEmpty())
             <x-panel>
                 <h3 class="flex items-center gap-2 text-lg font-semibold text-fg">
                     <x-icona :is="Icon::Characters" class="h-5 w-5" /> Chi c'era
@@ -107,7 +118,7 @@
                     <p class="mt-3 text-sm italic text-muted">Le presenze non sono ancora state segnate.</p>
                 @endif
             </x-panel>
-        @endunless
+        @endif
 
         @if ($scrive || $segna)
             @include('sessions.partials.chiudi')

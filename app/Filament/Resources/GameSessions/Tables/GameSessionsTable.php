@@ -20,7 +20,7 @@ class GameSessionsTable
             ->defaultSort('played_at', 'desc')
             // recapWrittenBy si legge in una description: va precaricato, o con
             // il lazy loading disattivato la tabella esplode appena c'è una sessione.
-            ->modifyQueryUsing(fn ($query) => $query->with(['campaign', 'recapWrittenBy']))
+            ->modifyQueryUsing(fn ($query) => $query->with(['campaign', 'recapWrittenBy', 'dms', 'tables.dms']))
             ->columns([
                 TextColumn::make('campaign.title')
                     ->label('Campagna')

@@ -9,8 +9,10 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Slider;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Str;
 
@@ -43,13 +45,22 @@ class CampaignForm
                                 ->helperText('Si scrive da solo dal titolo. Modificalo solo se vuoi: è la parte finale dell\'indirizzo della pagina.'),
 
                             TextInput::make('season')
-                                ->label('Stagione')
+                                ->label('Prima stagione')
                                 ->numeric()
                                 ->minValue(1)
                                 ->required()
                                 // Default: la stagione più alta già esistente.
                                 ->default(fn () => max(Campaign::seasons() ?: [1]))
-                                ->helperText('Serve a raggruppare le campagne nell\'elenco.'),
+                                ->helperText('Serve a raggruppare le campagne nell\'elenco.')
+                                ->hidden(fn (Get $get) => (bool) $get('is_special')),
+
+                            TextInput::make('last_season')
+                                ->label('Ultima stagione')
+                                ->numeric()
+                                ->minValue(1)
+                                ->gte('season')
+                                ->helperText('Solo se dura più stagioni. Vuota = una stagione sola.')
+                                ->hidden(fn (Get $get) => (bool) $get('is_special')),
 
                             TextInput::make('price_modifier')
                                 ->label('Prezzi del Manuale')
@@ -113,6 +124,14 @@ class CampaignForm
 
             Section::make('Chi conduce')
                 ->schema([
+                    // Solo un admin la crea: la speciale è di tutti i DM e non si chiude.
+                    Toggle::make('is_special')
+                        ->label('Campagna delle sessioni speciali')
+                        ->helperText('Raccoglie multitavolo e altre sessioni fuori dalle campagne: niente DM titolare, la gestiscono tutti i DM, non si chiude.')
+                        ->live()
+                        ->visible(fn () => auth()->user()->isAdmin())
+                        ->columnSpanFull(),
+
                     Select::make('dm_id')
                         ->label('Dungeon master')
                         ->relationship(
@@ -123,7 +142,8 @@ class CampaignForm
                         )
                         ->searchable()
                         ->preload()
-                        ->required()
+                        ->required(fn (Get $get) => ! $get('is_special'))
+                        ->hidden(fn (Get $get) => (bool) $get('is_special'))
                         // Solo un admin può assegnare la campagna a un altro DM.
                         ->default(fn () => auth()->id())
                         ->disabled(fn () => ! auth()->user()->isAdmin())

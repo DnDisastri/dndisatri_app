@@ -22,7 +22,7 @@
         <h2 class="text-2xl text-fg">{{ $campaign->title }}</h2>
 
         <p class="mt-1 flex flex-wrap items-center justify-center gap-2 text-sm text-muted">
-            <span>Season {{ $campaign->season }}</span>
+            <span>{{ $campaign->seasonLabel() }}</span>
 
             @if ($campaign->hasQuestGiver())
                 <span>·</span>
@@ -36,6 +36,8 @@
 
         @if ($campaign->dm)
             <p class="mt-1 text-sm text-muted">Conduce {{ $campaign->dm->name }}</p>
+        @elseif ($campaign->isSpecial())
+            <p class="mt-1 text-sm text-muted">Le conducono tutti i dungeon master</p>
         @endif
     </div>
 
