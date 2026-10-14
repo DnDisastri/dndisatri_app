@@ -38,7 +38,7 @@ class DmController extends Controller
             'eroi' => $sessione?->isUpcoming() ? $sessione->bookedCharacters() : collect(),
             'combattimenti' => $corrente ? $corrente->encounters()->open()->with('session')->latest('updated_at')->get() : collect(),
             // La campagna di un altro: la home lo dice, senza impedirlo.
-            'sostituto' => $corrente !== null && $corrente->dm_id !== $user->getKey(),
+            'sostituto' => $corrente !== null && ! $corrente->isSpecial() && $corrente->dm_id !== $user->getKey(),
         ]);
     }
 

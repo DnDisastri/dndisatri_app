@@ -32,10 +32,10 @@ class CampaignPolicy
         return $user->isAdmin() || $this->owns($user, $campaign);
     }
 
-    /** Chiudere una campagna è irreversibile. */
+    /** Chiudere una campagna è irreversibile; la speciale non si chiude mai. */
     public function end(User $user, Campaign $campaign): bool
     {
-        return ($user->isAdmin() || $this->owns($user, $campaign)) && $campaign->isActive();
+        return ($user->isAdmin() || $this->owns($user, $campaign)) && $campaign->isActive() && ! $campaign->isSpecial();
     }
 
     public function delete(User $user, Campaign $campaign): bool
@@ -43,8 +43,9 @@ class CampaignPolicy
         return $user->isAdmin();
     }
 
+    /** La speciale non ha titolare: è di tutti i DM. */
     private function owns(User $user, Campaign $campaign): bool
     {
-        return $user->isDm() && $campaign->dm_id === $user->getKey();
+        return $user->isDm() && ($campaign->isSpecial() || $campaign->dm_id === $user->getKey());
     }
 }

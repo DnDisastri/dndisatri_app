@@ -33,6 +33,12 @@ class CampaignFactory extends Factory
         return $this->state(fn () => ['ended_at' => now()]);
     }
 
+    /** La campagna delle sessioni speciali: senza titolare. */
+    public function special(): static
+    {
+        return $this->state(fn () => ['is_special' => true, 'dm_id' => null, 'title' => 'Sessioni speciali', 'quest_giver' => null]);
+    }
+
     public function runBy(User $dm): static
     {
         return $this->state(fn () => ['dm_id' => $dm->getKey()]);

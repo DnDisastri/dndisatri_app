@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\GameSessions\Schemas;
 
+use App\Enums\SpecialSessionType;
+use App\Models\Campaign;
 use App\Models\Character;
 use App\Models\User;
 use Filament\Forms\Components\DateTimePicker;
@@ -20,6 +22,12 @@ use Filament\Schemas\Schema;
  */
 class GameSessionForm
 {
+    /** La campagna scelta è quella delle sessioni speciali. */
+    private static function speciale(Get $get): bool
+    {
+        return (bool) Campaign::query()->whereKey($get('campaign_id'))->value('is_special');
+    }
+
     public static function configure(Schema $schema): Schema
     {
         return $schema
@@ -32,12 +40,29 @@ class GameSessionForm
                             ->relationship('campaign', 'title')
                             ->searchable()
                             ->preload()
+                            ->live()
                             ->required(),
+
+                        Select::make('special_type')
+                            ->label('Tipo di sessione speciale')
+                            ->options(SpecialSessionType::options())
+                            ->default(SpecialSessionType::Opening->value)
+                            ->required(fn (Get $get) => self::speciale($get))
+                            ->visible(fn (Get $get) => self::speciale($get)),
+
+                        TextInput::make('season')
+                            ->label('Stagione')
+                            ->numeric()
+                            ->minValue(1)
+                            ->default(fn () => max(Campaign::seasons() ?: [1]))
+                            ->required(fn (Get $get) => self::speciale($get))
+                            ->visible(fn (Get $get) => self::speciale($get)),
 
                         TextInput::make('number')
                             ->label('Numero')
                             ->helperText('La progressione dentro la campagna. Si può lasciare vuoto.')
-                            ->numeric(),
+                            ->numeric()
+                            ->hidden(fn (Get $get) => self::speciale($get)),
 
                         TextInput::make('title')
                             ->label('Titolo')

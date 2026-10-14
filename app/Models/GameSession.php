@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\SeatStatus;
+use App\Enums\SpecialSessionType;
 use App\Models\Concerns\HasReactions;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,7 +20,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * Una sessione di gioco: posti, prenotazioni, quest, presenze e resoconto.
  * Non `Session`, per non confondersi con le sessioni di login di Laravel.
  */
-#[Fillable(['campaign_id', 'number', 'title', 'played_at', 'created_by', 'min_players', 'max_players'])]
+#[Fillable(['campaign_id', 'number', 'title', 'season', 'special_type', 'played_at', 'created_by', 'min_players', 'max_players'])]
 class GameSession extends Model
 {
     use HasFactory, HasReactions, LogsActivity;
@@ -46,6 +47,8 @@ class GameSession extends Model
             'rewards' => 'array',
             'min_players' => 'integer',
             'max_players' => 'integer',
+            'season' => 'integer',
+            'special_type' => SpecialSessionType::class,
         ];
     }
 
@@ -122,6 +125,29 @@ class GameSession extends Model
     public function isUpcoming(): bool
     {
         return $this->played_at->isFuture();
+    }
+
+    /**
+     * Tipo e stagione valgono solo nella campagna speciale: spostando una sessione
+     * in una campagna normale si azzerano.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function withoutSpecialFieldsUnlessSpecial(array $data): array
+    {
+        if (! Campaign::query()->whereKey($data['campaign_id'] ?? null)->value('is_special')) {
+            $data['special_type'] = null;
+            $data['season'] = null;
+        }
+
+        return $data;
+    }
+
+    /** Sta nella campagna delle sessioni speciali. */
+    public function isSpecial(): bool
+    {
+        return (bool) $this->campaign?->isSpecial();
     }
 
     public function hasRecap(): bool
@@ -245,12 +271,21 @@ class GameSession extends Model
     /** Solo la parte "Sessione 12", senza il titolo: serve dove le due righe si impilano. */
     public function numberLabel(): string
     {
+        if ($this->special_type !== null) {
+            return $this->special_type->label().($this->season ? " · Season {$this->season}" : '');
+        }
+
         return $this->number !== null ? "Sessione {$this->number}" : 'Sessione';
     }
 
     /** Titolo da mostrare: "Sessione 12: La Torre Nera", o quel che c'è. */
     public function displayTitle(): string
     {
+        // Le speciali non hanno numero: «Apertura di stagione: Il risveglio».
+        if ($this->special_type !== null) {
+            return filled($this->title) ? "{$this->special_type->label()}: {$this->title}" : $this->special_type->label();
+        }
+
         return filled($this->title) ? "{$this->numberLabel()}: {$this->title}" : $this->numberLabel();
     }
 

@@ -17,6 +17,13 @@ class CreateCampaign extends CreateRecord
         // senza questo un DM aprirebbe una campagna intestata a un altro.
         if (! auth()->user()->isAdmin()) {
             $data['dm_id'] = auth()->id();
+            $data['is_special'] = false;
+        }
+
+        // La speciale è di tutti i DM: nessun titolare.
+        if (! empty($data['is_special'])) {
+            $data['dm_id'] = null;
+            $data['last_season'] = null;
         }
 
         return $data;

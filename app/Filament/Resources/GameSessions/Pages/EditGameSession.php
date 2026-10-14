@@ -5,6 +5,7 @@ namespace App\Filament\Resources\GameSessions\Pages;
 use App\Actions\Sessions\RecordAttendance;
 use App\Actions\Sessions\WriteRecap;
 use App\Filament\Resources\GameSessions\GameSessionResource;
+use App\Models\GameSession;
 use App\Models\User;
 use Filament\Actions\DeleteAction;
 use Filament\Notifications\Notification;
@@ -45,6 +46,8 @@ class EditGameSession extends EditRecord
     // dopo con le rispettive azioni, che tengono in ordine firma e pivot.
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        $data = GameSession::withoutSpecialFieldsUnlessSpecial($data);
+
         $nuovo = (string) ($data['recap'] ?? '');
         unset($data['recap']);
 

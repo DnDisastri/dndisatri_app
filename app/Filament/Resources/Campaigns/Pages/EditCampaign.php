@@ -25,6 +25,13 @@ class EditCampaign extends EditRecord
     {
         if (! auth()->user()->isAdmin()) {
             $data['dm_id'] = $this->record->dm_id;
+            $data['is_special'] = $this->record->is_special;
+        }
+
+        // La speciale è di tutti i DM: nessun titolare.
+        if (! empty($data['is_special'])) {
+            $data['dm_id'] = null;
+            $data['last_season'] = null;
         }
 
         return $data;

@@ -78,3 +78,38 @@ describe('modificando una campagna', function () {
         expect($campaign->fresh()->dm_id)->toBe($nuovo->id);
     });
 });
+
+describe('la campagna speciale dal pannello', function () {
+    it('un admin la crea senza titolare', function () {
+        $this->actingAs(User::factory()->admin()->create());
+
+        Livewire::test(CreateCampaign::class)
+            ->fillForm([
+                'title' => 'Sessioni speciali',
+                'slug' => 'sessioni-speciali',
+                'is_special' => true,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        expect(Campaign::first()->isSpecial())->toBeTrue()
+            ->and(Campaign::first()->dm_id)->toBeNull();
+    });
+
+    it('un DM non può renderne speciale una', function () {
+        $dm = User::factory()->dm()->create();
+        $this->actingAs($dm);
+
+        Livewire::test(CreateCampaign::class)
+            ->fillForm([
+                'title' => 'Furbata',
+                'slug' => 'furbata',
+                'dm_id' => $dm->id,
+                'is_special' => true,
+            ])
+            ->call('create');
+
+        expect(Campaign::first()->isSpecial())->toBeFalse()
+            ->and(Campaign::first()->dm_id)->toBe($dm->id);
+    });
+});

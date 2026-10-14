@@ -16,7 +16,7 @@ use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
 #[Fillable([
-    'title', 'slug', 'description', 'cover_path', 'background_path', 'background_opacity', 'season',
+    'title', 'slug', 'description', 'cover_path', 'background_path', 'background_opacity', 'season', 'last_season', 'is_special',
     'quest_giver', 'quest_giver_description', 'quest_giver_photo',
     'dm_id', 'created_by', 'ended_at', 'price_modifier',
 ])]
@@ -49,6 +49,8 @@ class Campaign extends Model
         return [
             'ended_at' => 'datetime',
             'season' => 'integer',
+            'last_season' => 'integer',
+            'is_special' => 'boolean',
             'background_opacity' => 'integer',
             'handover_updated_at' => 'datetime',
             'price_modifier' => 'integer',
@@ -130,6 +132,30 @@ class Campaign extends Model
         return $this->ended_at === null;
     }
 
+    /** Le sessioni speciali: di tutti i DM, senza titolare, non si chiude mai. */
+    public function isSpecial(): bool
+    {
+        return (bool) $this->is_special;
+    }
+
+    /** Ultima stagione giocata: senza `last_season` la campagna sta in una sola. */
+    public function lastSeason(): int
+    {
+        return max((int) $this->season, (int) ($this->last_season ?? $this->season));
+    }
+
+    /** «Season 2», «Season 2-3»; la speciale attraversa tutte le stagioni. */
+    public function seasonLabel(): string
+    {
+        if ($this->isSpecial()) {
+            return 'Sessioni speciali';
+        }
+
+        return $this->lastSeason() > $this->season
+            ? "Season {$this->season}-{$this->lastSeason()}"
+            : "Season {$this->season}";
+    }
+
     public function scopeActive(Builder $query): void
     {
         $query->whereNull('ended_at');
@@ -189,9 +215,19 @@ class Campaign extends Model
 
     // === Query ===
 
+    /** Quelle che in quella stagione si giocavano, più la speciale che c'è in tutte. */
     public function scopeInSeason(Builder $query, int $season): void
     {
-        $query->where('season', $season);
+        $query->where(fn (Builder $q) => $q
+            ->where('is_special', true)
+            ->orWhere(fn (Builder $q) => $q
+                ->where('season', '<=', $season)
+                ->whereRaw('COALESCE(last_season, season) >= ?', [$season])));
+    }
+
+    public function scopeSpecial(Builder $query): void
+    {
+        $query->where('is_special', true);
     }
 
     /**
@@ -202,11 +238,18 @@ class Campaign extends Model
      */
     public static function seasons(): array
     {
-        return static::query()
-            ->distinct()
-            ->orderByDesc('season')
-            ->pluck('season')
+        $daCampagne = static::query()
+            ->where('is_special', false)
+            ->get(['season', 'last_season'])
+            ->flatMap(fn (Campaign $c) => range((int) $c->season, $c->lastSeason()));
+
+        $daSpeciali = GameSession::query()->whereNotNull('season')->distinct()->pluck('season');
+
+        return $daCampagne->concat($daSpeciali)
             ->map(fn ($season) => (int) $season)
+            ->unique()
+            ->sortDesc()
+            ->values()
             ->all();
     }
 }

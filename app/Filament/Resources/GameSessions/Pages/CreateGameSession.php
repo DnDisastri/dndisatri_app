@@ -6,6 +6,7 @@ use App\Actions\AnnounceToPlayers;
 use App\Actions\Sessions\RecordAttendance;
 use App\Actions\Sessions\WriteRecap;
 use App\Filament\Resources\GameSessions\GameSessionResource;
+use App\Models\GameSession;
 use App\Notifications\GameSessionScheduled;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
@@ -25,6 +26,7 @@ class CreateGameSession extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $data['created_by'] = auth()->id();
+        $data = GameSession::withoutSpecialFieldsUnlessSpecial($data);
 
         $this->recapNuovo = $data['recap'] ?? null;
         $this->presenze = $data['presenze'] ?? [];

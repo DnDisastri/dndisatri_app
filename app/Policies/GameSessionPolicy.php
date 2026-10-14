@@ -89,9 +89,10 @@ class GameSessionPolicy
         return $this->runsTheTable($user, $session->campaign);
     }
 
+    /** La campagna speciale non ha titolare: le sue sessioni le gestisce qualsiasi DM. */
     private function runsTheTable(User $user, Campaign $campaign): bool
     {
         return $user->isAdmin()
-            || ($user->isDm() && $campaign->dm_id === $user->getKey());
+            || ($user->isDm() && ($campaign->isSpecial() || $campaign->dm_id === $user->getKey()));
     }
 }
