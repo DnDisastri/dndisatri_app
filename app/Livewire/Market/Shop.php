@@ -32,9 +32,9 @@ class Shop extends Component
     public string $ordine = 'categoria';
 
     public const ORDINI = [
-        'categoria' => 'Categoria',
-        'prezzo' => 'Prezzo ↑',
-        '-prezzo' => 'Prezzo ↓',
+        'categoria' => 'Per categoria',
+        'prezzo' => 'Prezzo crescente',
+        '-prezzo' => 'Prezzo decrescente',
         'nome' => 'Nome A-Z',
         '-nome' => 'Nome Z-A',
     ];
