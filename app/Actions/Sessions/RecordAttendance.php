@@ -20,17 +20,23 @@ final class RecordAttendance
 {
     /**
      * `[3, 7]` (solo giocatori) o `[3 => 12, 7 => null]` (giocatore => personaggio).
+     * Nelle sessioni con i tavoli, `$tables` dice a quale tavolo ha giocato ognuno.
      *
      * @param  Collection<int,mixed>|array<int,mixed>  $attendance
+     * @param  array<int, int|null>  $tables  giocatore => tavolo
      */
-    public function handle(GameSession $session, Collection|array $attendance): GameSession
+    public function handle(GameSession $session, Collection|array $attendance, array $tables = []): GameSession
     {
         $pairs = $this->normalise($attendance);
 
         $this->assertCharactersBelong($pairs);
+        $this->assertTablesBelong($session, $tables);
 
         $session->attendees()->sync(
-            $pairs->map(fn (?int $characterId) => ['character_id' => $characterId])->all()
+            $pairs->map(fn (?int $characterId, int $userId) => [
+                'character_id' => $characterId,
+                'session_table_id' => isset($tables[$userId]) ? (int) $tables[$userId] : null,
+            ])->all()
         );
 
         return $session->load('attendees');
@@ -56,6 +62,16 @@ final class RecordAttendance
         return collect($raw)->mapWithKeys(fn ($characterId, $userId) => [
             (int) $userId => $characterId === null ? null : (int) $characterId,
         ]);
+    }
+
+    /** @param  array<int, int|null>  $tables */
+    private function assertTablesBelong(GameSession $session, array $tables): void
+    {
+        $scelti = array_filter($tables);
+
+        if ($scelti !== [] && $session->tables()->whereKey($scelti)->count() !== count(array_unique($scelti))) {
+            throw new InvalidArgumentException('Quel tavolo non è di questa sessione.');
+        }
     }
 
     /** @param  Collection<int,int|null>  $pairs */

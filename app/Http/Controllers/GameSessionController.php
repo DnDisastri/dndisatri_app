@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Sessions\AssignTables;
 use App\Actions\Sessions\AwardSessionRewards;
 use App\Actions\Sessions\RecordAttendance;
 use App\Actions\Sessions\WriteRecap;
@@ -10,6 +11,7 @@ use App\Enums\SeatStatus;
 use App\Exceptions\MarketException;
 use App\Models\Event;
 use App\Models\GameSession;
+use App\Models\SessionTable;
 use App\Models\User;
 use App\Notifications\SessionClosedBySubstitute;
 use Illuminate\Http\RedirectResponse;
@@ -39,7 +41,7 @@ class GameSessionController extends Controller
 
         $sessions = GameSession::query()
             ->whereBetween('played_at', [$mese->copy(), $mese->copy()->endOfMonth()])
-            ->with('campaign')
+            ->with(['campaign', 'dms', 'tables.dms'])
             ->orderBy('played_at')
             ->get();
 
@@ -74,7 +76,7 @@ class GameSessionController extends Controller
     {
         $this->authorize('view', $session);
 
-        $session->load(['campaign.dm', 'recapWrittenBy', 'attendees.characters', 'quests', 'bookings']);
+        $session->load(['campaign.dm', 'dms', 'tables.dms', 'tables.recapWrittenBy', 'recapWrittenBy', 'attendees.characters', 'quests', 'bookings']);
 
         $utente = auth()->user();
         $posti = $session->bookings()->holdingSeat()->with(['user', 'character'])->get();
@@ -149,6 +151,8 @@ class GameSessionController extends Controller
             'presenti.*' => ['integer', Rule::exists('users', 'id')],
             'personaggi' => ['array'],
             'personaggi.*' => ['nullable', 'integer', Rule::exists('characters', 'id')],
+            'tavoli' => ['array'],
+            'tavoli.*' => ['nullable', 'integer'],
             'ospiti' => ['array'],
             'ospiti.*' => ['integer'],
         ]);
@@ -159,7 +163,11 @@ class GameSessionController extends Controller
             ]);
 
         try {
-            app(RecordAttendance::class)->handle($session, $presenze);
+            app(RecordAttendance::class)->handle(
+                $session,
+                $presenze,
+                collect($dati['tavoli'] ?? [])->only($presenze->keys())->map(fn ($t) => $t === null ? null : (int) $t)->all(),
+            );
         } catch (InvalidArgumentException $e) {
             // La tendina arriva dal browser e i browser si manomettono:
             // l'azione rifiuta il personaggio di un altro giocatore, e qui si
@@ -186,12 +194,23 @@ class GameSessionController extends Controller
             'coins' => ['required', 'array'],
             'coins.*' => ['nullable', 'integer', 'min:0', 'max:'.Coins::MAX],
             'reason' => ['required', 'string', 'max:120'],
+            // «tutti», «tavolo-3» o «pg-12»: a chi vanno.
+            'destinatari' => ['nullable', 'string', 'regex:/^(tutti|tavolo-\d+|pg-\d+)$/'],
         ], [
             'reason.required' => 'Scrivi il motivo: finisce nel Registro di ognuno.',
         ]);
 
         try {
-            $chi = $rewards->handle($session, $request->user(), Coins::fromArray($dati['coins']), $dati['reason']);
+            [$tipo, $id] = array_pad(explode('-', $dati['destinatari'] ?? 'tutti', 2), 2, null);
+
+            $chi = $rewards->handle(
+                $session,
+                $request->user(),
+                Coins::fromArray($dati['coins']),
+                $dati['reason'],
+                tableId: $tipo === 'tavolo' ? (int) $id : null,
+                characterId: $tipo === 'pg' ? (int) $id : null,
+            );
         } catch (InvalidArgumentException|MarketException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
@@ -199,6 +218,40 @@ class GameSessionController extends Controller
         $this->avvisaIlTitolare($session, $request->user(), 'le ricompense');
 
         return back()->with('status', 'Ricompense date a '.$chi->pluck('name')->join(', ', ' e ').'.');
+    }
+
+    /** I DM mettono a tavolo i prenotati di una sessione speciale. */
+    public function assignTables(Request $request, GameSession $session, AssignTables $assign): RedirectResponse
+    {
+        $this->authorize('manageSeats', $session);
+
+        $dati = $request->validate([
+            'tavoli' => ['required', 'array'],
+            'tavoli.*' => ['nullable', 'integer'],
+        ]);
+
+        try {
+            $assign->handle($session, collect($dati['tavoli'])->map(fn ($t) => $t === null ? null : (int) $t)->all());
+        } catch (InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('status', 'Tavoli assegnati.');
+    }
+
+    /** Il resoconto di un tavolo: facoltativo, accanto a quello generale. */
+    public function writeTableRecap(Request $request, GameSession $session, SessionTable $table): RedirectResponse
+    {
+        $this->authorize('writeRecap', $session);
+        abort_unless($table->game_session_id === $session->getKey(), 404);
+
+        $dati = $request->validate([
+            'recap' => ['required', 'string', 'max:20000'],
+        ]);
+
+        app(WriteRecap::class)->handle($table, $request->user(), $dati['recap']);
+
+        return back()->with('status', "Resoconto del {$table->name} salvato.");
     }
 
     private function avvisaIlTitolare(GameSession $session, User $chi, string $cosa): void

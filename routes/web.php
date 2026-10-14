@@ -123,6 +123,8 @@ Route::middleware('auth')->group(function () {
     Route::post('serate/{session}/resoconto', [GameSessionController::class, 'writeRecap'])->name('sessions.recap');
     Route::post('serate/{session}/presenze', [GameSessionController::class, 'recordAttendance'])->name('sessions.attendance');
     Route::post('serate/{session}/ricompense', [GameSessionController::class, 'awardRewards'])->name('sessions.rewards');
+    Route::post('serate/{session}/tavoli', [GameSessionController::class, 'assignTables'])->name('sessions.tables.assign');
+    Route::post('serate/{session}/tavoli/{table}/resoconto', [GameSessionController::class, 'writeTableRecap'])->whereNumber('table')->name('sessions.tables.recap');
 
     Route::post('reazioni/{tipo}/{id}', [ReactionController::class, 'store'])->name('reactions.store');
 

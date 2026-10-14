@@ -60,7 +60,7 @@ class SessionBookingController extends Controller
             'character_id.required' => 'Scegli con quale eroe vieni.',
         ]);
 
-        $sessioni = GameSession::whereIn('id', $dati['sessioni'])->with('campaign')->orderBy('played_at')->get();
+        $sessioni = GameSession::whereIn('id', $dati['sessioni'])->with(['campaign', 'dms', 'tables.dms'])->orderBy('played_at')->get();
 
         if ($sessioni->countBy(fn (GameSession $s) => $s->played_at->toDateString())->max() > 1) {
             return back()->withInput()->with('error', 'Puoi chiedere una sola sessione al giorno: nello stesso giorno ne hai scelte due.');

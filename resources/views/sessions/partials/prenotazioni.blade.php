@@ -63,6 +63,12 @@
                                 @break
                             @case(SeatStatus::Confirmed)
                                 Il posto è tuo: ci vediamo alla sessione.
+                                @php $mioTavolo = $session->tables->firstWhere('id', $mioPosto->session_table_id); @endphp
+                                @if ($mioTavolo)
+                                    Sei al {{ $mioTavolo->name }}@if ($mioTavolo->dms->isNotEmpty()), con {{ $mioTavolo->dms->pluck('name')->join(', ', ' e ') }}@endif.
+                                @elseif ($session->tables->isNotEmpty())
+                                    Il tavolo te lo assegnano i dungeon master.
+                                @endif
                                 @break
                             @case(SeatStatus::Reserve)
                                 Se si libera un posto, potresti essere chiamato. Non è garantito.

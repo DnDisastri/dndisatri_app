@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection as BaseCollection;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
@@ -74,6 +75,27 @@ class GameSession extends Model
         return $this->hasMany(Quest::class);
     }
 
+    /** I tavoli di una sessione speciale; le sessioni normali non ne hanno. */
+    public function tables(): HasMany
+    {
+        return $this->hasMany(SessionTable::class)->orderBy('position')->orderBy('id');
+    }
+
+    public function hasTables(): bool
+    {
+        return $this->relationLoaded('tables') ? $this->tables->isNotEmpty() : $this->tables()->exists();
+    }
+
+    /** Con i tavoli, i posti della sessione sono la loro somma. */
+    public function syncSeatsFromTables(): void
+    {
+        $posti = (int) $this->tables()->sum('seats');
+
+        if ($posti > 0 && $posti !== $this->max_players) {
+            $this->forceFill(['max_players' => $posti, 'min_players' => min($this->min_players, $posti)])->saveQuietly();
+        }
+    }
+
     /** Tutti i posti, ospiti compresi. */
     public function bookings(): HasMany
     {
@@ -101,6 +123,40 @@ class GameSession extends Model
             ->get();
     }
 
+    /** Chi la conduce oltre al titolare della campagna: co-master, sostituti, DM dei tavoli. */
+    public function dms(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'game_session_dm')->withTimestamps();
+    }
+
+    /** Segnato sulla sessione o su uno dei suoi tavoli. */
+    public function isRunBy(User $user): bool
+    {
+        return $this->conductorIds()->contains($user->getKey());
+    }
+
+    /** Il titolare, i DM della sessione e quelli dei tavoli, senza doppioni. */
+    public function conductors(): BaseCollection
+    {
+        $this->loadMissing(['campaign.dm', 'dms', 'tables.dms']);
+
+        return collect([$this->campaign?->dm])->filter()
+            ->concat($this->dms)
+            ->concat($this->tables->flatMap->dms)
+            ->unique('id')
+            ->values();
+    }
+
+    /** @return BaseCollection<int, int> */
+    private function conductorIds(): BaseCollection
+    {
+        // Policy e viste lo chiedono più volte per pagina: si carica una volta sola.
+        // Negli elenchi va caricato con `with(['dms', 'tables.dms'])`.
+        $this->loadMissing(['dms', 'tables.dms']);
+
+        return collect($this->dms->modelKeys())->concat($this->tables->flatMap(fn (SessionTable $t) => $t->dms->modelKeys()));
+    }
+
     public function recapWrittenBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recap_written_by');
@@ -110,7 +166,7 @@ class GameSession extends Model
     public function attendees(): BelongsToMany
     {
         return $this->belongsToMany(User::class)
-            ->withPivot('character_id')
+            ->withPivot(['character_id', 'session_table_id'])
             ->withTimestamps();
     }
 
@@ -247,7 +303,8 @@ class GameSession extends Model
     {
         $titolare = $this->campaign?->dm_id;
 
-        return $titolare !== null && ! $user->isAdmin() && $user->isDm() && $user->getKey() !== $titolare;
+        return $titolare !== null && ! $user->isAdmin() && $user->isDm() && $user->getKey() !== $titolare
+            && ! $this->isRunBy($user);
     }
 
     /** Per la firma «in sostituzione di». */

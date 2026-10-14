@@ -34,12 +34,12 @@
                     if ($daSegnare) {
                         $posto = $confermati->firstWhere('user_id', $candidato->id);
 
-                        return ['utente' => $candidato, 'presente' => $posto !== null, 'scelto' => $posto?->character_id];
+                        return ['utente' => $candidato, 'presente' => $posto !== null, 'scelto' => $posto?->character_id, 'tavolo' => $posto?->session_table_id];
                     }
 
                     $attendee = $session->attendees->firstWhere('id', $candidato->id);
 
-                    return ['utente' => $candidato, 'presente' => $attendee !== null, 'scelto' => $attendee?->pivot->character_id];
+                    return ['utente' => $candidato, 'presente' => $attendee !== null, 'scelto' => $attendee?->pivot->character_id, 'tavolo' => $attendee?->pivot->session_table_id];
                 });
 
                 // Con 60 giocatori la lista intera non si scorre: a vista solo gli spuntati, gli altri si cercano.
@@ -49,7 +49,7 @@
             <div class="mt-3 space-y-2">
                 @foreach ($aVista->concat($daCercare) as $riga)
                     @php
-                        ['utente' => $candidato, 'presente' => $presente, 'scelto' => $scelto] = $riga;
+                        ['utente' => $candidato, 'presente' => $presente, 'scelto' => $scelto, 'tavolo' => $tavoloScelto] = $riga;
                     @endphp
 
                     {{-- La ricerca sta fra gli spuntati e i risultati. --}}
@@ -82,6 +82,15 @@
                                 @endforeach
                             </select>
                         @endif
+                        @if ($session->tables->isNotEmpty())
+                            <select name="tavoli[{{ $candidato->id }}]" aria-label="Tavolo di {{ $candidato->name }}"
+                                    class="max-w-full rounded-md border border-line bg-surface px-2 py-1 text-sm text-fg">
+                                <option value="">Senza tavolo</option>
+                                @foreach ($session->tables as $tavolo)
+                                    <option value="{{ $tavolo->id }}" @selected($tavoloScelto === $tavolo->id)>{{ $tavolo->name }}</option>
+                                @endforeach
+                            </select>
+                        @endif
                     </x-inset>
                 @endforeach
 
@@ -111,7 +120,7 @@
             @foreach ($session->rewards ?? [] as $data)
                 <p class="mt-1 text-xs text-muted">
                     Già date: {{ \App\Domain\Dnd\Coins::fromArray($data['coins'] ?? [])->format() }} a testa
-                    ({{ $data['reason'] }}) da {{ $data['by'] }} a {{ implode(', ', $data['characters'] ?? []) }}.
+                    ({{ $data['reason'] }}) da {{ $data['by'] }} a {{ implode(', ', $data['characters'] ?? []) }}@if (! empty($data['table'])) ({{ $data['table'] }})@endif.
                 </p>
             @endforeach
 
@@ -123,8 +132,24 @@
                     @csrf
 
                     <p class="text-xs text-muted">
-                        Le stesse monete a ciascuno dei {{ $presentiConPg->count() }} personaggi presenti. Nel Registro di ognuno resta una riga.
+                        Le stesse monete a ciascuno di quelli che scegli. Nel Registro di ognuno resta una riga.
                     </p>
+
+                    <label class="block text-sm">
+                        <span class="mb-1 block text-muted">A chi</span>
+                        <select name="destinatari" class="{{ $campo }}">
+                            <option value="tutti">Tutti i {{ $presentiConPg->count() }} personaggi presenti</option>
+                            @foreach ($session->tables as $tavolo)
+                                <option value="tavolo-{{ $tavolo->id }}" @selected(old('destinatari') === 'tavolo-'.$tavolo->id)>I presenti del {{ $tavolo->name }}</option>
+                            @endforeach
+                            @foreach ($presentiConPg as $presente)
+                                @php $pg = $presente->characters->firstWhere('id', $presente->pivot->character_id); @endphp
+                                @if ($pg)
+                                    <option value="pg-{{ $pg->id }}" @selected(old('destinatari') === 'pg-'.$pg->id)>Solo {{ $pg->name }} ({{ $presente->name }})</option>
+                                @endif
+                            @endforeach
+                        </select>
+                    </label>
 
                     <x-campo-monete name="coins" label="Monete a testa" />
 
