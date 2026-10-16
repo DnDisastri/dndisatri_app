@@ -206,6 +206,15 @@ class GameSession extends Model
         return (bool) $this->campaign?->isSpecial();
     }
 
+    /** Circa una pagina. */
+    public const RECAP_MAX = 3600;
+
+    /** Quelli scritti prima del limite si accorciano, ma non si allungano. */
+    public static function recapLimit(?string $attuale): int
+    {
+        return max(self::RECAP_MAX, mb_strlen((string) $attuale));
+    }
+
     public function hasRecap(): bool
     {
         return filled($this->recap);

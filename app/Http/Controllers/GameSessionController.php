@@ -129,7 +129,7 @@ class GameSessionController extends Controller
         $this->authorize('writeRecap', $session);
 
         $dati = $request->validate([
-            'recap' => ['required', 'string', 'max:20000'],
+            'recap' => ['required', 'string', 'max:'.GameSession::recapLimit($session->recap)],
         ]);
 
         app(WriteRecap::class)->handle($session, $request->user(), $dati['recap']);
@@ -246,7 +246,7 @@ class GameSessionController extends Controller
         abort_unless($table->game_session_id === $session->getKey(), 404);
 
         $dati = $request->validate([
-            'recap' => ['required', 'string', 'max:20000'],
+            'recap' => ['required', 'string', 'max:'.GameSession::recapLimit($table->recap)],
         ]);
 
         app(WriteRecap::class)->handle($table, $request->user(), $dati['recap']);

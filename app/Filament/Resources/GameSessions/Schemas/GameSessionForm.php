@@ -162,7 +162,9 @@ class GameSessionForm
                         Textarea::make('recap')
                             ->label('Resoconto')
                             ->rows(10)
-                            ->maxLength(20000)
+                            ->maxLength(fn (?GameSession $record) => GameSession::recapLimit($record?->recap))
+                            ->live(debounce: 500)
+                            ->hint(fn (?string $state, ?GameSession $record) => mb_strlen((string) $state).' / '.number_format(GameSession::recapLimit($record?->recap), 0, ',', '.'))
                             ->columnSpanFull(),
                     ]),
 

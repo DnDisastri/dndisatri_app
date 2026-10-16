@@ -175,9 +175,9 @@
                 3. {{ $session->hasRecap() ? 'Correggi il resoconto' : 'Scrivi il resoconto' }}
             </label>
 
-            <textarea name="recap" id="recap" rows="10" maxlength="20000"
-                      class="mt-1 {{ $campo }}"
-                      placeholder="Cosa è successo, chi ha fatto cosa, com'è finita.">{{ old('recap', $session->recap) }}</textarea>
+            <x-testo-contato name="recap" id="recap" rows="10" :max="\App\Models\GameSession::recapLimit($session->recap)"
+                             :value="old('recap', $session->recap)" class="mt-1 {{ $campo }}"
+                             placeholder="Cosa è successo, chi ha fatto cosa, com'è finita." />
 
             @error('recap')
                 <p class="mt-1 text-sm text-on-danger-soft">{{ $message }}</p>
