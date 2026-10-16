@@ -39,7 +39,7 @@ class ProposalController extends Controller
                 ->when($mostraArchiviate, fn ($q) => $q->archived(), fn ($q) => $q->notArchived())
                 ->with(['character', 'reviewedBy'])
                 ->latest('id')
-                ->simplePaginate(15)
+                ->paginate(15)
                 ->withQueryString(),
             'archiviate' => (clone $base)->archived()->count(),
             'daSvuotare' => (clone $base)->notArchived()->decided()->count(),
