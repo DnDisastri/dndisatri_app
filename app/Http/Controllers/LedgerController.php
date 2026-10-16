@@ -48,7 +48,7 @@ class LedgerController extends Controller
                 ->archived()
                 ->with('campaign')
                 ->orderByRaw('COALESCE(completed_at, closed_at) DESC')
-                ->simplePaginate(10, pageName: 'quest')
+                ->paginate(10, pageName: 'quest')
                 ->withQueryString(),
 
             'sessions' => GameSession::query()
@@ -56,7 +56,7 @@ class LedgerController extends Controller
                 ->past()
                 ->withRecap()
                 ->with('campaign')
-                ->simplePaginate(6, pageName: 'serate')
+                ->paginate(6, pageName: 'serate')
                 ->withQueryString(),        ]);
     }
 }

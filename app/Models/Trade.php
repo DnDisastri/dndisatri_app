@@ -34,12 +34,12 @@ class Trade extends Model
 
     public function from(): BelongsTo
     {
-        return $this->belongsTo(Character::class, 'from_character_id');
+        return $this->belongsTo(Character::class, 'from_character_id')->withTrashed();
     }
 
     public function to(): BelongsTo
     {
-        return $this->belongsTo(Character::class, 'to_character_id');
+        return $this->belongsTo(Character::class, 'to_character_id')->withTrashed();
     }
 
     public function items(): HasMany

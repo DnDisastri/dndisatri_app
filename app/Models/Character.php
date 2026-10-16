@@ -29,6 +29,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
@@ -46,7 +47,7 @@ use Spatie\Activitylog\Support\LogOptions;
 ])]
 class Character extends Model
 {
-    use HasFactory, LogsActivity, ShrinksImages;
+    use HasFactory, LogsActivity, ShrinksImages, SoftDeletes;
 
     /** @return array<string, int> */
     public function imageLimits(): array
@@ -513,6 +514,17 @@ class Character extends Model
     {
         return $this->sessions()->where('played_at', '<', now())->with('campaign')
             ->orderByDesc('played_at')->limit($quante)->get();
+    }
+
+    /** Il diario del giocatore, una nota per sessione. */
+    public function journals(): HasMany
+    {
+        return $this->hasMany(SessionJournal::class);
+    }
+
+    public function retiredBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'retired_by');
     }
 
     public function sessionsSinceLastLevelUp(): int

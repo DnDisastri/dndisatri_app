@@ -4,13 +4,18 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
+use App\Contracts\Icona;
 use App\Domain\Dnd\AdventurerRank;
+use Filament\Support\Contracts\ScalableIcon;
+use Filament\Support\Enums\IconSize;
+use ToneGabes\Filament\Icons\Enums\Phosphor;
+use ToneGabes\Filament\Icons\Enums\Weight;
 
 /**
  * I valori restano in italiano perché sono quelli scritti nei dati della
  * vecchia applicazione: la migrazione li importa così come sono.
  */
-enum QuestDifficulty: string
+enum QuestDifficulty: string implements Icona, ScalableIcon
 {
     case Facile = 'Facile';
     case Media = 'Media';
@@ -70,5 +75,27 @@ enum QuestDifficulty: string
             self::Difficile => 'Scontri seri e scelte pesanti: meglio arrivarci preparati.',
             self::Epica => 'Roba da leggenda: i più forti, e non è detto che tornino tutti.',
         };
+    }
+
+    /** Le tacche del segnale: una in più a ogni gradino. */
+    public function phosphor(): Phosphor
+    {
+        return match ($this) {
+            self::Facile => Phosphor::CellSignalLow,
+            self::Media => Phosphor::CellSignalMedium,
+            self::Difficile => Phosphor::CellSignalHigh,
+            self::Epica => Phosphor::CellSignalFull,
+        };
+    }
+
+    /** Duotone come le altre icone: le tacche mancanti restano accennate. */
+    public function blade(): string
+    {
+        return $this->phosphor()->getLabel().'-'.Weight::Duotone->value;
+    }
+
+    public function getIconForSize(IconSize $size): string
+    {
+        return $this->blade();
     }
 }

@@ -11,6 +11,8 @@ use App\Domain\Dnd\Coins;
 use App\Enums\EquipmentSlot;
 use App\Enums\SeatStatus;
 use App\Exceptions\MarketException;
+use App\Http\Controllers\Concerns\NormalizesNewlines;
+use App\Models\Character;
 use App\Models\CharacterItem;
 use App\Models\Event;
 use App\Models\GameSession;
@@ -30,6 +32,8 @@ use InvalidArgumentException;
  */
 class GameSessionController extends Controller
 {
+    use NormalizesNewlines;
+
     /** Il calendario delle sessioni (P20). */
     public function index(Request $request): View
     {
@@ -79,7 +83,7 @@ class GameSessionController extends Controller
     {
         $this->authorize('view', $session);
 
-        $session->load(['campaign.dm', 'dms', 'tables.dms', 'tables.recapWrittenBy', 'recapWrittenBy', 'attendees.characters', 'quests', 'bookings']);
+        $session->load(['campaign.dm', 'dms', 'tables.dms', 'tables.recapWrittenBy', 'recapWrittenBy', 'attendees.characters' => fn ($q) => $q->withTrashed(), 'quests', 'bookings']);
 
         $utente = auth()->user();
         $posti = $session->bookings()->holdingSeat()->with(['user', 'character'])->get();
@@ -131,6 +135,9 @@ class GameSessionController extends Controller
                 ? app(LootSuggestions::class)->handle()
                 : [],
             'oggettiMax' => self::OGGETTI_MAX,
+
+            // Il diario solo a chi l'ha giocata, col suo personaggio ancora in gioco.
+            ...$this->diarioDi($session, $utente),
         ]);
     }
 
@@ -141,6 +148,8 @@ class GameSessionController extends Controller
     public function writeRecap(Request $request, GameSession $session): RedirectResponse
     {
         $this->authorize('writeRecap', $session);
+
+        $this->normalizeNewlines($request, 'recap');
 
         $dati = $request->validate([
             'recap' => ['required', 'string', 'max:'.GameSession::recapLimit($session->recap)],
@@ -272,6 +281,8 @@ class GameSessionController extends Controller
         $this->authorize('writeRecap', $session);
         abort_unless($table->game_session_id === $session->getKey(), 404);
 
+        $this->normalizeNewlines($request, 'recap');
+
         $dati = $request->validate([
             'recap' => ['required', 'string', 'max:'.GameSession::recapLimit($table->recap)],
         ]);
@@ -279,6 +290,18 @@ class GameSessionController extends Controller
         app(WriteRecap::class)->handle($table, $request->user(), $dati['recap']);
 
         return back()->with('status', "Resoconto del {$table->name} salvato.");
+    }
+
+    /** @return array{diarioPg: ?Character, diarioNota: ?string} */
+    private function diarioDi(GameSession $session, User $utente): array
+    {
+        $idPg = $session->attendees->firstWhere('id', $utente->getKey())?->pivot->character_id;
+        $pg = $idPg === null ? null : $utente->characters()->find($idPg);
+
+        return [
+            'diarioPg' => $pg,
+            'diarioNota' => $pg?->journals()->where('game_session_id', $session->getKey())->value('body'),
+        ];
     }
 
     private function avvisaIlTitolare(GameSession $session, User $chi, string $cosa): void

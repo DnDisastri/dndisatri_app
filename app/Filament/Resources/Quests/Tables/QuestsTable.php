@@ -33,6 +33,7 @@ class QuestsTable
                 TextColumn::make('difficulty')
                     ->label('Difficoltà')
                     ->badge()
+                    ->icon(fn ($state) => $state)
                     ->visibleFrom('md'),
 
                 TextColumn::make('interested_count')

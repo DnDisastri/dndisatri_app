@@ -67,14 +67,26 @@
     @endif
 
     @unless ($filtrabile && $tutti)
+        {{-- Una pila per pezzo («1.234 mo»): con tante monete vanno a capo fra le pile, non dentro. --}}
+        @php preg_match_all('/\S+ \S+/u', $character->coins()->format(), $pile); @endphp
         <x-panel class="mb-6 flex items-center justify-between gap-3">
-            <span class="text-sm uppercase tracking-wide text-muted">In borsa</span>
-            <span class="flex items-center gap-2 text-right text-2xl font-bold text-fg">
+            <span class="shrink-0 text-sm uppercase tracking-wide text-muted">In borsa</span>
+            <span class="flex min-w-0 items-center gap-2 text-2xl font-bold text-fg">
                 <x-icona :is="\App\Enums\Icon::Gold" class="h-6 w-6 shrink-0" />
-                <x-monete :borsa="$character->coins()" class="whitespace-normal" />
+                <span class="flex flex-wrap justify-end gap-x-2">
+                    @foreach ($pile[0] as $pila)
+                        <span class="whitespace-nowrap">{{ $pila }}</span>
+                    @endforeach
+                </span>
             </span>
         </x-panel>
     @endunless
+
+    @if ($sessioni?->isNotEmpty())
+        @include('characters.partials.sessioni-giocate')
+
+        <h3 class="mb-3 mt-8 text-lg font-semibold text-fg">Movimenti</h3>
+    @endif
 
     <div class="space-y-2">
         @forelse ($entries as $entry)

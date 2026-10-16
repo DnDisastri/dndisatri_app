@@ -669,3 +669,51 @@ window.addEventListener('pageshow', async (evento) => {
         // Senza rete resta com'era.
     }
 });
+
+// Contatore dei caratteri di <x-testo-contato>: si colora vicino al limite.
+
+document.addEventListener('input', (evento) => {
+    const box = evento.target.closest('[data-contatore]');
+
+    if (!box || evento.target.tagName !== 'TEXTAREA') return;
+
+    const n = evento.target.value.length;
+    box.querySelector('[data-contatore-n]').textContent = n;
+    box.querySelector('[data-contatore-riga]').classList.toggle('text-on-danger-soft', n > Number(box.dataset.max) * 0.9);
+});
+
+// Modali semplici: `data-apri-dialogo="id"` apre il <dialog data-dialogo>, solo `data-chiudi-dialogo`
+// lo chiude (né il fondo né Esc: c'è un testo da non perdere). `data-apri-subito` lo riapre al
+// caricamento, quando c'è un errore da correggere lì dentro.
+
+document.querySelector('dialog[data-dialogo][data-apri-subito]')?.showModal();
+
+document.addEventListener('click', (evento) => {
+    const apri = evento.target.closest('[data-apri-dialogo]');
+
+    if (apri) {
+        document.getElementById(apri.dataset.apriDialogo)?.showModal();
+
+        return;
+    }
+
+    if (evento.target.closest('[data-chiudi-dialogo]')) {
+        evento.target.closest('dialog[data-dialogo]')?.close();
+    }
+});
+
+document.addEventListener('cancel', (evento) => {
+    if (evento.target.matches('dialog[data-dialogo]')) evento.preventDefault();
+}, true);
+
+// Testi lunghi tagliati a qualche riga: `data-espandi="id"` apre e richiude quel testo.
+
+document.addEventListener('click', (evento) => {
+    const pulsante = evento.target.closest('[data-espandi]');
+
+    if (!pulsante) return;
+
+    const testo = document.getElementById(pulsante.dataset.espandi);
+    const aperto = testo.classList.toggle('line-clamp-4') === false;
+    pulsante.textContent = aperto ? pulsante.dataset.testoAperto : pulsante.dataset.testoChiuso;
+});

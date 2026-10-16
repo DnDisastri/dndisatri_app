@@ -44,7 +44,7 @@
     "src": "_quicksand-700-normal-HjJN-aaT.woff"
   },
   "resources/css/app.css": {
-    "file": "assets/app-B15fdK3L.css",
+    "file": "assets/app-CxnioBYN.css",
     "name": "app",
     "names": [
       "app.css"
@@ -53,7 +53,7 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-C8axIPa5.js",
+    "file": "assets/app-CTADP6df.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true

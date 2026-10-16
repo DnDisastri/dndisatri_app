@@ -163,6 +163,18 @@ class CharacterPolicy
         return ($user->isDm() || $user->isAdmin()) && $character->isAlive();
     }
 
+    /** Ritirarlo (resta nel database) e passare le sue sessioni al nuovo: DM e admin, senza richiesta. */
+    public function retire(User $user, Character $character): bool
+    {
+        return $user->isDm() || $user->isAdmin();
+    }
+
+    /** Il diario lo scrive solo il giocatore; lo leggono anche DM e admin, dal Registro. */
+    public function writeJournal(User $user, Character $character): bool
+    {
+        return $character->user_id === $user->getKey();
+    }
+
     /** Cancellare un personaggio non è un'azione di gioco. */
     public function delete(User $user, Character $character): bool
     {

@@ -181,6 +181,7 @@
                 @include('sessions.partials.quest')
             @endif
 
+
             @if ($session->hasRecap())
                 <x-panel>
                     <p class="text-xs uppercase tracking-wide text-muted">Com'è andata</p>
@@ -198,6 +199,32 @@
                 </x-panel>
             @elseif (! $session->isUpcoming())
                 <x-empty>Il resoconto non è ancora stato scritto.</x-empty>
+            @endif
+
+            @if ($diarioPg)
+                <x-panel id="diario" class="scroll-mt-20">
+                    <div class="flex items-baseline justify-between gap-3">
+                        <p class="text-xs uppercase tracking-wide text-muted">Il tuo diario</p>
+                        {{-- Solo per le note lunghe: le corte si leggono già tutte. --}}
+                        @if (filled($diarioNota) && (mb_strlen($diarioNota) > 250 || substr_count($diarioNota, "\n") > 3))
+                            <button type="button" data-espandi="diario-testo" data-testo-chiuso="Leggi tutta" data-testo-aperto="Mostra meno"
+                                    class="text-xs font-semibold text-active hover:underline">Leggi tutta</button>
+                        @endif
+                    </div>
+
+                    @if (filled($diarioNota))
+                        <p id="diario-testo" class="mt-2 line-clamp-4 whitespace-pre-line text-sm text-fg">{{ $diarioNota }}</p>
+                    @else
+                        <p class="mt-2 text-sm text-muted">Hai giocato questa sessione con {{ $diarioPg->name }}: scrivi cosa vuoi ricordarne. La leggono solo tu, i dungeon master e gli admin.</p>
+                    @endif
+
+                    <x-button type="button" variant="secondary" size="sm" class="mt-3" data-apri-dialogo="nota-{{ $session->id }}">
+                        {{ filled($diarioNota) ? 'Modifica' : 'Scrivi nel diario' }}
+                    </x-button>
+                    @include('characters.partials.nota-dialogo', [
+                        'character' => $diarioPg, 'sessione' => $session, 'nota' => $diarioNota, 'scrive' => true, 'daRegistro' => false,
+                    ])
+                </x-panel>
             @endif
             </div>
         @endif

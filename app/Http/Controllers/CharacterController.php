@@ -4,10 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Enums\LedgerAction;
 use App\Enums\SheetSection;
+use App\Models\Campaign;
 use App\Models\Character;
 use App\Models\LedgerEntry;
 use App\Models\PendingChange;
+use App\Models\SessionTable;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class CharacterController extends Controller
@@ -153,6 +157,7 @@ class CharacterController extends Controller
         if (! $request->user()->isDm() && ! $request->user()->isAdmin()) {
             return view('characters.ledger', [
                 'character' => $character,
+                ...$this->sessioniGiocate($character, $request->query('campagna')),
                 'filtrabile' => false,
                 'entries' => $character->ledgerEntries()
                     ->with('actor')
@@ -177,6 +182,8 @@ class CharacterController extends Controller
 
         return view('characters.ledger', [
             'character' => $character,
+            // Le sessioni restano del singolo personaggio, anche guardando tutti i movimenti.
+            ...($tutti ? ['sessioni' => null] : $this->sessioniGiocate($character, $request->query('campagna'))),
             'filtrabile' => true,
             'entries' => $entries,
             'tutti' => $tutti,
@@ -185,5 +192,37 @@ class CharacterController extends Controller
             'personaggi' => Character::orderBy('name')->get(['id', 'name']),
             'azioni' => LedgerAction::cases(),
         ]);
+    }
+
+    /**
+     * Le sessioni giocate, dalla più recente, a pagine da sei (righe intere
+     * nella griglia da 2 e da 3), con i tavoli e le note del giocatore.
+     * Si filtrano per campagna, fra quelle che il personaggio ha giocato.
+     *
+     * @return array{sessioni: LengthAwarePaginator, diario: Collection, tavoli: Collection, campagne: Collection, campagna: ?Campaign}
+     */
+    private function sessioniGiocate(Character $character, mixed $slug): array
+    {
+        $giocate = fn () => $character->sessions()->where('played_at', '<', now());
+
+        $campagne = Campaign::whereIn('id', $giocate()->select('campaign_id'))->orderBy('title')->get(['id', 'title', 'slug']);
+        $campagna = is_string($slug) ? $campagne->firstWhere('slug', $slug) : null;
+
+        $sessioni = $giocate()
+            ->when($campagna, fn ($q) => $q->where('campaign_id', $campagna->getKey()))
+            ->with('campaign')
+            ->withPivot('session_table_id')
+            ->orderByDesc('played_at')
+            ->paginate(6, pageName: 'sessioni')
+            ->withQueryString()
+            ->fragment('sessioni');
+
+        return [
+            'sessioni' => $sessioni,
+            'diario' => $character->journals()->whereIn('game_session_id', $sessioni->pluck('id'))->get()->keyBy('game_session_id'),
+            'tavoli' => SessionTable::whereIn('id', $sessioni->pluck('pivot.session_table_id')->filter())->pluck('name', 'id'),
+            'campagne' => $campagne,
+            'campagna' => $campagna,
+        ];
     }
 }

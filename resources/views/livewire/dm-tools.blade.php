@@ -10,6 +10,16 @@
         <x-button variant="quiet" size="sm" type="button" wire:click="apriMorte">
             <x-icona :is="\App\Enums\Icon::Fallen" class="h-4 w-4" /> Dichiara caduto
         </x-button>
+
+        <x-button variant="quiet" size="sm" type="button" wire:click="apriRitiro">
+            <x-icona :is="\App\Enums\Icon::Archive" class="h-4 w-4" /> Ritira
+        </x-button>
+
+        @if ($ritirati->isNotEmpty())
+            <x-button variant="quiet" size="sm" type="button" wire:click="apriPassaggio">
+                <x-icona :is="\App\Enums\Icon::Sessions" class="h-4 w-4" /> Sessioni da un ritirato
+            </x-button>
+        @endif
     </div>
 
     @if ($esitoOro)
@@ -105,6 +115,59 @@
 
                 <div class="border-t border-line pt-3">
                     <button type="button" wire:click="annullaMorte"
+                            class="text-sm text-muted transition hover:text-fg">Non adesso</button>
+                </div>
+            </div>
+        </x-modal>
+    @endif
+    @if ($modaleRitiro)
+        <x-modal title="Ritira il personaggio" close="annullaRitiro">
+            <div class="space-y-3 text-left text-sm">
+                <x-note>
+                    <span class="font-semibold">{{ $character->name }}</span> sparisce dall'app ma resta nel database,
+                    con Registro e sessioni. Le sue richieste in attesa vengono rifiutate.
+                    Il giocatore potrà crearne uno nuovo, e dalla sua scheda gli passerai le sessioni giocate.
+                </x-note>
+
+                <label class="flex items-start gap-2">
+                    <input type="checkbox" wire:model="ritiroCapito" class="mt-1 accent-[var(--ui-active)]">
+                    <span class="text-fg">Ne avete parlato col giocatore.</span>
+                </label>
+                @error('ritiroCapito') <p class="text-on-danger-soft">{{ $message }}</p> @enderror
+
+                <x-button variant="primary" full type="button" wire:click="ritira">Ritira</x-button>
+
+                <div class="border-t border-line pt-3">
+                    <button type="button" wire:click="annullaRitiro"
+                            class="text-sm text-muted transition hover:text-fg">Non adesso</button>
+                </div>
+            </div>
+        </x-modal>
+    @endif
+
+    @if ($modalePassaggio)
+        <x-modal title="Sessioni da un personaggio ritirato" close="annullaPassaggio">
+            <div class="space-y-3 text-left text-sm">
+                <p class="text-muted">
+                    Le sessioni giocate, con il diario, passano a <span class="font-semibold text-fg">{{ $character->name }}</span>.
+                    Monete e oggetti restano dove sono.
+                </p>
+
+                <select wire:model="passaggioDa" aria-label="Da quale personaggio"
+                        class="w-full rounded-md border border-line bg-page px-2 py-2 text-fg">
+                    <option value="">Scegli il personaggio ritirato</option>
+                    @foreach ($ritirati as $ritirato)
+                        <option value="{{ $ritirato->id }}">
+                            {{ $ritirato->name }} · {{ $ritirato->sessions_count === 1 ? '1 sessione' : $ritirato->sessions_count.' sessioni' }}
+                        </option>
+                    @endforeach
+                </select>
+                @error('passaggioDa') <p class="text-on-danger-soft">{{ $message }}</p> @enderror
+
+                <x-button full type="button" wire:click="passaSessioni">Passa le sessioni</x-button>
+
+                <div class="border-t border-line pt-3">
+                    <button type="button" wire:click="annullaPassaggio"
                             class="text-sm text-muted transition hover:text-fg">Non adesso</button>
                 </div>
             </div>

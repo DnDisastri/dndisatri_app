@@ -9,7 +9,6 @@ use App\Models\CharacterItem;
 use App\Models\CharacterItemEffect;
 use Illuminate\Database\UniqueConstraintViolationException;
 
-
 function sheet(array $attributes = []): Character
 {
     return Character::factory()->create($attributes);
@@ -186,7 +185,11 @@ describe('cancellazione a cascata', function () {
         CharacterItem::factory()->for($character)->count(3)->create();
         CharacterItemEffect::factory()->for($character)->create();
 
+        // `delete()` lo ritira soltanto: la cancellazione vera è `forceDelete()`.
         $character->delete();
+        expect(CharacterItem::count())->toBe(3);
+
+        $character->forceDelete();
 
         expect(CharacterItem::count())->toBe(0)
             ->and(CharacterItemEffect::count())->toBe(0);

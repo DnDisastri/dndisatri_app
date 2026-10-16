@@ -34,12 +34,12 @@ class MarketListing extends Model
 
     public function seller(): BelongsTo
     {
-        return $this->belongsTo(Character::class, 'seller_character_id');
+        return $this->belongsTo(Character::class, 'seller_character_id')->withTrashed();
     }
 
     public function buyer(): BelongsTo
     {
-        return $this->belongsTo(Character::class, 'buyer_character_id');
+        return $this->belongsTo(Character::class, 'buyer_character_id')->withTrashed();
     }
 
     public function isOpen(): bool
