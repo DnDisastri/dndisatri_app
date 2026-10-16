@@ -7,6 +7,7 @@ use App\Actions\Sessions\AssignTables;
 use App\Actions\Sessions\AwardSessionRewards;
 use App\Actions\Sessions\RecordAttendance;
 use App\Actions\Sessions\WriteRecap;
+use App\Http\Controllers\Concerns\NormalizesNewlines;
 use App\Domain\Dnd\Coins;
 use App\Enums\EquipmentSlot;
 use App\Enums\SeatStatus;
@@ -30,6 +31,8 @@ use InvalidArgumentException;
  */
 class GameSessionController extends Controller
 {
+    use NormalizesNewlines;
+
     /** Il calendario delle sessioni (P20). */
     public function index(Request $request): View
     {
@@ -141,6 +144,8 @@ class GameSessionController extends Controller
     public function writeRecap(Request $request, GameSession $session): RedirectResponse
     {
         $this->authorize('writeRecap', $session);
+
+        $this->normalizeNewlines($request, 'recap');
 
         $dati = $request->validate([
             'recap' => ['required', 'string', 'max:'.GameSession::recapLimit($session->recap)],
@@ -271,6 +276,8 @@ class GameSessionController extends Controller
     {
         $this->authorize('writeRecap', $session);
         abort_unless($table->game_session_id === $session->getKey(), 404);
+
+        $this->normalizeNewlines($request, 'recap');
 
         $dati = $request->validate([
             'recap' => ['required', 'string', 'max:'.GameSession::recapLimit($table->recap)],

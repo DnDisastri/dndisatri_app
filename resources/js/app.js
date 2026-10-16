@@ -669,3 +669,15 @@ window.addEventListener('pageshow', async (evento) => {
         // Senza rete resta com'era.
     }
 });
+
+// Contatore dei caratteri di <x-testo-contato>: si colora vicino al limite.
+
+document.addEventListener('input', (evento) => {
+    const box = evento.target.closest('[data-contatore]');
+
+    if (!box || evento.target.tagName !== 'TEXTAREA') return;
+
+    const n = evento.target.value.length;
+    box.querySelector('[data-contatore-n]').textContent = n;
+    box.querySelector('[data-contatore-riga]').classList.toggle('text-on-danger-soft', n > Number(box.dataset.max) * 0.9);
+});
