@@ -118,8 +118,12 @@
             <p class="text-xs uppercase tracking-wide text-muted">2. Ricompense</p>
 
             @foreach ($session->rewards ?? [] as $data)
+                @php
+                    $monete = \App\Domain\Dnd\Coins::fromArray($data['coins'] ?? []);
+                    $cosa = collect([$monete->isEmpty() ? null : $monete->format(), ...($data['items'] ?? [])])->filter()->join(', ');
+                @endphp
                 <p class="mt-1 text-xs text-muted">
-                    Già date: {{ \App\Domain\Dnd\Coins::fromArray($data['coins'] ?? [])->format() }} a testa
+                    Già date: {{ $cosa }} a testa
                     ({{ $data['reason'] }}) da {{ $data['by'] }} a {{ implode(', ', $data['characters'] ?? []) }}@if (! empty($data['table'])) ({{ $data['table'] }})@endif.
                 </p>
             @endforeach
@@ -132,7 +136,7 @@
                     @csrf
 
                     <p class="text-xs text-muted">
-                        Le stesse monete a ciascuno di quelli che scegli. Nel Registro di ognuno resta una riga.
+                        Monete, oggetti o tutti e due: le stesse cose a ciascuno di quelli che scegli. Nel Registro di ognuno resta una riga.
                     </p>
 
                     <label class="block text-sm">
@@ -153,6 +157,15 @@
 
                     <x-campo-monete name="coins" label="Monete a testa" />
 
+                    <div>
+                        <p class="mb-1 text-sm text-muted">Oggetti a testa</p>
+                        @include('partials.righe-oggetti', [
+                            'massimo' => $oggettiMax,
+                            'aperte' => 1,
+                            'limite' => 'Al massimo '.$oggettiMax.' oggetti per volta: il resto con una seconda consegna.',
+                        ])
+                    </div>
+
                     <label class="block text-sm">
                         <span class="mb-1 block text-muted">Motivo</span>
                         <input type="text" name="reason" maxlength="120" required value="{{ old('reason') }}"
@@ -160,6 +173,7 @@
                     </label>
                     @error('reason') <p class="text-sm text-on-danger-soft">{{ $message }}</p> @enderror
                     @error('coins') <p class="text-sm text-on-danger-soft">{{ $message }}</p> @enderror
+                    @error('items') <p class="text-sm text-on-danger-soft">{{ $message }}</p> @enderror
 
                     <x-button variant="secondary">Dai le ricompense</x-button>
                 </form>

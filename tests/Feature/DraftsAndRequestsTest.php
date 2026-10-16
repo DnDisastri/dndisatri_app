@@ -85,3 +85,40 @@ it('una sessione pubblicata non torna bozza', function () {
         ->test(EditGameSession::class, ['record' => $sessione->getRouteKey()])
         ->assertFormFieldIsHidden('bozza');
 });
+
+describe('le ricompense con gli oggetti', function () {
+    it('vanno a ciascuno dei presenti, e restano nel Registro', function () {
+        $dm = User::factory()->dm()->create();
+        $sessione = GameSession::factory()->create(['played_at' => now()->subDay()]);
+        $anna = Character::factory()->create(['name' => 'Anna']);
+        $bruno = Character::factory()->create(['name' => 'Bruno']);
+        app(RecordAttendance::class)->handle($sessione, [$anna->user_id => $anna->id, $bruno->user_id => $bruno->id]);
+
+        $this->actingAs($dm)
+            ->post(route('sessions.rewards', $sessione), [
+                'reason' => 'Il tesoro del drago',
+                'items' => [
+                    ['name' => 'Pozione di guarigione', 'qty' => 2, 'value' => '50'],
+                    ['name' => ''],
+                ],
+            ])
+            ->assertSessionHas('status');
+
+        foreach ([$anna, $bruno] as $pg) {
+            expect($pg->items()->where('name', 'Pozione di guarigione')->value('qty'))->toBe(2)
+                ->and($pg->ledgerEntries()->where('action', LedgerAction::DmItems)->value('message'))->toContain('2× Pozione di guarigione');
+        }
+
+        expect($sessione->fresh()->rewards[0]['items'])->toBe(['2× Pozione di guarigione']);
+    });
+
+    it('senza monete né oggetti non parte niente', function () {
+        $sessione = GameSession::factory()->create(['played_at' => now()->subDay()]);
+        $anna = Character::factory()->create();
+        app(RecordAttendance::class)->handle($sessione, [$anna->user_id => $anna->id]);
+
+        $this->actingAs(User::factory()->dm()->create())
+            ->post(route('sessions.rewards', $sessione), ['reason' => 'Niente'])
+            ->assertSessionHas('error');
+    });
+});

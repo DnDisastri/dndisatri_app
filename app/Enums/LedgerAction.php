@@ -28,6 +28,9 @@ enum LedgerAction: string
     /** Monete assegnate o tolte da un DM. */
     case DmGold = 'dm-gold';
 
+    /** Oggetti dati da un DM, per esempio fra le ricompense di una sessione. */
+    case DmItems = 'dm-items';
+
     /** Richiesta approvata dalla bacheca. */
     case Approve = 'approve';
 
@@ -47,6 +50,7 @@ enum LedgerAction: string
             self::ListingBought => 'Comprato da un giocatore',
             self::Trade => 'Scambio',
             self::DmGold => 'Monete dal dungeon master',
+            self::DmItems => 'Oggetti dal dungeon master',
             self::Approve => 'Richiesta approvata',
             self::Reversal => 'Annullamento',
             self::Exchange => 'Cambio monete',
