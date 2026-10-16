@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Actions\Approvals\ArchiveDecidedNotifications;
 use App\Enums\NotificationCategory;
 use App\Models\BugReport;
 
@@ -25,6 +26,7 @@ final class BugReportFiled extends InAppNotification
             'title' => 'Una segnalazione da leggere',
             'body' => "{$chi}: «{$this->report->title}».",
             'url' => route('filament.admin.resources.bug-reports.view', $this->report),
+            'subject' => ArchiveDecidedNotifications::subject($this->report),
         ];
     }
 }

@@ -57,6 +57,8 @@
             </p>
         </x-panel>
 
+        @include('proposals.partials.sessione')
+
         <x-panel>
             <x-field name="note" label="Da dove arriva (facoltativo)" maxlength="255" />
         </x-panel>

@@ -13,6 +13,7 @@ use App\Domain\Dnd\Progression;
 use App\Domain\Dnd\SpellSlots;
 use App\Enums\PendingChangeType;
 use App\Models\Character;
+use App\Models\GameSession;
 use App\Models\PendingChange;
 use App\Models\User;
 use App\Notifications\ChangeAwaitingApproval;
@@ -53,6 +54,7 @@ final class RequestLevelUp
         ?string $subclass = null,
         array $spells = [],
         array $skills = [],
+        ?GameSession $session = null,
     ): PendingChange {
         $newLevel = $character->level + 1;
 
@@ -145,13 +147,14 @@ final class RequestLevelUp
         $change = PendingChange::create([
             'character_id' => $character->getKey(),
             'requested_by' => $requester->getKey(),
+            'game_session_id' => $session?->getKey(),
             'type' => PendingChangeType::LevelUp,
             'diff' => $diff,
             'summary' => implode(' ', $summary),
             'base_updated_at' => $character->updated_at,
         ]);
 
-        app(AnnounceForApproval::class)->handle(new ChangeAwaitingApproval($change), $requester);
+        app(AnnounceForApproval::class)->handle(new ChangeAwaitingApproval($change), $requester, session: $session);
 
         return $change;
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Actions\Approvals\ArchiveDecidedNotifications;
 use App\Enums\NotificationCategory;
 use App\Models\PendingChange;
 use Illuminate\Support\Str;
@@ -31,6 +32,7 @@ final class ChangeAwaitingApproval extends InAppNotification
             'title' => 'Una modifica da approvare',
             'body' => "Richiesta di {$chi}.\n{$cosa}\nAprila nel pannello per decidere.",
             'url' => route('filament.admin.resources.pending-changes.view', $this->change),
+            'subject' => ArchiveDecidedNotifications::subject($this->change),
         ];
     }
 }

@@ -508,6 +508,13 @@ class Character extends Model
         return $ultimo?->updated_at ?? $this->created_at;
     }
 
+    /** Le ultime sessioni giocate, dalla più recente. */
+    public function playedSessions(int $quante = 10): Collection
+    {
+        return $this->sessions()->where('played_at', '<', now())->with('campaign')
+            ->orderByDesc('played_at')->limit($quante)->get();
+    }
+
     public function sessionsSinceLastLevelUp(): int
     {
         return $this->sessions()

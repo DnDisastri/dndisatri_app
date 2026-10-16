@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Actions\Approvals\ArchiveDecidedNotifications;
 use App\Enums\NotificationCategory;
 use App\Models\SupervisedAction;
 
@@ -25,6 +26,7 @@ final class SupervisedActionAwaitingApproval extends InAppNotification
             'title' => "Un'azione da approvare",
             'body' => "{$this->action->type->label()}: {$this->action->summary}. Aprila nel pannello per decidere.",
             'url' => route('filament.admin.resources.supervised-actions.view', $this->action),
+            'subject' => ArchiveDecidedNotifications::subject($this->action),
         ];
     }
 }

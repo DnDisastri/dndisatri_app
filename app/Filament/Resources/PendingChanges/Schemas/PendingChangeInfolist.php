@@ -32,6 +32,11 @@ class PendingChangeInfolist
                     TextEntry::make('character.name')
                         ->label('Personaggio'),
 
+                    TextEntry::make('session')
+                        ->label('Dalla sessione')
+                        ->state(fn ($record) => $record->session?->displayTitle())
+                        ->placeholder('Non indicata'),
+
                     TextEntry::make('summary')
                         ->label('Riassunto')
                         ->visible(fn (PendingChange $record) => filled($record->summary)),

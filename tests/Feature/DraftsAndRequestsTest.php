@@ -122,3 +122,84 @@ describe('le ricompense con gli oggetti', function () {
             ->assertSessionHas('error');
     });
 });
+
+describe('le richieste ai DM della sessione', function () {
+    beforeEach(function () {
+        $this->titolare = User::factory()->dm()->create();
+        $this->coMaster = User::factory()->dm()->create();
+        $this->altroDm = User::factory()->dm()->create();
+        $this->admin = User::factory()->admin()->create();
+
+        $this->sessione = GameSession::factory()->inCampaign(Campaign::factory()->create(['dm_id' => $this->titolare->id]))
+            ->create(['played_at' => now()->subDay()]);
+        $this->sessione->dms()->attach($this->coMaster);
+
+        $this->giocatore = User::factory()->player()->create();
+        $this->pg = Character::factory()->ownedBy($this->giocatore)->create();
+        app(RecordAttendance::class)->handle($this->sessione, [$this->giocatore->id => $this->pg->id]);
+    });
+
+    it('il bottino di una sessione avvisa i suoi DM e gli admin, non gli altri DM', function () {
+        Notification::fake();
+
+        $this->actingAs($this->giocatore)
+            ->post(route('proposals.loot', $this->pg), ['coins' => ['gp' => 10], 'game_session_id' => $this->sessione->id])
+            ->assertSessionHasNoErrors();
+
+        Notification::assertSentTo([$this->titolare, $this->coMaster, $this->admin], ChangeAwaitingApproval::class);
+        Notification::assertNotSentTo($this->altroDm, ChangeAwaitingApproval::class);
+    });
+
+    it('una sessione che il personaggio non ha giocato non conta: avvisa tutti', function () {
+        Notification::fake();
+        $estranea = GameSession::factory()->create(['played_at' => now()->subDay()]);
+
+        $this->actingAs($this->giocatore)
+            ->post(route('proposals.loot', $this->pg), ['coins' => ['gp' => 10], 'game_session_id' => $estranea->id]);
+
+        Notification::assertSentTo([$this->titolare, $this->altroDm, $this->admin], ChangeAwaitingApproval::class);
+    });
+});
+
+describe('le richieste già decise', function () {
+    it('vanno in archivio da sole per gli altri, con l\'esito', function () {
+        $giocatore = User::factory()->player()->create();
+        $pg = Character::factory()->ownedBy($giocatore)->create();
+        $chiDecide = User::factory()->dm()->create(['name' => 'Margherita']);
+        $altro = User::factory()->dm()->create();
+
+        $richiesta = app(ProposeChange::class)->loot($pg, $giocatore, coins: new Coins(gp: 10));
+
+        expect($altro->notifications()->whereNull('archived_at')->count())->toBe(1);
+
+        app(ApprovePendingChange::class)->handle($richiesta, $chiDecide);
+
+        $notifica = $altro->notifications()->first();
+
+        expect($notifica->archived_at)->not->toBeNull()
+            ->and($notifica->data['outcome'])->toBe('Approvata da Margherita il '.now()->format('d/m').'.');
+
+        $this->actingAs($altro)
+            ->get(route('notifications.index', ['archiviate' => 1]))
+            ->assertSee('Approvata da Margherita');
+    });
+
+    it('il comando recupera le vecchie dal link, e in prova non tocca niente', function () {
+        $giocatore = User::factory()->player()->create();
+        $pg = Character::factory()->ownedBy($giocatore)->create();
+        $altro = User::factory()->dm()->create();
+        $richiesta = app(ProposeChange::class)->loot($pg, $giocatore, coins: new Coins(gp: 10));
+
+        // Com'erano prima: senza il riferimento alla richiesta.
+        $notifica = $altro->notifications()->first();
+        $notifica->forceFill(['data' => collect($notifica->data)->except('subject')->all()])->save();
+        $richiesta->forceFill(['status' => 'approved', 'reviewed_by' => User::factory()->admin()->create()->id, 'reviewed_at' => now()])->save();
+
+        $this->artisan('dndisastri:archivia-notifiche-decise', ['--dry-run' => true])->assertSuccessful();
+        expect($notifica->fresh()->archived_at)->toBeNull();
+
+        $this->artisan('dndisastri:archivia-notifiche-decise')->assertSuccessful();
+        expect($notifica->fresh()->archived_at)->not->toBeNull()
+            ->and($notifica->fresh()->data['subject']['id'])->toBe($richiesta->id);
+    });
+});
