@@ -7,6 +7,7 @@ use App\Http\Controllers\BuildController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CharacterController;
 use App\Http\Controllers\DmController;
+use App\Http\Controllers\DmRuleController;
 use App\Http\Controllers\EncounterController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\FaqController;
@@ -34,6 +35,8 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // Pubblica: la si raggiunge dalla presentazione, prima dell'accesso.
 Route::get('chi-siamo', [AboutController::class, 'show'])->name('about');
+// Pubbliche anche le FAQ; il tutorial solo a chi ha un account.
+Route::get('guida', [FaqController::class, 'index'])->name('faq.index');
 
 // Ospiti senza account: il modulo per chiedere un posto e la pagina personale col token.
 Route::get('calendario', [GuestBookingController::class, 'calendar'])->name('guest-bookings.calendar');
@@ -55,6 +58,7 @@ Route::middleware('auth')->group(function () {
     Route::get('bacheca/{change}/foto', [PendingChangePhotoController::class, 'show'])->name('pending-changes.photo');
 
     Route::get('notifiche', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('notifiche/non-lette', [NotificationController::class, 'unreadCount'])->name('notifications.unread');
     // La rotta fissa deve precedere `{notification}` per non essere interpretata come parametro dinamico.
     Route::post('notifiche/svuota', [NotificationController::class, 'clear'])->name('notifications.clear');
     Route::delete('notifiche/archivio', [NotificationController::class, 'emptyArchive'])->name('notifications.empty-archive');
@@ -76,8 +80,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('gilda', [GuildController::class, 'index'])->name('guild.index');
 
-    Route::get('guida', [FaqController::class, 'index'])->name('faq.index');
-
     Route::get('area-master', [DmController::class, 'home'])->name('dm.home');
     // I vecchi indirizzi della Regia, rimasti nei preferiti.
     Route::redirect('regia', '/area-master');
@@ -87,6 +89,7 @@ Route::middleware('auth')->group(function () {
     Route::put('area-master/campagne/{campaign}/nota', [DmController::class, 'handover'])->name('dm.handover');
     Route::get('area-master/png', NpcManager::class)->name('dm.npcs');
     Route::get('area-master/manuale', [ManualController::class, 'show'])->name('dm.manual');
+    Route::get('area-master/regole', [DmRuleController::class, 'index'])->name('dm.rules');
 
     Route::get('area-master/combattimenti', [EncounterController::class, 'index'])->name('encounters.index');
     Route::post('area-master/combattimenti', [EncounterController::class, 'store'])->name('encounters.store');

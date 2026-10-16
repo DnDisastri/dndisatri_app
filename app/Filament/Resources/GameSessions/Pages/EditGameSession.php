@@ -5,6 +5,8 @@ namespace App\Filament\Resources\GameSessions\Pages;
 use App\Actions\Sessions\RecordAttendance;
 use App\Actions\Sessions\WriteRecap;
 use App\Filament\Resources\GameSessions\GameSessionResource;
+use App\Filament\Resources\GameSessions\Pages\Concerns\AnnouncesSession;
+use App\Filament\Support\Bozza;
 use App\Models\GameSession;
 use App\Models\User;
 use Filament\Actions\DeleteAction;
@@ -15,6 +17,10 @@ use InvalidArgumentException;
 class EditGameSession extends EditRecord
 {
     protected static string $resource = GameSessionResource::class;
+
+    use AnnouncesSession;
+
+    private bool $eraBozza = false;
 
     private bool $recapCambiato = false;
 
@@ -49,6 +55,9 @@ class EditGameSession extends EditRecord
     {
         $data = GameSession::withoutSpecialFieldsUnlessSpecial($data);
 
+        $this->eraBozza = $this->record->isDraft();
+        $data = Bozza::applica($data, (bool) ($this->data['bozza'] ?? false), $this->record);
+
         $nuovo = (string) ($data['recap'] ?? '');
         unset($data['recap']);
 
@@ -65,6 +74,11 @@ class EditGameSession extends EditRecord
 
     protected function afterSave(): void
     {
+        // Solo al passaggio da bozza a pubblicata: le modifiche dopo non riavvisano.
+        if ($this->eraBozza) {
+            $this->announceIfPublished();
+        }
+
         if ($this->recapCambiato) {
             app(WriteRecap::class)->handle($this->record, auth()->user(), (string) $this->recapNuovo);
         }

@@ -69,7 +69,7 @@
                         <div class="flex items-center justify-between gap-2 rounded-md border border-line bg-page px-3 py-2">
                             <span class="min-w-0 text-sm">
                                 <span class="font-semibold text-fg">{{ $m->name }}</span>
-                                <span class="text-xs text-muted"> · PF {{ $m->hp }} · CA {{ $m->ac }}</span>
+                                <span class="text-xs text-muted"> · PF {{ $m->hp }} · CA {{ $m->ac }}@if (filled($m->challenge)) · GS {{ $m->challenge }}@endif</span>
                             </span>
                             <x-button size="sm" type="button" wire:click="aggiungiDalBestiario({{ $m->id }})">Aggiungi</x-button>
                         </div>
@@ -137,7 +137,7 @@
                 };
                 $mioTurno = $turnoId === $c['id'];
                 // Il mostro ha uno statblock da aprire solo se ha di che riempirlo.
-                $haStatblock = ! $isPg && (! empty($c['attacks']) || filled($c['traits'] ?? null) || filled($c['speed'] ?? null));
+                $haStatblock = ! $isPg && (filled($c['monsterId'] ?? null) || ! empty($c['attacks']) || filled($c['traits'] ?? null) || filled($c['speed'] ?? null));
             @endphp
 
             <div wire:key="comb-{{ $c['id'] }}"
@@ -149,13 +149,17 @@
                  ])>
 
                 <div class="flex items-center gap-3">
-                    <input type="number" inputmode="numeric" aria-label="Iniziativa di {{ $c['nome'] }}"
-                           wire:model.blur="combattenti.{{ $i }}.iniziativa"
-                           @class([
-                               'h-11 w-11 shrink-0 rounded-lg border text-center font-display text-lg',
-                               'border-active bg-active text-on-active' => $mioTurno,
-                               'border-line bg-page text-fg' => ! $mioTurno,
-                           ])>
+                    {{-- Il numero è l'iniziativa: la fila si riordina quando si esce dal campo. --}}
+                    <label class="flex shrink-0 flex-col items-center gap-0.5">
+                        <input type="number" inputmode="numeric" aria-label="Iniziativa di {{ $c['nome'] }}"
+                               wire:model.blur="combattenti.{{ $i }}.iniziativa"
+                               @class([
+                                   'h-11 w-11 rounded-lg border text-center font-display text-lg',
+                                   'border-active bg-active text-on-active' => $mioTurno,
+                                   'border-line bg-page text-fg' => ! $mioTurno,
+                               ])>
+                        <span class="text-[10px] font-semibold uppercase tracking-wide text-muted">Iniz.</span>
+                    </label>
 
                     <div class="min-w-0 flex-1">
                         <p class="flex items-center gap-1.5 font-semibold leading-tight text-fg">
@@ -163,10 +167,7 @@
                                 <a href="{{ route('characters.show', $pg) }}" class="truncate hover:underline">{{ $c['nome'] }}</a>
                             @elseif ($haStatblock)
                                 <button type="button" wire:click="apriStatblock('{{ $c['id'] }}')"
-                                        class="inline-flex min-w-0 items-center gap-1 text-left hover:underline">
-                                    <span class="truncate">{{ $c['nome'] }}</span>
-                                    <x-icona :is="Icon::Discover" class="h-3.5 w-3.5 shrink-0 text-muted" />
-                                </button>
+                                        class="min-w-0 truncate text-left hover:underline">{{ $c['nome'] }}</button>
                             @else
                                 <span class="truncate">{{ $c['nome'] }}</span>
                             @endif
@@ -189,6 +190,14 @@
                             @endif
                         </p>
                     </div>
+
+                    {{-- Anche il nome apre la scheda, ma da solo non si nota. --}}
+                    @if ($haStatblock)
+                        <button type="button" wire:click="apriStatblock('{{ $c['id'] }}')"
+                                class="inline-flex shrink-0 items-center gap-1 rounded-full border border-line px-2.5 py-1 text-xs font-semibold text-fg transition hover:border-active">
+                            <x-icona :is="Icon::Discover" class="h-3.5 w-3.5" /> Scheda
+                        </button>
+                    @endif
 
                     <button type="button" wire:click="rimuovi('{{ $c['id'] }}')" title="Togli"
                             class="shrink-0 rounded-full p-1.5 text-muted transition hover:text-on-danger-soft">
@@ -319,6 +328,10 @@
     @if ($statblock)
         <x-modal :title="$statblock['nome']" close="chiudiStatblock" class="lg:max-w-2xl">
             <div class="space-y-3 text-left text-sm">
+                @if (filled($statblock['profilo'] ?? null))
+                    <p class="font-semibold text-fg">{{ $statblock['profilo'] }}</p>
+                @endif
+
                 <p class="text-muted">
                     PF <span class="font-semibold text-fg">{{ $statblock['hpMax'] }}</span>
                     · CA <span class="font-semibold text-fg">{{ $statblock['ac'] }}</span>
@@ -335,7 +348,7 @@
                                 <li>
                                     <span class="font-medium text-fg">{{ $a['nome'] ?? 'Vuoto' }}</span>
                                     @if (! empty($a['bonus'])) <span class="text-muted">{{ $a['bonus'] }} per colpire</span> @endif
-                                    @if (! empty($a['danni'])) <span class="text-muted">· {{ $a['danni'] }} danni</span> @endif
+                                    @if (! empty($a['danni'])) <span class="text-muted">· {{ $a['danni'] }} danni {{ \App\Enums\DamageType::tryFrom($a['tipo'] ?? '')?->label() }}</span> @endif
                                 </li>
                             @endforeach
                         </ul>

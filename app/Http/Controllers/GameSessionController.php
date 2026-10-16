@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Characters\LootSuggestions;
 use App\Actions\Sessions\AssignTables;
 use App\Actions\Sessions\AwardSessionRewards;
 use App\Actions\Sessions\RecordAttendance;
 use App\Actions\Sessions\WriteRecap;
 use App\Domain\Dnd\Coins;
+use App\Enums\EquipmentSlot;
 use App\Enums\SeatStatus;
 use App\Exceptions\MarketException;
+use App\Models\CharacterItem;
 use App\Models\Event;
 use App\Models\GameSession;
 use App\Models\SessionTable;
@@ -120,8 +123,19 @@ class GameSessionController extends Controller
             'candidates' => auth()->user()->can('recordAttendance', $session)
                 ? User::visibleToPlayers()->with('characters')->orderBy('name')->get()
                 : collect(),
+
+            // Per le ricompense: a chi le dà, e solo con presenti che hanno un personaggio.
+            'suggerimenti' => ! $session->isUpcoming()
+                && $session->attendees->contains(fn (User $u) => $u->pivot->character_id !== null)
+                && auth()->user()->can('recordAttendance', $session)
+                ? app(LootSuggestions::class)->handle()
+                : [],
+            'oggettiMax' => self::OGGETTI_MAX,
         ]);
     }
+
+    /** Quanti oggetti diversi in una consegna di ricompense. */
+    private const OGGETTI_MAX = 10;
 
     /** Il resoconto (M13). Si può riscrivere: le correzioni arrivano dopo. */
     public function writeRecap(Request $request, GameSession $session): RedirectResponse
@@ -129,7 +143,7 @@ class GameSessionController extends Controller
         $this->authorize('writeRecap', $session);
 
         $dati = $request->validate([
-            'recap' => ['required', 'string', 'max:20000'],
+            'recap' => ['required', 'string', 'max:'.GameSession::recapLimit($session->recap)],
         ]);
 
         app(WriteRecap::class)->handle($session, $request->user(), $dati['recap']);
@@ -191,8 +205,15 @@ class GameSessionController extends Controller
         $this->authorize('recordAttendance', $session);
 
         $dati = $request->validate([
-            'coins' => ['required', 'array'],
+            'coins' => ['nullable', 'array'],
             'coins.*' => ['nullable', 'integer', 'min:0', 'max:'.Coins::MAX],
+            'items' => ['nullable', 'array', 'max:'.self::OGGETTI_MAX],
+            'items.*.name' => ['nullable', 'string', 'max:100'],
+            'items.*.qty' => ['nullable', 'integer', 'min:1', 'max:999'],
+            'items.*.category' => ['nullable', Rule::in(CharacterItem::CATEGORIES)],
+            'items.*.base' => ['nullable', Rule::in(collect(EquipmentSlot::bases())->flatten()->all())],
+            'items.*.value' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
+            'items.*.details' => ['nullable', 'string', 'max:1000'],
             'reason' => ['required', 'string', 'max:120'],
             // «tutti», «tavolo-3» o «pg-12»: a chi vanno.
             'destinatari' => ['nullable', 'string', 'regex:/^(tutti|tavolo-\d+|pg-\d+)$/'],
@@ -206,10 +227,16 @@ class GameSessionController extends Controller
             $chi = $rewards->handle(
                 $session,
                 $request->user(),
-                Coins::fromArray($dati['coins']),
+                Coins::fromArray($dati['coins'] ?? []),
                 $dati['reason'],
                 tableId: $tipo === 'tavolo' ? (int) $id : null,
                 characterId: $tipo === 'pg' ? (int) $id : null,
+                // Le righe lasciate in bianco non sono oggetti; il valore arriva in mo.
+                items: collect($dati['items'] ?? [])
+                    ->filter(fn ($item) => filled($item['name'] ?? null))
+                    ->map(fn (array $item) => [...collect($item)->except('value')->all(), 'value_cp' => (int) round((float) ($item['value'] ?? 0) * 100)])
+                    ->values()
+                    ->all(),
             );
         } catch (InvalidArgumentException|MarketException $e) {
             return back()->withInput()->with('error', $e->getMessage());
@@ -246,7 +273,7 @@ class GameSessionController extends Controller
         abort_unless($table->game_session_id === $session->getKey(), 404);
 
         $dati = $request->validate([
-            'recap' => ['required', 'string', 'max:20000'],
+            'recap' => ['required', 'string', 'max:'.GameSession::recapLimit($table->recap)],
         ]);
 
         app(WriteRecap::class)->handle($table, $request->user(), $dati['recap']);

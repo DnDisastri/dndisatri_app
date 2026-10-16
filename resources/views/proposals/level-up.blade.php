@@ -172,6 +172,8 @@
             </x-panel>
         @endif
 
+        @include('proposals.partials.sessione')
+
         <div class="flex gap-3">
             <x-button size="lg" class="flex-1">Chiedi il levelup</x-button>
             <x-button size="lg" variant="quiet" :href="route('characters.show', $character)">Annulla</x-button>

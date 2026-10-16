@@ -38,6 +38,10 @@
             </p>
         @endunless
 
+        @if ($session->isDraft())
+            <x-badge tone="outline" class="mb-2">Bozza: i giocatori non la vedono</x-badge>
+        @endif
+
         <h2 class="text-2xl leading-tight text-fg">
             <span class="block">{{ $session->numberLabel() }}</span>
             @if (filled($session->title))

@@ -18,6 +18,10 @@
         <p class="font-semibold text-fg">{{ $quest->title }}</p>
 
         <div class="flex shrink-0 items-center gap-1.5">
+            @if ($quest->isDraft())
+                <x-badge tone="outline">Bozza</x-badge>
+            @endif
+
             {{-- Il tipo, neutro: per ora tutte «Di campagna», distingue quando arriveranno boss run e farm. --}}
             @if ($quest->type)
                 <x-badge tone="neutral">{{ $quest->type->label() }}</x-badge>

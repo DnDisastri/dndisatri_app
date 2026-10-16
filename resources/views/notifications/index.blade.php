@@ -59,6 +59,10 @@
                             {{ $data['title'] }}
                         </p>
 
+                        @if (filled($data['outcome'] ?? null))
+                            <p class="mt-1 text-sm font-semibold text-fg">{{ $data['outcome'] }}</p>
+                        @endif
+
                         @if (filled($data['body'] ?? null))
                             <p class="mt-1 whitespace-pre-line text-sm text-muted">{{ $data['body'] }}</p>
                         @endif

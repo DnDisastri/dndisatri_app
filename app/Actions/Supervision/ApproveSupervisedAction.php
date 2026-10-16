@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Supervision;
 
+use App\Actions\Approvals\ArchiveDecidedNotifications;
 use App\Actions\Market\AcceptTrade;
 use App\Actions\Market\BuyListing;
 use App\Actions\Market\CreateListing;
@@ -43,6 +44,7 @@ final class ApproveSupervisedAction
             ])->save();
 
             $locked->user()->first()?->notify(new SupervisedActionDecided($locked));
+            app(ArchiveDecidedNotifications::class)->handle($locked->refresh());
 
             return $result;
         });

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Characters;
 
+use App\Actions\Approvals\ArchiveDecidedNotifications;
 use App\Enums\PendingChangeStatus;
 use App\Models\PendingChange;
 use App\Models\User;
@@ -31,6 +32,7 @@ final class RejectPendingChange
         app(CharacterPhoto::class)->discard($change->diff['photo_path'] ?? null);
 
         $change->requestedBy()->first()?->notify(new RequestDecided($change));
+        app(ArchiveDecidedNotifications::class)->handle($change->refresh());
 
         return $change;
     }

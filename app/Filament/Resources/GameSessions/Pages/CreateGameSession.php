@@ -2,18 +2,20 @@
 
 namespace App\Filament\Resources\GameSessions\Pages;
 
-use App\Actions\AnnounceToPlayers;
 use App\Actions\Sessions\RecordAttendance;
 use App\Actions\Sessions\WriteRecap;
 use App\Filament\Resources\GameSessions\GameSessionResource;
+use App\Filament\Resources\GameSessions\Pages\Concerns\AnnouncesSession;
+use App\Filament\Support\Bozza;
 use App\Models\GameSession;
-use App\Notifications\GameSessionScheduled;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use InvalidArgumentException;
 
 class CreateGameSession extends CreateRecord
 {
+    use AnnouncesSession;
+
     protected static string $resource = GameSessionResource::class;
 
     private ?string $recapNuovo = null;
@@ -27,6 +29,7 @@ class CreateGameSession extends CreateRecord
     {
         $data['created_by'] = auth()->id();
         $data = GameSession::withoutSpecialFieldsUnlessSpecial($data);
+        $data = Bozza::applica($data, (bool) ($this->data['bozza'] ?? false));
 
         $this->recapNuovo = $data['recap'] ?? null;
         $this->presenze = $data['presenze'] ?? [];
@@ -37,14 +40,7 @@ class CreateGameSession extends CreateRecord
 
     protected function afterCreate(): void
     {
-        // Si avvisa solo per una sessione futura, non per una inserita a posteriori.
-        $annuncio = app(AnnounceToPlayers::class);
-
-        if ($this->record->isUpcoming() && ($this->data['notify_players'] ?? true)) {
-            $annuncio->handle($this->record, new GameSessionScheduled($this->record), auth()->user());
-        } else {
-            $annuncio->skip($this->record);
-        }
+        $this->announceIfPublished();
 
         if (filled($this->recapNuovo)) {
             app(WriteRecap::class)->handle($this->record, auth()->user(), $this->recapNuovo);

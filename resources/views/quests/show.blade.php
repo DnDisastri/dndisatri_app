@@ -39,6 +39,10 @@
         </div>
 
         <div class="text-center">
+            @if ($quest->isDraft())
+                <x-badge tone="outline" class="mb-2">Bozza: i giocatori non la vedono</x-badge>
+            @endif
+
             <h2 class="text-2xl text-fg">{{ $quest->title }}</h2>
 
             <p class="mt-1 flex flex-wrap items-center justify-center gap-2 text-sm text-muted">

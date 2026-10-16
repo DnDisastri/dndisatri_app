@@ -11,6 +11,7 @@ use App\Domain\Dnd\ItemEffectMode;
 use App\Enums\PendingChangeType;
 use App\Models\Character;
 use App\Models\CharacterItem;
+use App\Models\GameSession;
 use App\Models\MarketItem;
 use App\Models\PendingChange;
 use App\Models\User;
@@ -50,7 +51,7 @@ final class ProposeChange
      *
      * @param  list<array{name: string, qty?: int, category?: string, value_cp?: int, details?: string}>  $items
      */
-    public function loot(Character $character, User $requester, ?Coins $coins = null, array $items = [], ?string $note = null): PendingChange
+    public function loot(Character $character, User $requester, ?Coins $coins = null, array $items = [], ?string $note = null, ?GameSession $session = null): PendingChange
     {
         $coins ??= Coins::none();
 
@@ -80,6 +81,7 @@ final class ProposeChange
             'grant_items' => $items,
             'summary' => 'Bottino: '.implode(' e ', $parts),
             'note' => filled($note) ? $note : null,
+            'game_session_id' => $session?->getKey(),
         ]);
     }
 
@@ -155,7 +157,7 @@ final class ProposeChange
             ...$attributes,
         ]);
 
-        app(AnnounceForApproval::class)->handle(new ChangeAwaitingApproval($change), $requester);
+        app(AnnounceForApproval::class)->handle(new ChangeAwaitingApproval($change), $requester, session: $change->session);
 
         return $change;
     }

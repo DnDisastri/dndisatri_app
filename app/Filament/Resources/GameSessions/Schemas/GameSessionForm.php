@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\GameSessions\Schemas;
 
 use App\Enums\SpecialSessionType;
+use App\Filament\Support\Bozza;
 use App\Models\Campaign;
 use App\Models\Character;
 use App\Models\GameSession;
@@ -110,12 +111,19 @@ class GameSessionForm
                             ->default(3)
                             ->required(),
 
+                        Bozza::toggle('I giocatori non la vedono e non possono prenotarsi. Spegnila per pubblicarla.')
+                            ->live(),
+
                         Toggle::make('notify_players')
                             ->label('Avvisa i giocatori')
-                            ->helperText('Solo per una sessione futura: quelle già giocate non avvisano comunque.')
-                            ->default(true)
+                            ->helperText(fn (Get $get) => $get('bozza')
+                                ? 'Quando la pubblichi. Le sessioni già giocate non avvisano comunque.'
+                                : 'Solo per una sessione futura: quelle già giocate non avvisano comunque.')
+                            // Non è una colonna: anche in modifica parte acceso.
+                            ->formatStateUsing(fn () => true)
                             ->dehydrated(false)
-                            ->visibleOn('create'),
+                            // Si avvisa una volta sola, alla pubblicazione.
+                            ->visible(fn (?GameSession $record) => $record === null || $record->isDraft()),
                     ])
                     ->columns(2),
 
@@ -162,7 +170,9 @@ class GameSessionForm
                         Textarea::make('recap')
                             ->label('Resoconto')
                             ->rows(10)
-                            ->maxLength(20000)
+                            ->maxLength(fn (?GameSession $record) => GameSession::recapLimit($record?->recap))
+                            ->live(debounce: 500)
+                            ->hint(fn (?string $state, ?GameSession $record) => mb_strlen((string) $state).' / '.number_format(GameSession::recapLimit($record?->recap), 0, ',', '.'))
                             ->columnSpanFull(),
                     ]),
 

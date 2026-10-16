@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\SeatStatus;
 use App\Enums\SpecialSessionType;
 use App\Models\Concerns\HasReactions;
+use App\Models\Scopes\HideDrafts;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -21,7 +22,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * Una sessione di gioco: posti, prenotazioni, quest, presenze e resoconto.
  * Non `Session`, per non confondersi con le sessioni di login di Laravel.
  */
-#[Fillable(['campaign_id', 'number', 'title', 'season', 'special_type', 'played_at', 'created_by', 'min_players', 'max_players'])]
+#[Fillable(['campaign_id', 'number', 'title', 'season', 'special_type', 'played_at', 'published_at', 'created_by', 'min_players', 'max_players'])]
 class GameSession extends Model
 {
     use HasFactory, HasReactions, LogsActivity;
@@ -45,6 +46,7 @@ class GameSession extends Model
             'played_at' => 'datetime',
             'recap_written_at' => 'datetime',
             'players_notified_at' => 'datetime',
+            'published_at' => 'datetime',
             'rewards' => 'array',
             'min_players' => 'integer',
             'max_players' => 'integer',
@@ -73,6 +75,17 @@ class GameSession extends Model
     public function quests(): HasMany
     {
         return $this->hasMany(Quest::class);
+    }
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new HideDrafts);
+    }
+
+    /** Non ancora pubblicata: la vedono solo DM e admin. */
+    public function isDraft(): bool
+    {
+        return $this->published_at === null;
     }
 
     /** I tavoli di una sessione speciale; le sessioni normali non ne hanno. */
@@ -206,6 +219,15 @@ class GameSession extends Model
         return (bool) $this->campaign?->isSpecial();
     }
 
+    /** Circa una pagina. */
+    public const RECAP_MAX = 3600;
+
+    /** Quelli scritti prima del limite si accorciano, ma non si allungano. */
+    public static function recapLimit(?string $attuale): int
+    {
+        return max(self::RECAP_MAX, mb_strlen((string) $attuale));
+    }
+
     public function hasRecap(): bool
     {
         return filled($this->recap);
@@ -216,7 +238,7 @@ class GameSession extends Model
     /** Ci si prenota fino all'inizio della sessione. */
     public function acceptsBookings(): bool
     {
-        return $this->isUpcoming();
+        return $this->isUpcoming() && ! $this->isDraft();
     }
 
     /** Offerti e confermati, ospiti compresi: il posto è tenuto per loro. */

@@ -17,7 +17,7 @@ use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
 #[Fillable([
-    'character_id', 'requested_by', 'type', 'diff', 'summary', 'note',
+    'character_id', 'requested_by', 'game_session_id', 'type', 'diff', 'summary', 'note',
     'grant_coins', 'grant_items', 'base_updated_at', 'archived_at',
 ])]
 class PendingChange extends Model
@@ -50,6 +50,12 @@ class PendingChange extends Model
             'reviewed_at' => 'datetime',
             'archived_at' => 'datetime',
         ];
+    }
+
+    /** La sessione da cui arriva la richiesta, se il giocatore l'ha indicata. */
+    public function session(): BelongsTo
+    {
+        return $this->belongsTo(GameSession::class, 'game_session_id');
     }
 
     public function character(): BelongsTo

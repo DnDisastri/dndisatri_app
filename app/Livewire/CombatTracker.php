@@ -586,9 +586,26 @@ class CombatTracker extends Component
             'personaggi' => $personaggi,
             'condizioniDisponibili' => Condition::elenco(),
             'mostriTrovati' => $mostriTrovati,
-            'statblock' => $this->statblockAperto !== null
-                ? collect($this->combattenti)->firstWhere('id', $this->statblockAperto)
-                : null,
+            'statblock' => $this->statblock(),
         ]);
+    }
+
+    /**
+     * Dal bestiario, se il mostro c'è ancora: le correzioni si vedono subito.
+     * Altrimenti la copia salvata con lo scontro.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function statblock(): ?array
+    {
+        $combattente = $this->statblockAperto !== null
+            ? collect($this->combattenti)->firstWhere('id', $this->statblockAperto)
+            : null;
+
+        $mostro = filled($combattente['monsterId'] ?? null)
+            ? Monster::usableInCampaign($this->scontro()->campaign_id)->find($combattente['monsterId'])
+            : null;
+
+        return $mostro === null ? $combattente : [...$combattente, ...$mostro->toCombatant(), 'nome' => $combattente['nome']];
     }
 }

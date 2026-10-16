@@ -14,14 +14,12 @@ class FaqController extends Controller
      */
     public function index(): View
     {
-        $this->authorize('viewAny', Faq::class);
-
-        $gruppi = Faq::published()->ordered()->get()
+        $gruppi = Faq::published()->for(auth()->check())->ordered()->get()
             ->groupBy(fn (Faq $faq) => $faq->category ?? '');
 
         return view('faq.index', [
             'gruppi' => $gruppi,
-            'passi' => TutorialStep::published()->ordered()->get(),
+            'passi' => auth()->check() ? TutorialStep::published()->ordered()->get() : collect(),
         ]);
     }
 }

@@ -29,7 +29,13 @@ class QuestFactory extends Factory
             'type' => QuestType::Campaign,
             'completed_at' => null,
             'closed_at' => null,
+            'published_at' => now()->subMonth(),
         ];
+    }
+
+    public function draft(): static
+    {
+        return $this->state(fn () => ['published_at' => null]);
     }
 
     public function inCampaign(Campaign $campaign): static

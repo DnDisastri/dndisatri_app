@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -36,6 +37,12 @@ class NotificationController extends Controller
             'archiviate' => $user->notifications()->whereNotNull('archived_at')->count(),
             'daSvuotare' => $user->notifications()->whereNull('archived_at')->count(),
         ]);
+    }
+
+    /** Per il pallino, quando il browser rimostra una pagina vecchia. */
+    public function unreadCount(Request $request): JsonResponse
+    {
+        return response()->json(['n' => $request->user()->unreadNotifications()->whereNull('archived_at')->count()]);
     }
 
     public function archive(Request $request, string $notification): RedirectResponse

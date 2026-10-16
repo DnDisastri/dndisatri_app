@@ -76,7 +76,8 @@
                         <p class="mt-1 text-xs text-muted">Facoltativo: quello che è successo solo qui. Il resoconto generale resta quello della sessione.</p>
                         <form method="POST" action="{{ route('sessions.tables.recap', [$session, $tavolo]) }}" class="mt-2">
                             @csrf
-                            <textarea name="recap" rows="6" maxlength="20000" required class="{{ $campo }}">{{ $tavolo->recap }}</textarea>
+                            <x-testo-contato name="recap" rows="6" required class="{{ $campo }}"
+                                             :max="\App\Models\GameSession::recapLimit($tavolo->recap)" :value="$tavolo->recap" />
                             <x-button variant="secondary" size="sm" class="mt-2">Salva</x-button>
                         </form>
                     </details>

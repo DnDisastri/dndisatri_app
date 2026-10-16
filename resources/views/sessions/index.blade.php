@@ -136,7 +136,7 @@
                                                 {{ $session->played_at->format('H:i') }} · {{ $session->campaign?->title }}
                                             </label>
                                             <a href="{{ route('sessions.show', ['session' => $session, 'da' => 'serate']) }}"
-                                               class="block truncate text-xs text-muted hover:text-fg hover:underline">{{ $session->displayTitle() }} ›</a>
+                                               class="block truncate text-xs text-muted hover:text-fg hover:underline">@if ($session->isDraft())<span class="font-semibold text-fg">Bozza ·</span> @endif{{ $session->displayTitle() }} ›</a>
                                         </span>
 
                                         @if ($mio)

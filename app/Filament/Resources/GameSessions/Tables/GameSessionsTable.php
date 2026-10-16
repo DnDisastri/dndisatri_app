@@ -30,6 +30,7 @@ class GameSessionsTable
                 TextColumn::make('sessione')
                     ->label('Sessione')
                     ->state(fn (GameSession $record) => $record->displayTitle())
+                    ->description(fn (GameSession $record) => $record->isDraft() ? 'Bozza' : null)
                     ->searchable(['number', 'title']),
 
                 TextColumn::make('played_at')

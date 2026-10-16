@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Support;
 
+use App\Actions\Approvals\ArchiveDecidedNotifications;
 use App\Enums\BugReportStatus;
 use App\Models\BugReport;
 use App\Models\User;
@@ -49,6 +50,7 @@ final class CloseBugReport
             ])->save();
 
             $locked->reporter?->notify(new BugReportClosed($locked));
+            app(ArchiveDecidedNotifications::class)->handle($locked->refresh());
 
             return $locked;
         });

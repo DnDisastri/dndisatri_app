@@ -5,14 +5,21 @@
 <head>
     @include('partials.testa')
 </head>
-<body class="relative h-[100dvh] overflow-hidden bg-page antialiased lg:flex">
+{{-- svh: l'altezza con le barre del browser aperte, così il pulsante resta sempre visibile. --}}
+<body class="relative h-[100svh] overflow-hidden bg-page antialiased lg:flex">
 
 {{-- Da `lg` due metà: illustrazione in cover a sinistra, benvenuto a destra. --}}
 <div class="relative h-full w-full overflow-hidden bg-primary lg:w-1/2 lg:shrink-0">
-    <a href="{{ route('about') }}"
-       class="pointer-events-auto absolute right-4 top-4 z-20 rounded-full bg-black/30 px-3 py-1.5 text-sm font-medium text-white backdrop-blur transition hover:bg-black/50 lg:hidden">
-        Chi siamo
-    </a>
+    <div class="pointer-events-auto absolute right-4 top-4 z-20 flex gap-2 lg:hidden">
+        <a href="{{ route('faq.index') }}"
+           class="rounded-full bg-black/30 px-3 py-1.5 text-sm font-medium text-white backdrop-blur transition hover:bg-black/50">
+            FAQs
+        </a>
+        <a href="{{ route('about') }}"
+           class="rounded-full bg-black/30 px-3 py-1.5 text-sm font-medium text-white backdrop-blur transition hover:bg-black/50">
+            Chi siamo
+        </a>
+    </div>
 
     <div id="benvenuto"
          class="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto scroll-smooth
@@ -31,7 +38,7 @@
 
 {{-- `pointer-events-none` lascia passare lo swipe all'immagine. Da `lg` torna nel flusso. --}}
 <div class="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center
-            bg-gradient-to-t from-black/85 via-black/45 to-transparent px-6 pb-10 pt-40
+            bg-gradient-to-t from-black/85 via-black/45 to-transparent px-6 pb-[calc(2.5rem+env(safe-area-inset-bottom))] pt-40
             lg:pointer-events-auto lg:static lg:flex-1 lg:items-center lg:bg-none lg:p-12">
     <div class="pointer-events-auto w-full max-w-md text-center">
         <div class="flex items-center justify-center gap-3 lg:flex-col lg:gap-5">
@@ -62,9 +69,10 @@
             Tiriamo i Dadi
         </x-button>
 
-        <a href="{{ route('about') }}" class="mt-4 hidden text-sm text-muted transition hover:text-fg hover:underline lg:inline-block">
-            Chi siamo
-        </a>
+        <div class="mt-4 hidden justify-center gap-4 text-sm text-muted lg:flex">
+            <a href="{{ route('faq.index') }}" class="transition hover:text-fg hover:underline">FAQs</a>
+            <a href="{{ route('about') }}" class="transition hover:text-fg hover:underline">Chi siamo</a>
+        </div>
     </div>
 </div>
 

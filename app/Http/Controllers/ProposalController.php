@@ -15,6 +15,7 @@ use App\Domain\Dnd\Progression;
 use App\Enums\EquipmentSlot;
 use App\Models\Character;
 use App\Models\CharacterItem;
+use App\Models\GameSession;
 use App\Models\PendingChange;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -77,6 +78,12 @@ class ProposalController extends Controller
     }
 
     /** Solo ciò che si vede in bacheca (il giocatore le sue, il DM tutte); fuori 404, per non rivelarne l'esistenza. */
+    /** Solo una sessione che il personaggio ha giocato davvero: la tendina si manomette. */
+    private function sessioneGiocata(Character $character, ?int $id): ?GameSession
+    {
+        return $id === null ? null : $character->sessions()->where('played_at', '<', now())->whereKey($id)->first();
+    }
+
     private function authorizeArchive(Request $request, PendingChange $change): void
     {
         abort_unless(
@@ -179,6 +186,7 @@ class ProposalController extends Controller
             'subclass' => ['nullable', 'string', 'max:255'],
             'skills' => ['array'],
             'skills.*' => ['string'],
+            'game_session_id' => ['nullable', 'integer'],
         ]);
 
         return $this->propose(
@@ -192,6 +200,7 @@ class ProposalController extends Controller
                 featDescription: $validated['feat_description'] ?? null,
                 subclass: $validated['subclass'] ?? null,
                 skills: array_values($validated['skills'] ?? []),
+                session: $this->sessioneGiocata($character, $validated['game_session_id'] ?? null),
             ),
             $character,
         );
@@ -222,6 +231,7 @@ class ProposalController extends Controller
             'items.*.value' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
             'items.*.details' => ['nullable', 'string', 'max:1000'],
             'note' => ['nullable', 'string', 'max:255'],
+            'game_session_id' => ['nullable', 'integer'],
         ], [
             'items.max' => 'Al massimo :max oggetti per richiesta: registra il resto con una seconda richiesta.',
             'items.*.name.max' => 'Il nome di un oggetto può avere al massimo :max caratteri: la descrizione va nei dettagli.',
@@ -254,6 +264,7 @@ class ProposalController extends Controller
                 $coins,
                 $items,
                 $validated['note'] ?? null,
+                $this->sessioneGiocata($character, $validated['game_session_id'] ?? null),
             ),
             $character,
         );

@@ -34,6 +34,16 @@ class FaqsTable
                 IconColumn::make('is_published')
                     ->label('Pubblicata')
                     ->boolean(),
+
+                IconColumn::make('show_public')
+                    ->label('Pubblica')
+                    ->boolean()
+                    ->toggleable(),
+
+                IconColumn::make('show_private')
+                    ->label('Interna')
+                    ->boolean()
+                    ->toggleable(),
             ])
             ->filters([
                 TernaryFilter::make('is_published')

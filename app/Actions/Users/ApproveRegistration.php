@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Users;
 
+use App\Actions\Approvals\ArchiveDecidedNotifications;
 use App\Models\User;
 use App\Notifications\RegistrationApproved;
 use RuntimeException;
@@ -22,6 +23,10 @@ final class ApproveRegistration
             ->update(['approved_at' => now()]);
 
         $target->refresh();
+
+        if ($approvato > 0) {
+            app(ArchiveDecidedNotifications::class)->handle($target, $admin);
+        }
 
         if ($approvato === 0 || ! self::sendsConfirmation($target)) {
             return;

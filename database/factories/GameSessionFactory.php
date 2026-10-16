@@ -22,7 +22,13 @@ class GameSessionFactory extends Factory
             'recap' => null,
             'recap_written_by' => null,
             'recap_written_at' => null,
+            'published_at' => now()->subMonth(),
         ];
+    }
+
+    public function draft(): static
+    {
+        return $this->state(fn () => ['published_at' => null]);
     }
 
     public function inCampaign(Campaign $campaign): static

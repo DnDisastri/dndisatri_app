@@ -1,6 +1,6 @@
 @php
     $barra = \App\Support\Navigazione::barra(auth()->user());
-    $unread = auth()->user()->unreadNotifications()->count();
+    $unread = auth()->user()->unreadNotifications()->whereNull('archived_at')->count();
     $notifiche = request()->routeIs('notifications.*');
 @endphp
 
@@ -34,7 +34,7 @@
             <x-icona :is="\App\Enums\Icon::Notifications" class="h-5 w-5" />
 
             @if ($unread > 0)
-                <span class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full
+                <span data-non-lette class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full
                              border-2 border-surface bg-active px-1 text-[10px] font-bold text-on-active">
                     {{ $unread > 9 ? '9+' : $unread }}
                 </span>

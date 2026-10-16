@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Quests\Schemas;
 use App\Domain\Dnd\Coin;
 use App\Domain\Dnd\Coins;
 use App\Enums\QuestDifficulty;
+use App\Filament\Support\Bozza;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
@@ -32,6 +33,8 @@ class QuestForm
                         ->label('Difficoltà')
                         ->options(QuestDifficulty::class)
                         ->required(),
+
+                    Bozza::toggle('I giocatori non la vedono finché la spegni.'),
 
                     TextInput::make('title')
                         ->label('Titolo')

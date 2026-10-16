@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Characters;
 
+use App\Actions\Approvals\ArchiveDecidedNotifications;
 use App\Actions\Market\Purse;
 use App\Domain\Dnd\ClassRules;
 use App\Domain\Dnd\Coins;
@@ -93,6 +94,7 @@ final class ApprovePendingChange
             );
 
             $locked->requestedBy()->first()?->notify(new RequestDecided($locked));
+            app(ArchiveDecidedNotifications::class)->handle($locked->refresh());
 
             return $locked;
         });

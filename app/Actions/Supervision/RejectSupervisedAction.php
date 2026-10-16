@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Supervision;
 
+use App\Actions\Approvals\ArchiveDecidedNotifications;
 use App\Enums\PendingChangeStatus;
 use App\Models\SupervisedAction;
 use App\Models\User;
@@ -47,6 +48,7 @@ final class RejectSupervisedAction
         // Non è successo niente al mercato: l'intenzione non era mai stata
         // eseguita, quindi non c'è nulla da riportare indietro.
         $action->user()->first()?->notify(new SupervisedActionDecided($action));
+        app(ArchiveDecidedNotifications::class)->handle($action->refresh());
 
         return $action;
     }

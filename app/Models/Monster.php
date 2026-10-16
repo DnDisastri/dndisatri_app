@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\CreatureSize;
+use App\Enums\CreatureType;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,7 +20,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * campagna); valorizzato, lo vede e lo usa solo il DM di quella campagna.
  */
 #[Fillable([
-    'name', 'hp', 'ac', 'speed', 'attacks', 'traits', 'created_by', 'campaign_id',
+    'name', 'size', 'creature_type', 'challenge', 'hp', 'ac', 'speed', 'attacks', 'traits', 'created_by', 'campaign_id',
 ])]
 class Monster extends Model
 {
@@ -38,7 +40,25 @@ class Monster extends Model
     {
         return [
             'attacks' => 'array',
+            'size' => CreatureSize::class,
+            'creature_type' => CreatureType::class,
         ];
+    }
+
+    /** I gradi di sfida del manuale, dal più basso. */
+    public const CHALLENGES = ['0', '1/8', '1/4', '1/2', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10',
+        '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30'];
+
+    /** «Umanoide · Media · GS 1/4», con quello che c'è. */
+    public function profile(): ?string
+    {
+        $parti = array_filter([
+            $this->creature_type?->label(),
+            $this->size?->label(),
+            filled($this->challenge) ? "GS {$this->challenge}" : null,
+        ]);
+
+        return $parti === [] ? null : implode(' · ', $parti);
     }
 
     public function createdBy(): BelongsTo
@@ -87,6 +107,7 @@ class Monster extends Model
             'attacks' => $this->attacks ?? [],
             'traits' => $this->traits,
             'monsterId' => $this->getKey(),
+            'profilo' => $this->profile(),
         ];
     }
 }
