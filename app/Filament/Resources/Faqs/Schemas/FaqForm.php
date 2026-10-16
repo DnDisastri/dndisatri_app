@@ -45,6 +45,16 @@ class FaqForm
                         ->label('Pubblicata')
                         ->default(true)
                         ->helperText('Spenta = bozza, non visibile nella guida.'),
+
+                    Toggle::make('show_public')
+                        ->label('Mostra nella pagina pubblica')
+                        ->default(true)
+                        ->helperText('La vede chi non ha un account.'),
+
+                    Toggle::make('show_private')
+                        ->label('Mostra nella pagina interna')
+                        ->default(true)
+                        ->helperText('La vede chi ha un account: giocatori, DM e admin.'),
                 ])
                 ->columns(2),
         ])->columns(1);

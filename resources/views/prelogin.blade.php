@@ -9,10 +9,16 @@
 
 {{-- Da `lg` due metà: illustrazione in cover a sinistra, benvenuto a destra. --}}
 <div class="relative h-full w-full overflow-hidden bg-primary lg:w-1/2 lg:shrink-0">
-    <a href="{{ route('about') }}"
-       class="pointer-events-auto absolute right-4 top-4 z-20 rounded-full bg-black/30 px-3 py-1.5 text-sm font-medium text-white backdrop-blur transition hover:bg-black/50 lg:hidden">
-        Chi siamo
-    </a>
+    <div class="pointer-events-auto absolute right-4 top-4 z-20 flex gap-2 lg:hidden">
+        <a href="{{ route('faq.index') }}"
+           class="rounded-full bg-black/30 px-3 py-1.5 text-sm font-medium text-white backdrop-blur transition hover:bg-black/50">
+            FAQs
+        </a>
+        <a href="{{ route('about') }}"
+           class="rounded-full bg-black/30 px-3 py-1.5 text-sm font-medium text-white backdrop-blur transition hover:bg-black/50">
+            Chi siamo
+        </a>
+    </div>
 
     <div id="benvenuto"
          class="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto scroll-smooth
@@ -62,9 +68,10 @@
             Tiriamo i Dadi
         </x-button>
 
-        <a href="{{ route('about') }}" class="mt-4 hidden text-sm text-muted transition hover:text-fg hover:underline lg:inline-block">
-            Chi siamo
-        </a>
+        <div class="mt-4 hidden justify-center gap-4 text-sm text-muted lg:flex">
+            <a href="{{ route('faq.index') }}" class="transition hover:text-fg hover:underline">FAQs</a>
+            <a href="{{ route('about') }}" class="transition hover:text-fg hover:underline">Chi siamo</a>
+        </div>
     </div>
 </div>
 

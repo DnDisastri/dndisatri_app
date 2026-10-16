@@ -44,3 +44,32 @@ describe('il resoconto', function () {
             ->assertSessionHasErrors('recap');
     });
 });
+
+describe('le FAQ', function () {
+    it('si leggono anche senza account, senza il tutorial', function () {
+        Faq::factory()->create(['question' => 'Come mi iscrivo?']);
+        TutorialStep::factory()->create(['title' => 'La barra in basso', 'is_published' => true]);
+
+        $this->get(route('faq.index'))
+            ->assertOk()
+            ->assertSee('Come mi iscrivo?')
+            ->assertDontSee('Leggi il tutorial')
+            ->assertDontSee('La barra in basso');
+    });
+
+    it('ognuna si mostra nella pagina pubblica, in quella privata o in tutte e due', function () {
+        Faq::factory()->create(['question' => 'Per tutti?']);
+        Faq::factory()->create(['question' => 'Solo fuori?', 'show_private' => false]);
+        Faq::factory()->create(['question' => 'Solo dentro?', 'show_public' => false]);
+
+        $this->get(route('faq.index'))
+            ->assertSee('Per tutti?')->assertSee('Solo fuori?')->assertDontSee('Solo dentro?');
+
+        $this->actingAs(User::factory()->player()->create())->get(route('faq.index'))
+            ->assertSee('Per tutti?')->assertSee('Solo dentro?')->assertDontSee('Solo fuori?');
+    });
+
+    it('la presentazione porta alle FAQ', function () {
+        $this->get('/')->assertSee(route('faq.index'));
+    });
+});

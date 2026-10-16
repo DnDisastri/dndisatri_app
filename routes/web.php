@@ -34,6 +34,8 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // Pubblica: la si raggiunge dalla presentazione, prima dell'accesso.
 Route::get('chi-siamo', [AboutController::class, 'show'])->name('about');
+// Pubbliche anche le FAQ; il tutorial solo a chi ha un account.
+Route::get('guida', [FaqController::class, 'index'])->name('faq.index');
 
 // Ospiti senza account: il modulo per chiedere un posto e la pagina personale col token.
 Route::get('calendario', [GuestBookingController::class, 'calendar'])->name('guest-bookings.calendar');
@@ -75,8 +77,6 @@ Route::middleware('auth')->group(function () {
         ->name('bug-reports.store');
 
     Route::get('gilda', [GuildController::class, 'index'])->name('guild.index');
-
-    Route::get('guida', [FaqController::class, 'index'])->name('faq.index');
 
     Route::get('area-master', [DmController::class, 'home'])->name('dm.home');
     // I vecchi indirizzi della Regia, rimasti nei preferiti.
