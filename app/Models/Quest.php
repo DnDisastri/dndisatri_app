@@ -7,6 +7,7 @@ use App\Enums\QuestDifficulty;
 use App\Enums\QuestOutcome;
 use App\Enums\QuestType;
 use App\Models\Concerns\HasReactions;
+use App\Models\Scopes\HideDrafts;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,7 +20,7 @@ use Spatie\Activitylog\Support\LogOptions;
 #[Fillable([
     'campaign_id', 'title', 'slug', 'description',
     'setting', 'rewards', 'reward_coins', 'reward_items', 'difficulty', 'type',
-    'created_by',
+    'created_by', 'published_at',
 ])]
 class Quest extends Model
 {
@@ -39,6 +40,7 @@ class Quest extends Model
     {
         return [
             'difficulty' => QuestDifficulty::class,
+            'published_at' => 'datetime',
             'type' => QuestType::class,
             'reward_coins' => 'array',
             'reward_items' => 'array',
@@ -79,6 +81,17 @@ class Quest extends Model
         return ! $this->rewardCoins()->isEmpty()
             || filled($this->reward_items)
             || filled($this->rewards);
+    }
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new HideDrafts);
+    }
+
+    /** Non ancora pubblicata: la vedono solo DM e admin. */
+    public function isDraft(): bool
+    {
+        return $this->published_at === null;
     }
 
     public function isCampaign(): bool

@@ -27,6 +27,7 @@ class QuestsTable
 
                 TextColumn::make('title')
                     ->label('Titolo')
+                    ->description(fn ($record) => $record->isDraft() ? 'Bozza' : null)
                     ->searchable(),
 
                 TextColumn::make('difficulty')
