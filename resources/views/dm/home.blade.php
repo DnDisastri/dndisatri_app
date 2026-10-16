@@ -152,7 +152,7 @@
             </section>
         </div>
 
-        <nav class="grid grid-cols-2 gap-3" aria-label="Strumenti del DM">
+        <nav class="grid grid-cols-3 gap-3" aria-label="Strumenti del DM">
             <a href="{{ route('dm.npcs', ['campagna' => $corrente->slug]) }}"
                class="flex items-center justify-center gap-2 rounded-card border border-line bg-surface px-4 py-3 text-sm font-semibold text-fg transition hover:border-active">
                 <x-icona :is="Icon::Characters" class="h-4 w-4" /> PNG
@@ -160,6 +160,10 @@
             <a href="{{ route('dm.manual', ['campagna' => $corrente->slug]) }}"
                class="flex items-center justify-center gap-2 rounded-card border border-line bg-surface px-4 py-3 text-sm font-semibold text-fg transition hover:border-active">
                 <x-icona :is="Icon::Manual" class="h-4 w-4" /> Manuale
+            </a>
+            <a href="{{ route('dm.rules') }}"
+               class="flex items-center justify-center gap-2 rounded-card border border-line bg-surface px-4 py-3 text-sm font-semibold text-fg transition hover:border-active">
+                <x-icona :is="Icon::DmRules" class="h-4 w-4" /> Regole
             </a>
         </nav>
 

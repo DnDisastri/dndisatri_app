@@ -82,7 +82,7 @@ final class Navigazione
         }
 
         if ($utente->isDm()) {
-            array_unshift($voci, self::voce('Manuale', 'dm.manual', Icon::Manual, ['dm.manual']));
+            array_unshift($voci, self::voce('Manuale', 'dm.manual', Icon::Manual, ['dm.manual']), self::voce('Regole del DM', 'dm.rules', Icon::DmRules, ['dm.rules']));
         }
 
         if ($utente->isDm() || $utente->isAdmin()) {

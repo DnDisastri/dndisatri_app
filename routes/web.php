@@ -7,6 +7,7 @@ use App\Http\Controllers\BuildController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CharacterController;
 use App\Http\Controllers\DmController;
+use App\Http\Controllers\DmRuleController;
 use App\Http\Controllers\EncounterController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\FaqController;
@@ -87,6 +88,7 @@ Route::middleware('auth')->group(function () {
     Route::put('area-master/campagne/{campaign}/nota', [DmController::class, 'handover'])->name('dm.handover');
     Route::get('area-master/png', NpcManager::class)->name('dm.npcs');
     Route::get('area-master/manuale', [ManualController::class, 'show'])->name('dm.manual');
+    Route::get('area-master/regole', [DmRuleController::class, 'index'])->name('dm.rules');
 
     Route::get('area-master/combattimenti', [EncounterController::class, 'index'])->name('encounters.index');
     Route::post('area-master/combattimenti', [EncounterController::class, 'store'])->name('encounters.store');

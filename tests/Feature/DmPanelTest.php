@@ -73,3 +73,33 @@ describe('le FAQ', function () {
         $this->get('/')->assertSee(route('faq.index'));
     });
 });
+
+describe('le regole del DM', function () {
+    it('le leggono i DM, per sezione', function () {
+        DmRule::factory()->inSection('Ricompense')->create([
+            'title' => 'Livello 1', 'body' => 'Ai personaggi di livello 1 si danno 10 mo.',
+        ]);
+
+        $this->actingAs(User::factory()->dm()->create())
+            ->get(route('dm.rules'))
+            ->assertOk()
+            ->assertSeeInOrder(['Ricompense', 'Livello 1', 'Ai personaggi di livello 1 si danno 10 mo.']);
+    });
+
+    it('i giocatori non le vedono', function () {
+        $this->actingAs(User::factory()->player()->create())
+            ->get(route('dm.rules'))
+            ->assertForbidden();
+    });
+
+    it('le scrivono gli admin dal pannello, non i DM', function () {
+        Livewire::actingAs(User::factory()->admin()->create())
+            ->test(CreateDmRule::class)
+            ->fillForm(['category' => 'Ricompense', 'title' => 'Livello 1', 'body' => '10 mo a sessione.'])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        expect(DmRule::where('title', 'Livello 1')->exists())->toBeTrue()
+            ->and(User::factory()->dm()->create()->can('create', DmRule::class))->toBeFalse();
+    });
+});
