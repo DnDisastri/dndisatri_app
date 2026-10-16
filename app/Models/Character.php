@@ -516,6 +516,12 @@ class Character extends Model
             ->orderByDesc('played_at')->limit($quante)->get();
     }
 
+    /** Il diario del giocatore, una nota per sessione. */
+    public function journals(): HasMany
+    {
+        return $this->hasMany(SessionJournal::class);
+    }
+
     public function retiredBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'retired_by');

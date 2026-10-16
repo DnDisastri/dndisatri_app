@@ -76,6 +76,12 @@
         </x-panel>
     @endunless
 
+    @if ($sessioni?->isNotEmpty())
+        @include('characters.partials.sessioni-giocate')
+
+        <h3 class="mb-3 mt-8 text-lg font-semibold text-fg">Movimenti</h3>
+    @endif
+
     <div class="space-y-2">
         @forelse ($entries as $entry)
             @php $proprietario = ($tutti ?? false) ? $entry->character?->user_id : $character->user_id; @endphp

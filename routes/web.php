@@ -26,6 +26,7 @@ use App\Http\Controllers\ProposalController;
 use App\Http\Controllers\QuestController;
 use App\Http\Controllers\ReactionController;
 use App\Http\Controllers\SessionBookingController;
+use App\Http\Controllers\SessionJournalController;
 use App\Http\Controllers\SupervisionController;
 use App\Livewire\CharacterWizard;
 use App\Livewire\NpcManager;
@@ -152,6 +153,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('personaggi/{character}/registro', [CharacterController::class, 'ledger'])
         ->name('characters.ledger');
+    Route::put('personaggi/{character}/sessioni/{session}/diario', [SessionJournalController::class, 'update'])
+        ->name('characters.journal');
 
     Route::get('personaggi/{character}/{sezione}', [CharacterController::class, 'section'])
         ->whereIn('sezione', array_column(

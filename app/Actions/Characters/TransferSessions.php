@@ -11,7 +11,7 @@ use RuntimeException;
 
 /**
  * Le sessioni giocate da un personaggio ritirato passano al nuovo dello stesso
- * giocatore: presenze e prenotazioni passate. Le monete e gli oggetti no.
+ * giocatore: presenze, diario e prenotazioni passate. Le monete e gli oggetti no.
  */
 final class TransferSessions
 {
@@ -28,6 +28,8 @@ final class TransferSessions
 
         return DB::transaction(function () use ($from, $to) {
             $presenze = DB::table('game_session_user')->where('character_id', $from->getKey())->update(['character_id' => $to->getKey()]);
+
+            DB::table('session_journals')->where('character_id', $from->getKey())->update(['character_id' => $to->getKey()]);
 
             DB::table('game_session_bookings')->where('character_id', $from->getKey())
                 ->whereIn('game_session_id', fn ($q) => $q->select('id')->from('game_sessions')->where('played_at', '<', now()))

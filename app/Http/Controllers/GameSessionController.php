@@ -7,11 +7,12 @@ use App\Actions\Sessions\AssignTables;
 use App\Actions\Sessions\AwardSessionRewards;
 use App\Actions\Sessions\RecordAttendance;
 use App\Actions\Sessions\WriteRecap;
-use App\Http\Controllers\Concerns\NormalizesNewlines;
 use App\Domain\Dnd\Coins;
 use App\Enums\EquipmentSlot;
 use App\Enums\SeatStatus;
 use App\Exceptions\MarketException;
+use App\Http\Controllers\Concerns\NormalizesNewlines;
+use App\Models\Character;
 use App\Models\CharacterItem;
 use App\Models\Event;
 use App\Models\GameSession;
@@ -134,6 +135,9 @@ class GameSessionController extends Controller
                 ? app(LootSuggestions::class)->handle()
                 : [],
             'oggettiMax' => self::OGGETTI_MAX,
+
+            // Il diario solo a chi l'ha giocata, col suo personaggio ancora in gioco.
+            ...$this->diarioDi($session, $utente),
         ]);
     }
 
@@ -286,6 +290,18 @@ class GameSessionController extends Controller
         app(WriteRecap::class)->handle($table, $request->user(), $dati['recap']);
 
         return back()->with('status', "Resoconto del {$table->name} salvato.");
+    }
+
+    /** @return array{diarioPg: ?Character, diarioNota: ?string} */
+    private function diarioDi(GameSession $session, User $utente): array
+    {
+        $idPg = $session->attendees->firstWhere('id', $utente->getKey())?->pivot->character_id;
+        $pg = $idPg === null ? null : $utente->characters()->find($idPg);
+
+        return [
+            'diarioPg' => $pg,
+            'diarioNota' => $pg?->journals()->where('game_session_id', $session->getKey())->value('body'),
+        ];
     }
 
     private function avvisaIlTitolare(GameSession $session, User $chi, string $cosa): void
