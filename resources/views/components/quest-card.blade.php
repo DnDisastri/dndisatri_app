@@ -28,7 +28,7 @@
             @endif
 
             @if ($quest->difficulty)
-                <x-badge tone="accent">{{ $quest->difficulty->label() }}</x-badge>
+                <x-difficolta :is="$quest->difficulty" />
             @endif
         </div>
     </div>

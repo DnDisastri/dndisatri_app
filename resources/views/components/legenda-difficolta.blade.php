@@ -7,7 +7,7 @@
     @foreach (\App\Enums\QuestDifficulty::cases() as $difficolta)
         @php [$da, $a] = $difficolta->ranks(); @endphp
         <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <x-badge tone="accent" class="shrink-0">{{ $difficolta->label() }}</x-badge>
+            <x-difficolta :is="$difficolta" class="shrink-0" />
             <span class="text-sm font-medium text-fg">
                 {{ $da->label() }} → {{ $a->label() }}
             </span>

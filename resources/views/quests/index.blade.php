@@ -46,7 +46,7 @@
                           'campagna' => $campagna?->slug,
                           'difficolta' => $grado->value,
                       ]))">
-                {{ $grado->label() }}
+                <x-icona :is="$grado" class="h-4 w-4" /> {{ $grado->label() }}
             </x-button>
         @endforeach
     </div>
