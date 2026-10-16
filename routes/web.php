@@ -58,6 +58,7 @@ Route::middleware('auth')->group(function () {
     Route::get('bacheca/{change}/foto', [PendingChangePhotoController::class, 'show'])->name('pending-changes.photo');
 
     Route::get('notifiche', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('notifiche/non-lette', [NotificationController::class, 'unreadCount'])->name('notifications.unread');
     // La rotta fissa deve precedere `{notification}` per non essere interpretata come parametro dinamico.
     Route::post('notifiche/svuota', [NotificationController::class, 'clear'])->name('notifications.clear');
     Route::delete('notifiche/archivio', [NotificationController::class, 'emptyArchive'])->name('notifications.empty-archive');

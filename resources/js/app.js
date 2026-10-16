@@ -80,6 +80,15 @@ if (slider) {
     slider.addEventListener('scroll', segnaIllustrazione, { passive: true });
     segnaIllustrazione();
 
+    // Tornando indietro (o ruotando) la larghezza cambia e l'illustrazione resta
+    // a metà fra due: la si rimette in squadra.
+    const inSquadra = () => {
+        const corrente = Math.round(slider.scrollLeft / slider.clientWidth);
+        slider.scrollTo({ left: corrente * slider.clientWidth, behavior: 'instant' });
+    };
+    window.addEventListener('resize', inSquadra);
+    window.addEventListener('pageshow', (evento) => evento.persisted && inSquadra());
+
     const quante = slider.children.length;
     const menoMovimento = window.matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -639,3 +648,24 @@ const giaInstallata = window.navigator.standalone === true
 if (iOS && !giaInstallata) {
     document.querySelectorAll('[data-ios-install]').forEach((el) => (el.hidden = false));
 }
+
+// Il browser rimostra la pagina com'era, pallino delle notifiche compreso:
+// tornando indietro si richiede il conteggio vero.
+
+window.addEventListener('pageshow', async (evento) => {
+    const pallini = document.querySelectorAll('[data-non-lette]');
+
+    if (!evento.persisted || pallini.length === 0) return;
+
+    try {
+        const risposta = await fetch('/notifiche/non-lette', { headers: { Accept: 'application/json' } });
+        const { n } = await risposta.json();
+
+        pallini.forEach((pallino) => {
+            pallino.hidden = n === 0;
+            pallino.textContent = n > 9 ? '9+' : String(n);
+        });
+    } catch {
+        // Senza rete resta com'era.
+    }
+});

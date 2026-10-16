@@ -5,7 +5,8 @@
 <head>
     @include('partials.testa')
 </head>
-<body class="relative h-[100dvh] overflow-hidden bg-page antialiased lg:flex">
+{{-- svh: l'altezza con le barre del browser aperte, così il pulsante resta sempre visibile. --}}
+<body class="relative h-[100svh] overflow-hidden bg-page antialiased lg:flex">
 
 {{-- Da `lg` due metà: illustrazione in cover a sinistra, benvenuto a destra. --}}
 <div class="relative h-full w-full overflow-hidden bg-primary lg:w-1/2 lg:shrink-0">
@@ -37,7 +38,7 @@
 
 {{-- `pointer-events-none` lascia passare lo swipe all'immagine. Da `lg` torna nel flusso. --}}
 <div class="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center
-            bg-gradient-to-t from-black/85 via-black/45 to-transparent px-6 pb-10 pt-40
+            bg-gradient-to-t from-black/85 via-black/45 to-transparent px-6 pb-[calc(2.5rem+env(safe-area-inset-bottom))] pt-40
             lg:pointer-events-auto lg:static lg:flex-1 lg:items-center lg:bg-none lg:p-12">
     <div class="pointer-events-auto w-full max-w-md text-center">
         <div class="flex items-center justify-center gap-3 lg:flex-col lg:gap-5">

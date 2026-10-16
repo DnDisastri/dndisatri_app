@@ -1,5 +1,5 @@
 @php
-    $unread = auth()->user()->unreadNotifications()->count();
+    $unread = auth()->user()->unreadNotifications()->whereNull('archived_at')->count();
 @endphp
 
 {{-- backdrop-blur crea uno stacking context: z-40 mantiene l'header sopra al main. --}}
@@ -28,7 +28,7 @@
             <x-icona :is="\App\Enums\Icon::Notifications" class="h-6 w-6" />
 
             @if ($unread > 0)
-                <span class="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full
+                <span data-non-lette class="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full
                              border-2 border-page bg-active px-1 text-[10px] font-bold text-on-active">
                     {{ $unread > 9 ? '9+' : $unread }}
                 </span>

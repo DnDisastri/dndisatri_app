@@ -203,3 +203,19 @@ describe('le richieste già decise', function () {
             ->and($notifica->fresh()->data['subject']['id'])->toBe($richiesta->id);
     });
 });
+
+describe('il pallino delle notifiche', function () {
+    it('non conta le archiviate, e il conteggio si richiede tornando indietro', function () {
+        $giocatore = User::factory()->player()->create();
+        $pg = Character::factory()->ownedBy($giocatore)->create();
+        $dm = User::factory()->dm()->create();
+        $richiesta = app(ProposeChange::class)->loot($pg, $giocatore, coins: new Coins(gp: 10));
+
+        $this->actingAs($dm)->getJson(route('notifications.unread'))->assertExactJson(['n' => 1]);
+
+        app(ApprovePendingChange::class)->handle($richiesta, User::factory()->admin()->create());
+
+        $this->actingAs($dm)->getJson(route('notifications.unread'))->assertExactJson(['n' => 0]);
+        $this->actingAs($dm)->get(route('home'))->assertDontSee('data-non-lette', false);
+    });
+});
