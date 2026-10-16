@@ -60,7 +60,7 @@ class PendingChange extends Model
 
     public function character(): BelongsTo
     {
-        return $this->belongsTo(Character::class);
+        return $this->belongsTo(Character::class)->withTrashed();
     }
 
     public function requestedBy(): BelongsTo

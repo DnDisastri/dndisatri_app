@@ -79,7 +79,7 @@ class GameSessionController extends Controller
     {
         $this->authorize('view', $session);
 
-        $session->load(['campaign.dm', 'dms', 'tables.dms', 'tables.recapWrittenBy', 'recapWrittenBy', 'attendees.characters', 'quests', 'bookings']);
+        $session->load(['campaign.dm', 'dms', 'tables.dms', 'tables.recapWrittenBy', 'recapWrittenBy', 'attendees.characters' => fn ($q) => $q->withTrashed(), 'quests', 'bookings']);
 
         $utente = auth()->user();
         $posti = $session->bookings()->holdingSeat()->with(['user', 'character'])->get();
