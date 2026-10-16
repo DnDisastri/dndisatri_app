@@ -2,6 +2,9 @@
 
 namespace App\Filament\Resources\Monsters\Schemas;
 
+use App\Enums\CreatureSize;
+use App\Enums\CreatureType;
+use App\Enums\DamageType;
 use App\Models\Campaign;
 use App\Models\Monster;
 use Filament\Forms\Components\Repeater;
@@ -54,6 +57,20 @@ class MonsterForm
                         ->maxLength(255)
                         ->columnSpanFull(),
 
+                    Select::make('creature_type')
+                        ->label('Tipo di creatura')
+                        ->options(CreatureType::options())
+                        ->searchable(),
+
+                    Select::make('size')
+                        ->label('Taglia')
+                        ->options(CreatureSize::options()),
+
+                    Select::make('challenge')
+                        ->label('Grado di sfida (GS)')
+                        ->options(array_combine(Monster::CHALLENGES, Monster::CHALLENGES))
+                        ->searchable(),
+
                     TextInput::make('hp')
                         ->label('Punti ferita')
                         ->numeric()
@@ -83,8 +100,9 @@ class MonsterForm
                             TextInput::make('nome')->label('Nome')->required(),
                             TextInput::make('bonus')->label('Per colpire')->placeholder('+4'),
                             TextInput::make('danni')->label('Danni')->placeholder('1d6+2'),
+                            Select::make('tipo')->label('Tipo di danni')->options(DamageType::options())->placeholder('Nessuno'),
                         ])
-                        ->columns(3)
+                        ->columns(['default' => 1, 'sm' => 2, 'lg' => 4])
                         ->addActionLabel('Aggiungi attacco')
                         ->reorderable(false)
                         // Parte vuoto: un mostro senza attacchi (una trappola,

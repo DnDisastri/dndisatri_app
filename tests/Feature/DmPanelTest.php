@@ -103,3 +103,43 @@ describe('le regole del DM', function () {
             ->and(User::factory()->dm()->create()->can('create', DmRule::class))->toBeFalse();
     });
 });
+
+describe('la scheda del mostro nel combattimento', function () {
+    beforeEach(function () {
+        $this->dm = User::factory()->dm()->create();
+        $this->scontro = Encounter::factory()->for(Campaign::factory()->create(['dm_id' => $this->dm->id]))->create();
+    });
+
+    it('si legge dal bestiario: le correzioni si vedono subito', function () {
+        $goblin = Monster::factory()->create(['name' => 'Goblin', 'traits' => 'Fuga astuta.']);
+
+        $comp = Livewire::actingAs($this->dm)
+            ->test(CombatTracker::class, ['encounter' => $this->scontro])
+            ->call('aggiungiDalBestiario', $goblin->id);
+
+        $goblin->update([
+            'traits' => 'Fuga astuta, anche come azione bonus.',
+            'creature_type' => CreatureType::Humanoid,
+            'size' => CreatureSize::Small,
+            'challenge' => '1/4',
+            'attacks' => [['nome' => 'Scimitarra', 'bonus' => '+4', 'danni' => '1d6+2', 'tipo' => 'slashing']],
+        ]);
+
+        $id = collect($comp->get('combattenti'))->firstWhere('nome', 'Goblin')['id'];
+
+        $comp->call('apriStatblock', $id)
+            ->assertSee('Umanoide · Piccola · GS 1/4')
+            ->assertSee('Fuga astuta, anche come azione bonus.')
+            ->assertSee('1d6+2 danni taglienti');
+    });
+
+    it('ha un pulsante «Scheda» ben visibile', function () {
+        $goblin = Monster::factory()->create(['name' => 'Goblin']);
+
+        Livewire::actingAs($this->dm)
+            ->test(CombatTracker::class, ['encounter' => $this->scontro])
+            ->call('aggiungiDalBestiario', $goblin->id)
+            ->assertSeeHtml('Scheda')
+            ->assertSee('Iniz.');
+    });
+});

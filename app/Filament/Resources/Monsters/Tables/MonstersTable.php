@@ -27,6 +27,20 @@ class MonstersTable
                     ->label('CA')
                     ->badge(),
 
+                TextColumn::make('challenge')
+                    ->label('GS')
+                    ->badge()
+                    ->placeholder('Vuoto')
+                    ->sortable(query: fn ($query, string $direction) => $query->orderByRaw(
+                        "CASE challenge WHEN '1/8' THEN 0.125 WHEN '1/4' THEN 0.25 WHEN '1/2' THEN 0.5 ELSE CAST(challenge AS DECIMAL(5,3)) END {$direction}"
+                    )),
+
+                TextColumn::make('creature_type')
+                    ->label('Tipo')
+                    ->formatStateUsing(fn ($state) => $state?->label())
+                    ->placeholder('Vuoto')
+                    ->toggleable(),
+
                 TextColumn::make('attacks')
                     ->label('Attacchi')
                     ->state(fn (Monster $record) => collect($record->attacks ?? [])
