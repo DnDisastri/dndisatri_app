@@ -39,6 +39,25 @@
         {{-- 1. Nome, storia e classe. --}}
         @if ($step === 1)
             <div class="space-y-4">
+                <div>
+                    <p class="mb-2 text-sm font-medium text-fg">Con quali regole lo crei?</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        @foreach ($editions as $edizione)
+                            @php $presa = $rulesEdition === $edizione->value; @endphp
+                            <button type="button" wire:click="selectEdition('{{ $edizione->value }}')"
+                                    @disabled(! $edizione->isCreatable())
+                                    @class([
+                                        'rounded-card border px-3 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-50',
+                                        'border-active bg-page' => $presa,
+                                        'border-line hover:border-active' => ! $presa,
+                                    ])>
+                                <span class="block font-bold text-fg">{{ $edizione->label() }}</span>
+                                <span class="block text-xs text-muted">{{ $edizione->isCreatable() ? 'Manuale del 2014' : 'In arrivo' }}</span>
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+
                 {{-- Partire da una build: solo se non si è già partiti da una. --}}
                 @unless ($buildTitle)
                     <a href="{{ route('builds.index') }}" wire:navigate
@@ -482,6 +501,7 @@
                 $skillNames = collect($skills)->map(fn ($s) => config("dnd.character.skill_names.$s", $s));
 
                 $righe = [
+                    ['Regole', \App\Enums\RulesEdition::from($rulesEdition)->label(), 1],
                     ['Chi sei', filled($name) ? $name : 'Nome da scrivere', 1],
                     ['Classe', filled($class) ? $class : 'Vuoto', 1],
                     ['Specie', filled($species) ? $species : 'Vuoto', 2],

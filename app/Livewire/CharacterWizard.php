@@ -8,6 +8,7 @@ use App\Domain\Dnd\AbilityScores;
 use App\Domain\Dnd\ClassRules;
 use App\Domain\Dnd\PointBuy;
 use App\Domain\Dnd\SubraceCatalogue;
+use App\Enums\RulesEdition;
 use App\Models\Build;
 use App\Models\Character;
 use App\Models\Subrace;
@@ -36,6 +37,8 @@ class CharacterWizard extends Component
     public array $buildSnapshot = [];
 
     // Passo 1
+    public string $rulesEdition = '2014';
+
     public string $name = '';
 
     public string $class = '';
@@ -171,6 +174,13 @@ class CharacterWizard extends Component
         // potrebbero non essere più ammessi.
         $this->skills = [];
         $this->spells = [];
+    }
+
+    public function selectEdition(string $edition): void
+    {
+        if (RulesEdition::tryFrom($edition)?->isCreatable()) {
+            $this->rulesEdition = $edition;
+        }
     }
 
     public function selectSpecies(string $species): void
@@ -363,6 +373,7 @@ class CharacterWizard extends Component
         try {
             $character = app(CreateCharacter::class)->handle(
                 owner: auth()->user(),
+                edition: RulesEdition::from($this->rulesEdition),
                 name: $this->name,
                 class: $this->class,
                 species: $this->species,
@@ -465,6 +476,7 @@ class CharacterWizard extends Component
     {
         return view('livewire.character-wizard', [
             'abilities' => Ability::cases(),
+            'editions' => RulesEdition::cases(),
             'classes' => ClassRules::names(),
             'speciesList' => array_keys(config('dnd.species', [])),
             'backgrounds' => config('dnd.backgrounds.list', []),

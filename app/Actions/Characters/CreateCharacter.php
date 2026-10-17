@@ -11,6 +11,7 @@ use App\Domain\Dnd\PointBuy;
 use App\Domain\Dnd\SpellSlots;
 use App\Domain\Dnd\SubraceCatalogue;
 use App\Enums\EquipmentSlot;
+use App\Enums\RulesEdition;
 use App\Models\Character;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -48,7 +49,12 @@ final class CreateCharacter
         array $backgroundSkills = [],
         ?int $pack = null,
         ?string $privateStory = null,
+        RulesEdition $edition = RulesEdition::Classic,
     ): Character {
+        if (! $edition->isCreatable()) {
+            throw new InvalidArgumentException("Le regole {$edition->label()} non sono ancora disponibili.");
+        }
+
         $this->validate($name, $class, $species, $background, $boughtScores, $skills, $spells);
         $this->validateBackgroundSkills($background, $backgroundSkills);
 
@@ -61,7 +67,7 @@ final class CreateCharacter
         return DB::transaction(function () use (
             $owner, $name, $class, $species, $background, $subclass, $story,
             $scores, $abilityScores, $hitDie, $skills, $spells, $equipmentChoices, $sottorazza,
-            $backgroundSkills, $pack, $privateStory
+            $backgroundSkills, $pack, $privateStory, $edition
         ) {
             $character = Character::create([
                 'user_id' => $owner->getKey(),
@@ -76,6 +82,7 @@ final class CreateCharacter
                 'story' => $story,
                 'private_story' => $privateStory,
                 'level' => 1,
+                'rules_edition' => $edition,
                 'hit_die' => $hitDie,
                 ...$scores,
                 // L'elfo dei boschi cammina più svelto della sua razza: se la

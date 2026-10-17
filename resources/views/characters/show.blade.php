@@ -36,6 +36,7 @@
                     </p>
                     <p class="text-sm ">
                         Livello {{ $character->level }}
+                        <span class="text-muted">· regole {{ $character->rules_edition->label() }}</span>
                     </p>
                 </div>
             </div>
