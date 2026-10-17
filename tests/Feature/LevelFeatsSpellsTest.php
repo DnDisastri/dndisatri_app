@@ -38,11 +38,11 @@ describe('edizione delle regole', function () {
         expect($character->fresh()->rules_edition)->toBe(RulesEdition::Classic);
     });
 
-    it('le regole 2024 non si possono ancora scegliere', function () {
+    it('le regole 2024 restano chiuse ai giocatori', function () {
         expect(fn () => creaDiSpecie('Mezzelfo', [
             'speciesSkills' => ['insight', 'persuasion'],
             'edition' => RulesEdition::Revised,
-        ]))->toThrow(InvalidArgumentException::class, 'non sono ancora disponibili');
+        ]))->toThrow(InvalidArgumentException::class, 'non sono ancora aperte ai giocatori');
     });
 
     it('la scheda mostra con quali regole è fatto', function () {
@@ -84,7 +84,7 @@ describe('Mezzelfo e Umano Variante', function () {
     });
 
     it('ma non un talento fuori dal catalogo', function () {
-        $altreRegole = Feat::create(['name' => 'Allerta', 'rules_edition' => '2024']);
+        $altreRegole = Feat::create(['name' => 'Talento di prova', 'rules_edition' => '2024']);
 
         expect(fn () => creaDiSpecie('Umano (Variante)', ['speciesSkills' => ['stealth'], 'featId' => $altreRegole->id]))
             ->toThrow(InvalidArgumentException::class, 'Talento non trovato');
@@ -146,7 +146,7 @@ describe('passaggio di livello', function () {
     });
 
     it('un talento di altre regole non si prende', function () {
-        $feat = Feat::create(['name' => 'Lottatore', 'rules_edition' => '2024']);
+        $feat = Feat::create(['name' => 'Talento di prova', 'rules_edition' => '2024']);
 
         expect(fn () => app(RequestLevelUp::class)->handle(
             $this->guerriero, $this->guerriero->user, asiMode: 'feat', featId: $feat->id,
@@ -229,7 +229,7 @@ describe('il catalogo dei talenti nel pannello', function () {
         $this->seed(FeatSeeder::class);
         $homebrew = Feat::create(['name' => 'Talento della casa']);
 
-        expect(Feat::where('is_homebrew', false)->count())->toBe(42);
+        expect(Feat::where('is_homebrew', false)->where('rules_edition', '2014')->count())->toBe(42);
 
         Livewire::actingAs(User::factory()->admin()->create())
             ->test(ListFeats::class)
@@ -245,6 +245,14 @@ describe('il catalogo dei talenti nel pannello', function () {
             ->fillForm(['name' => 'Allerta', 'rules_edition' => '2014'])
             ->call('create')
             ->assertHasFormErrors(['name' => 'unique']);
+
+        Livewire::actingAs(User::factory()->dm()->create())
+            ->test(CreateFeat::class)
+            ->fillForm(['name' => 'Allerta', 'rules_edition' => '2014'])
+            ->call('create')
+            ->assertHasFormErrors(['name' => 'unique']);
+
+        Feat::where('name', 'Allerta')->where('rules_edition', '2024')->delete();
 
         Livewire::actingAs(User::factory()->dm()->create())
             ->test(CreateFeat::class)

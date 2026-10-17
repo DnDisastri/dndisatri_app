@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\Characters\CreateCharacter;
 use App\Domain\Dnd\Ability;
+use App\Domain\Dnd\BackgroundRules;
 use App\Enums\EquipmentSlot;
 use App\Models\Character;
 use App\Models\User;
@@ -74,7 +75,7 @@ describe('un personaggio appena creato', function () {
 
         expect((float) $character->speed)->toBe(9.0)
             ->and($character->species_traits)->toContain('Forza')
-            ->and($character->gp)->toBe((int) config('dnd.backgrounds.list.Soldato.gp'));
+            ->and($character->gp)->toBe(BackgroundRules::of('Soldato')->gp);
     });
 });
 

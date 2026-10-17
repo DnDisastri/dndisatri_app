@@ -24,7 +24,7 @@ class SubraceSeeder extends Seeder
         foreach (self::catalogo() as $razza => $sottorazze) {
             foreach (array_values($sottorazze) as $posizione => $sottorazza) {
                 Subrace::updateOrCreate(
-                    ['race' => $razza, 'name' => $sottorazza['name']],
+                    ['race' => $razza, 'name' => $sottorazza['name'], 'rules_edition' => '2014'],
                     [
                         'description' => $sottorazza['description'] ?? null,
                         'asi' => $sottorazza['asi'] ?? [],

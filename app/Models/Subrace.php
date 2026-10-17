@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\RulesEdition;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,10 +16,12 @@ use Spatie\Activitylog\Support\LogOptions;
  * Porta bonus alle caratteristiche che si sommano a quelli della razza, e se
  * ha una velocità propria sostituisce la sua.
  */
-#[Fillable(['race', 'name', 'description', 'asi', 'speed', 'traits', 'is_homebrew', 'position'])]
+#[Fillable(['race', 'rules_edition', 'name', 'description', 'asi', 'speed', 'traits', 'is_homebrew', 'position'])]
 class Subrace extends Model
 {
     use HasFactory, LogsActivity;
+
+    protected $attributes = ['rules_edition' => '2014'];
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -33,6 +36,7 @@ class Subrace extends Model
     protected function casts(): array
     {
         return [
+            'rules_edition' => RulesEdition::class,
             'asi' => 'array',
             'speed' => 'float',
             'is_homebrew' => 'boolean',

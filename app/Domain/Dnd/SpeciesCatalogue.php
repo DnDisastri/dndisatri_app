@@ -4,29 +4,30 @@ declare(strict_types=1);
 
 namespace App\Domain\Dnd;
 
+use App\Enums\RulesEdition;
 use App\Models\Species;
 use Illuminate\Support\Collection;
 
-/** Le specie, lette una volta per richiesta. Salvare una Species lo azzera. */
+/** Le specie di un'edizione, lette una volta per richiesta. Salvare una Species lo azzera. */
 final class SpeciesCatalogue
 {
-    /** @var Collection<string,Species>|null */
-    private ?Collection $perNome = null;
+    /** @var array<string,Collection<string,Species>> */
+    private array $perEdizione = [];
 
     /** @return Collection<string,Species> */
-    public function all(): Collection
+    public function all(RulesEdition $edition = RulesEdition::Classic): Collection
     {
-        return $this->perNome ??= Species::ordered()->get()->keyBy('name');
+        return $this->perEdizione[$edition->value] ??= Species::where('rules_edition', $edition->value)->ordered()->get()->keyBy('name');
     }
 
-    public function find(?string $name): ?Species
+    public function find(?string $name, RulesEdition $edition = RulesEdition::Classic): ?Species
     {
-        return $name === null ? null : $this->all()->get($name);
+        return $name === null ? null : $this->all($edition)->get($name);
     }
 
     /** @return list<string> */
-    public function names(): array
+    public function names(RulesEdition $edition = RulesEdition::Classic): array
     {
-        return $this->all()->keys()->all();
+        return $this->all($edition)->keys()->all();
     }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Dnd;
 
+use App\Enums\RulesEdition;
+
 /**
  * L'acquisto dei punteggi in creazione.
  *
@@ -84,8 +86,9 @@ final class PointBuy
         ?string $species,
         array $chosen = [],
         ?string $subspecies = null,
+        RulesEdition $edition = RulesEdition::Classic,
     ): array {
-        $bonuses = SpeciesRules::asi($species);
+        $bonuses = SpeciesRules::asi($species, $edition);
 
         if (isset($bonuses['all'])) {
             $bonuses = collect(Ability::cases())
@@ -96,7 +99,7 @@ final class PointBuy
         // La sottorazza **aggiunge**, non sostituisce: un elfo alto ha +2
         // Destrezza dall'elfo e +1 Intelligenza dalla sottorazza. Le
         // discendenze draconiche e le etnie umane non portano niente.
-        $daSottorazza = app(SubraceCatalogue::class)->find($species, $subspecies)?->asi ?? [];
+        $daSottorazza = app(SubraceCatalogue::class)->find($species, $subspecies, $edition)?->asi ?? [];
 
         foreach ($daSottorazza as $ability => $bonus) {
             if (isset($scores[$ability])) {
@@ -114,8 +117,8 @@ final class PointBuy
     }
 
     /** Quanti +1 a scelta concede la specie (Umano Variante, Mezzelfo). */
-    public static function freeBonusesFor(?string $species): int
+    public static function freeBonusesFor(?string $species, RulesEdition $edition = RulesEdition::Classic): int
     {
-        return SpeciesRules::freeBonuses($species);
+        return SpeciesRules::freeBonuses($species, $edition);
     }
 }

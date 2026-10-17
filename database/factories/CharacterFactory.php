@@ -19,6 +19,8 @@ class CharacterFactory extends Factory
 
     private const SPECIE = ['Umano', 'Nano', 'Elfo', 'Halfling', 'Dragonide', 'Gnomo', 'Mezzorco', 'Tiefling'];
 
+    private const BACKGROUND = ['Accolito', 'Criminale', 'Eroe Popolano', 'Sapiente', 'Soldato', 'Monello'];
+
     public function definition(): array
     {
         $class = fake()->randomElement(array_keys(self::CLASSI));
@@ -29,7 +31,7 @@ class CharacterFactory extends Factory
             'class' => $class,
             'subclass' => null,
             'race' => fake()->randomElement(self::SPECIE),
-            'background' => fake()->randomElement(array_keys(config('dnd.backgrounds.list'))),
+            'background' => fake()->randomElement(self::BACKGROUND),
             'level' => 1,
             'hit_die' => self::CLASSI[$class],
             'str' => 10, 'dex' => 14, 'con' => 14,

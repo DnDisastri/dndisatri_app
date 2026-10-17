@@ -45,14 +45,19 @@
                         @foreach ($editions as $edizione)
                             @php $presa = $rulesEdition === $edizione->value; @endphp
                             <button type="button" wire:click="selectEdition('{{ $edizione->value }}')"
-                                    @disabled(! $edizione->isCreatable())
+                                    @disabled(! $edizione->isCreatableBy(auth()->user()))
                                     @class([
                                         'rounded-card border px-3 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-50',
                                         'border-active bg-page' => $presa,
                                         'border-line hover:border-active' => ! $presa,
                                     ])>
                                 <span class="block font-bold text-fg">{{ $edizione->label() }}</span>
-                                <span class="block text-xs text-muted">{{ $edizione->isCreatable() ? 'Manuale del 2014' : 'In arrivo' }}</span>
+                                <span class="block text-xs text-muted">{{ match (true) {
+                                    $edizione === \App\Enums\RulesEdition::Classic => 'Manuale del 2014',
+                                    ! $edizione->isCreatableBy(auth()->user()) => 'In arrivo',
+                                    ! \App\Models\AppSetting::get(\App\Models\AppSetting::RULES_2024_OPEN, false) => 'In prova, solo per i DM',
+                                    default => 'SRD 5.2',
+                                } }}</span>
                             </button>
                         @endforeach
                     </div>
@@ -145,8 +150,9 @@
                 @foreach ($speciesList as $option)
                     @php
                         $scelta = $species === $option;
-                        $dati = ['asi' => \App\Domain\Dnd\SpeciesRules::asi($option), 'speed' => \App\Domain\Dnd\SpeciesRules::speed($option), 'traits' => \App\Domain\Dnd\SpeciesRules::traits($option)];
-                        $bonus = PointBuy::freeBonusesFor($option);
+                        $edizione = $this->edition();
+                        $dati = ['asi' => \App\Domain\Dnd\SpeciesRules::asi($option, $edizione), 'speed' => \App\Domain\Dnd\SpeciesRules::speed($option, $edizione), 'traits' => \App\Domain\Dnd\SpeciesRules::traits($option, $edizione)];
+                        $bonus = PointBuy::freeBonusesFor($option, $edizione);
                     @endphp
                     <div @class([
                             'overflow-hidden rounded-card border transition',
@@ -166,7 +172,7 @@
 
                         @if ($scelta)
                             <div class="px-4 pb-4">
-                                @php $descrizione = \App\Domain\Dnd\SpeciesRules::description($option); @endphp
+                                @php $descrizione = \App\Domain\Dnd\SpeciesRules::description($option, $edizione); @endphp
                                 @if ($descrizione)
                                     <p class="mb-3 text-sm text-fg">{{ $descrizione }}</p>
                                 @endif
@@ -199,7 +205,7 @@
                                     </x-inset>
                                 @endif
 
-                                @php $abilitaSpecie = \App\Domain\Dnd\SpeciesRules::skillChoices($option); @endphp
+                                @php $abilitaSpecie = \App\Domain\Dnd\SpeciesRules::skillChoices($option, $edizione); @endphp
                                 @if ($abilitaSpecie > 0)
                                     <x-inset class="mt-3">
                                         <p class="mb-2 text-sm text-fg">
@@ -224,7 +230,7 @@
                                     </x-inset>
                                 @endif
 
-                                @if (\App\Domain\Dnd\SpeciesRules::grantsFeat($option))
+                                @if (\App\Domain\Dnd\SpeciesRules::grantsFeat($option, $edizione))
                                     <x-inset class="mt-3">
                                         <p class="mb-2 text-sm text-fg">E il tuo <strong>talento</strong> di primo livello.</p>
                                         <select wire:model.live="featId" aria-label="Talento"
@@ -352,7 +358,7 @@
                             @if ($scelta)
                                 <span class="ml-auto text-xs font-bold text-active">Selezionato</span>
                             @else
-                                <span class="ml-auto text-xs text-muted">{{ $data['gp'] }} mo</span>
+                                <span class="ml-auto text-xs text-muted">{{ $data->gp }} mo</span>
                             @endif
                             <x-icona :is="Icon::Expand" class="h-4 w-4 shrink-0 text-muted transition {{ $scelta ? 'rotate-180' : '' }}" />
                         </button>
@@ -360,18 +366,63 @@
                         @if ($scelta)
                             <div class="px-4 pb-4">
                                 <div class="flex flex-wrap gap-1">
-                                    <x-badge tone="accent">{{ $data['gp'] }} mo</x-badge>
-                                    @foreach ($data['skills'] as $s)
+                                    <x-badge tone="accent">{{ $data->gp }} mo</x-badge>
+                                    @foreach ($data->skills ?? [] as $s)
                                         <x-badge>{{ config("dnd.character.skill_names.$s") }}</x-badge>
                                     @endforeach
                                 </div>
 
-                                @php $feature = config("dnd.backgrounds.features.$option"); @endphp
-                                @if ($feature)
-                                    <p class="mt-3 text-sm text-fg">{{ $feature }}</p>
+                                @if ($data->feature)
+                                    <p class="mt-3 text-sm text-fg">{{ $data->feature }}</p>
                                 @endif
 
-                                <p class="mt-2 text-xs text-muted">{{ $data['equip'] }}</p>
+                                <p class="mt-2 text-xs text-muted">{{ $data->equipment_summary }}</p>
+
+                                {{-- Regole 2024: dal background arrivano le caratteristiche e il talento di origine. --}}
+                                @if ($data->ability_options)
+                                    @php $nomi = collect($data->ability_options)->mapWithKeys(fn ($a) => [$a => Ability::from($a)->fullName()]); @endphp
+                                    <x-inset class="mt-3">
+                                        <p class="mb-2 text-sm text-fg">
+                                            Aumenta <strong>{{ $nomi->join(', ', ' o ') }}</strong>:
+                                        </p>
+                                        <div class="space-y-2">
+                                            <label class="flex items-center gap-2 text-sm">
+                                                <input type="radio" wire:model.live="bonusMode" value="2-1" class="accent-active">
+                                                +2 a una e +1 a un'altra
+                                            </label>
+                                            @if ($bonusMode === '2-1')
+                                                <div class="grid grid-cols-2 gap-2 pl-6">
+                                                    @foreach (['bonusPlus2' => '+2', 'bonusPlus1' => '+1'] as $campo => $etichetta)
+                                                        <select wire:model.live="{{ $campo }}" aria-label="Caratteristica con {{ $etichetta }}"
+                                                                class="rounded-md border border-line bg-page px-3 py-2 text-sm text-fg focus:border-active focus:outline-none">
+                                                            <option value="">{{ $etichetta }} a…</option>
+                                                            @foreach ($nomi as $chiave => $nome)
+                                                                <option value="{{ $chiave }}">{{ $nome }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    @endforeach
+                                                </div>
+                                                @if ($bonusPlus2 !== '' && $bonusPlus2 === $bonusPlus1)
+                                                    <p class="pl-6 text-sm text-on-danger-soft">Scegline due diverse.</p>
+                                                @endif
+                                            @endif
+                                            <label class="flex items-center gap-2 text-sm">
+                                                <input type="radio" wire:model.live="bonusMode" value="1-1-1" class="accent-active">
+                                                +1 a tutte e tre
+                                            </label>
+                                        </div>
+                                    </x-inset>
+
+                                    @if ($data->origin_feat)
+                                        @php $talento = \App\Models\Feat::ofEdition($this->edition())->firstWhere('name', $data->origin_feat); @endphp
+                                        <x-inset class="mt-3">
+                                            <p class="text-sm text-fg">Talento di origine: <strong>{{ $data->origin_feat }}</strong></p>
+                                            @if ($talento?->description)
+                                                <p class="mt-1 text-xs text-muted">{{ $talento->description }}</p>
+                                            @endif
+                                        </x-inset>
+                                    @endif
+                                @endif
 
                                 {{-- Solo «Personalizzato»: gli altri le abilità
                                      le impongono, e lo zaino ce l'hanno nel
