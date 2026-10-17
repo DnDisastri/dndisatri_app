@@ -28,6 +28,8 @@
     $sotto = 'mb-1 mt-4 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted';
 @endphp
 
+<livewire:feature-tracker :character="$character" :key="'usi-'.$character->id" />
+
 <x-panel :title="ActionCost::Action->label()" :icon="Icon::Action">
 
     {{-- Componente a sé: si aggiorna quando si impugna o si ripone dall'inventario. --}}

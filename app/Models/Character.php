@@ -81,6 +81,8 @@ class Character extends Model
             'died_at' => 'datetime',
             'speed' => 'float',
             'rules_edition' => RulesEdition::class,
+            'feature_uses' => 'array',
+            'active_features' => 'array',
         ];
     }
 
