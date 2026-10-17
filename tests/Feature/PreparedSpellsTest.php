@@ -6,7 +6,6 @@ use App\Actions\Characters\PrepareSpells;
 use App\Models\Character;
 use App\Models\User;
 
-
 function chierico(array $overrides = []): Character
 {
     $character = Character::factory()->create([
@@ -32,11 +31,27 @@ describe('chi prepara e chi no', function () {
         expect(chierico()->preparesSpells())->toBeTrue();
     });
 
-    it('un Mago no: quelli che conosce sono sempre pronti', function () {
-        $mago = Character::factory()->create(['class' => 'Mago', 'level' => 3]);
+    it('uno Stregone no: quelli che conosce sono sempre pronti', function () {
+        $stregone = Character::factory()->create(['class' => 'Stregone', 'level' => 3]);
 
-        expect($mago->preparesSpells())->toBeFalse()
-            ->and($mago->preparationLimit())->toBe(0);
+        expect($stregone->preparesSpells())->toBeFalse()
+            ->and($stregone->preparationLimit())->toBe(0);
+    });
+
+    it('il Mago prepara dal libro: Intelligenza più livello', function () {
+        $mago = Character::factory()->create(['class' => 'Mago', 'level' => 3, 'int' => 16]);
+
+        expect($mago->preparesSpells())->toBeTrue()
+            ->and($mago->preparationLimit())->toBe(6);
+    });
+
+    it('il Paladino dal 2° livello, con metà livello', function () {
+        $primo = Character::factory()->create(['class' => 'Paladino', 'level' => 1, 'cha' => 14]);
+        $quinto = Character::factory()->create(['class' => 'Paladino', 'level' => 5, 'cha' => 14]);
+
+        expect($primo->preparesSpells())->toBeFalse()
+            ->and($quinto->preparesSpells())->toBeTrue()
+            ->and($quinto->preparationLimit())->toBe(4);
     });
 
     it('il numero è modificatore più livello nella classe', function () {
@@ -88,6 +103,16 @@ describe('preparare', function () {
         ))->toThrow(RuntimeException::class, 'Puoi tenerne pronti 1');
     });
 
+    it('sopra il limite si può scendere una spunta alla volta', function () {
+        $character = chierico(['wis' => 8, 'level' => 1]);
+
+        app(PrepareSpells::class)->handle($character, ['Cura Ferite', 'Benedizione']);
+
+        expect($character->fresh()->activeSpells()->pluck('name')->all())->toContain('Benedizione')
+            ->and(fn () => app(PrepareSpells::class)->handle($character->fresh(), ['Cura Ferite', 'Benedizione', 'Parola Guaritrice']))
+            ->toThrow(RuntimeException::class, 'Puoi tenerne pronti 1');
+    });
+
     it('non si prepara quello che non si conosce', function () {
         $character = chierico();
 
@@ -96,21 +121,21 @@ describe('preparare', function () {
     });
 
     it('e una classe che non prepara viene rifiutata', function () {
-        $mago = Character::factory()->create(['class' => 'Mago', 'level' => 3]);
-        $mago->spells()->create(['name' => 'Dardo Incantato', 'level' => 1]);
+        $stregone = Character::factory()->create(['class' => 'Stregone', 'level' => 3]);
+        $stregone->spells()->create(['name' => 'Dardo Incantato', 'level' => 1]);
 
-        expect(fn () => app(PrepareSpells::class)->handle($mago, ['Dardo Incantato']))
+        expect(fn () => app(PrepareSpells::class)->handle($stregone, ['Dardo Incantato']))
             ->toThrow(RuntimeException::class, 'non prepara');
     });
 });
 
 describe('chi non prepara non perde niente', function () {
     it('i suoi incantesimi restano tutti attivi', function () {
-        $mago = Character::factory()->create(['class' => 'Mago', 'level' => 3]);
-        $mago->spells()->create(['name' => 'Dardo Incantato', 'level' => 1]);
-        $mago->spells()->create(['name' => 'Scudo', 'level' => 1]);
+        $stregone = Character::factory()->create(['class' => 'Stregone', 'level' => 3]);
+        $stregone->spells()->create(['name' => 'Dardo Incantato', 'level' => 1]);
+        $stregone->spells()->create(['name' => 'Scudo', 'level' => 1]);
 
-        expect($mago->fresh()->activeSpells())->toHaveCount(2);
+        expect($stregone->fresh()->activeSpells())->toHaveCount(2);
     });
 });
 

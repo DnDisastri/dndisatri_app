@@ -582,28 +582,24 @@ class Character extends Model
 
     public function preparesSpells(): bool
     {
-        return collect(array_keys($this->classLevels()))->contains(
-            fn (string $class) => ClassRules::prepares($class)
+        return collect($this->classLevels())->contains(
+            fn (int $level, string $class) => ClassRules::prepares($class, $level)
         );
     }
 
-    /** `modificatore + livello nella classe`, minimo uno; con più classi i budget si sommano. */
+    /** Con più classi i budget si sommano. */
     public function preparationLimit(): int
     {
         $total = 0;
 
         foreach ($this->classLevels() as $class => $level) {
-            if (! ClassRules::prepares($class)) {
-                continue;
-            }
-
             $ability = SpellSlots::abilityFor($class);
             $modifier = $ability === null ? 0 : $this->effectiveScores()->modifier($ability);
 
-            $total += max(0, $modifier + $level);
+            $total += ClassRules::preparationLimit($class, $level, $modifier);
         }
 
-        return $this->preparesSpells() ? max(1, $total) : 0;
+        return $total;
     }
 
     /**

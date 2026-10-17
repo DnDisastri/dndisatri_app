@@ -11,11 +11,6 @@ use RuntimeException;
 /**
  * Il libro degli incantesimi: quelli che si conoscono, e quelli pronti per oggi.
  *
- * La regola c'era già, scritta e provata (D16), e non la raggiungeva nessuna
- * pagina: `prepared` era una colonna che nessuno poteva cambiare. Chi prepara —
- * Chierico e Druido nei dati di gioco — sceglieva la lista del giorno da
- * nessuna parte.
- *
  * **Non passa dalla bacheca**, come gli slot e i punti ferita: preparare gli
  * incantesimi è quello che si fa al mattino nel gioco, non una modifica al
  * personaggio. Cambia ogni giorno per definizione.

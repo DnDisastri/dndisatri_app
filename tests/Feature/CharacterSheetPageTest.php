@@ -279,7 +279,7 @@ describe('la scheda', function () {
 
     it('e chi non prepara non vede nessuna casella', function () {
         $character = Character::factory()->create([
-            'class' => 'Mago', 'level' => 3, 'spell_ability' => 'int',
+            'class' => 'Stregone', 'level' => 3, 'spell_ability' => 'cha',
         ]);
         CharacterSpell::factory()->for($character)->create(['name' => 'Dardo Incantato', 'level' => 1]);
 
