@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Livewire\CharacterWizard;
 use App\Models\Build;
 use App\Models\Character;
+use App\Models\Feat;
 use App\Models\User;
 use Livewire\Livewire;
 
@@ -117,6 +118,8 @@ describe('l\'avanzamento fra i passi', function () {
             ->assertSet('step', 2);
 
         $component->set('speciesChoices', ['str', 'con'])
+            ->set('speciesSkills', ['athletics'])
+            ->set('featId', (string) Feat::create(['name' => 'Allerta'])->id)
             ->call('next')
             ->assertSet('step', 3);
     });

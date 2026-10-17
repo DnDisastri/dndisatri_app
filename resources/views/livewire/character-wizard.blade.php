@@ -199,6 +199,45 @@
                                     </x-inset>
                                 @endif
 
+                                @php $abilitaSpecie = \App\Domain\Dnd\SpeciesRules::skillChoices($option); @endphp
+                                @if ($abilitaSpecie > 0)
+                                    <x-inset class="mt-3">
+                                        <p class="mb-2 text-sm text-fg">
+                                            Scegli <strong>{{ $abilitaSpecie === 1 ? 'un\'abilità' : $abilitaSpecie.' abilità' }}</strong> in cui sei competente.
+                                        </p>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            @foreach (range(0, $abilitaSpecie - 1) as $slot)
+                                                <select wire:model.live="speciesSkills.{{ $slot }}"
+                                                        aria-label="Abilità dalla specie"
+                                                        class="rounded-md border border-line bg-page px-3 py-2 text-sm text-fg focus:border-active focus:outline-none">
+                                                    <option value="">Scegli</option>
+                                                    @foreach (config('dnd.character.skill_names', []) as $chiave => $nome)
+                                                        <option value="{{ $chiave }}">{{ $nome }}</option>
+                                                    @endforeach
+                                                </select>
+                                            @endforeach
+                                        </div>
+
+                                        @if (count(array_filter($speciesSkills)) !== count(array_unique(array_filter($speciesSkills))))
+                                            <p class="mt-2 text-sm text-on-danger-soft">Scegline due diverse.</p>
+                                        @endif
+                                    </x-inset>
+                                @endif
+
+                                @if (\App\Domain\Dnd\SpeciesRules::grantsFeat($option))
+                                    <x-inset class="mt-3">
+                                        <p class="mb-2 text-sm text-fg">E il tuo <strong>talento</strong> di primo livello.</p>
+                                        <select wire:model.live="featId" aria-label="Talento"
+                                                class="w-full rounded-md border border-line bg-page px-3 py-2 text-sm text-fg focus:border-active focus:outline-none">
+                                            <option value="">Scegli il talento</option>
+                                            @foreach ($this->featOptions() as $talento)
+                                                <option value="{{ $talento->id }}">{{ $talento->name }}{{ $talento->prerequisite ? ' ('.$talento->prerequisite.')' : '' }}</option>
+                                            @endforeach
+                                        </select>
+                                        <p class="mt-2 text-xs text-muted">Manca quello che cerchi? Chiedi a un dungeon master di aggiungerlo.</p>
+                                    </x-inset>
+                                @endif
+
                                 {{-- La sottorazza aggiunge i suoi bonus a quelli della razza. --}}
                                 @php $sottorazze = $this->subspeciesOptions(); @endphp
                                 @if ($sottorazze->isNotEmpty())
@@ -391,7 +430,7 @@
         @if ($step === 5)
             <p class="mb-3 text-sm text-muted">
                 Scegli <strong>{{ ClassRules::skillCount($class) }}</strong> abilità del tuo {{ $class }}.
-                Quelle che hai già dal background sono <strong>bloccate</strong>: sono tue comunque,
+                Quelle che hai già dal background o dalla specie sono <strong>bloccate</strong>: sono tue comunque,
                 sceglierle non aggiungerebbe niente.
             </p>
 
@@ -402,12 +441,12 @@
 
             <div class="grid gap-2 sm:grid-cols-2">
                 @foreach ($this->skillOptions() as $key => $skill)
-                    @if ($skill['fromBackground'])
+                    @if ($skill['lockedBy'])
                         {{-- Fuori da `wire:model`: non deve contare fra le scelte di classe. --}}
                         <div class="flex items-center gap-2 rounded-md border border-line bg-page px-3 py-2 text-sm">
                             <input type="checkbox" checked disabled class="accent-active">
                             <span class="text-muted">{{ $skill['name'] }} ({{ $skill['ability'] }})</span>
-                            <x-badge tone="own" class="ml-auto">dal background</x-badge>
+                            <x-badge tone="own" class="ml-auto">{{ $skill['lockedBy'] }}</x-badge>
                         </div>
                     @else
                         <label @class([
