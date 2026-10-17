@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Subraces\Tables;
 
 use App\Domain\Dnd\Ability;
+use App\Domain\Dnd\SpeciesRules;
 use App\Models\Subrace;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -56,7 +57,7 @@ class SubracesTable
             ->filters([
                 SelectFilter::make('race')
                     ->label('Specie')
-                    ->options(fn () => collect(array_keys(config('dnd.species', [])))
+                    ->options(fn () => collect(SpeciesRules::names())
                         ->mapWithKeys(fn (string $r) => [$r => $r])
                         ->all()),
 

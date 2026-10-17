@@ -85,7 +85,7 @@ final class PointBuy
         array $chosen = [],
         ?string $subspecies = null,
     ): array {
-        $bonuses = config("dnd.species.{$species}.asi", []);
+        $bonuses = SpeciesRules::asi($species);
 
         if (isset($bonuses['all'])) {
             $bonuses = collect(Ability::cases())
@@ -116,9 +116,6 @@ final class PointBuy
     /** Quanti +1 a scelta concede la specie (Umano Variante, Mezzelfo). */
     public static function freeBonusesFor(?string $species): int
     {
-        return match ($species) {
-            'Umano (Variante)', 'Mezzelfo' => 2,
-            default => 0,
-        };
+        return SpeciesRules::freeBonuses($species);
     }
 }

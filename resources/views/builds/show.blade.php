@@ -50,9 +50,9 @@
         </x-panel>
     @endif
 
-    @if (config("dnd.classes.list.{$build->class}.equip"))
+    @if (\App\Domain\Dnd\ClassRules::equipmentSummary($build->class))
         <x-panel title="Equipaggiamento">
-            <p class="text-sm text-muted">{{ config("dnd.classes.list.{$build->class}.equip") }}</p>
+            <p class="text-sm text-muted">{{ \App\Domain\Dnd\ClassRules::equipmentSummary($build->class) }}</p>
         </x-panel>
     @endif
 

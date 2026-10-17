@@ -33,11 +33,7 @@ final class Progression
      */
     public static function subclassLevel(?string $class): int
     {
-        return match ($class) {
-            'Chierico', 'Stregone', 'Warlock' => 1,
-            'Druido', 'Mago' => 2,
-            default => 3,
-        };
+        return ClassRules::subclassLevel($class);
     }
 
     /**

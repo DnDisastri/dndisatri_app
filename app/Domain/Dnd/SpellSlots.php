@@ -15,6 +15,11 @@ final class SpellSlots
             return SpellSlotSet::none();
         }
 
+        // Mezzo incantatore per eccesso: la tabella completa a metà livello, arrotondata in su.
+        if ($type === CasterType::HalfUp) {
+            return self::for(CasterType::Full, intdiv($level + 1, 2));
+        }
+
         if ($type === CasterType::Pact) {
             $entry = config("dnd.spells.slots.pact.{$level}");
 
@@ -50,8 +55,6 @@ final class SpellSlots
     /** La caratteristica da incantatore della classe, se ne ha una. */
     public static function abilityFor(?string $class): ?Ability
     {
-        $ability = config("dnd.spells.ability_by_class.{$class}");
-
-        return $ability === null ? null : Ability::from($ability);
+        return ClassRules::spellAbility($class);
     }
 }

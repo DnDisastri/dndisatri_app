@@ -28,6 +28,9 @@ use Illuminate\Support\Collection;
  */
 final class Multiclass
 {
+    /** Il punteggio minimo dei requisiti, uguale per tutte le classi. */
+    public const MINIMUM_SCORE = 13;
+
     /**
      * Il livello da incantatore combinato.
      *
@@ -41,6 +44,7 @@ final class Multiclass
             $total += match (CasterType::for($class)) {
                 CasterType::Full => $level,
                 CasterType::Half => intdiv($level, 2),
+                CasterType::HalfUp => intdiv($level + 1, 2),
                 CasterType::Third => intdiv($level, 3),
                 // Il patto non entra nel conto: ha una riserva sua.
                 CasterType::Pact, CasterType::None => 0,
@@ -125,11 +129,13 @@ final class Multiclass
      */
     public static function unmetRequirements(AbilityScores $scores, array $current, string $entering): array
     {
-        $minimum = (int) config('dnd.multiclass.minimum_score', 13);
+        $minimum = self::MINIMUM_SCORE;
         $missing = [];
 
         foreach ([...$current, $entering] as $class) {
-            foreach (config("dnd.multiclass.prerequisites.{$class}", []) as $group) {
+            foreach (app(ClassCatalogue::class)->find($class)?->multiclass_requirements ?? [] as $gruppo) {
+                $group = $gruppo['abilities'] ?? [];
+
                 $satisfied = collect($group)->contains(
                     fn (string $ability) => $scores->score(Ability::from($ability)) >= $minimum
                 );
@@ -158,17 +164,13 @@ final class Multiclass
      */
     public static function skillsOnEntry(string $class): array
     {
-        $entry = config("dnd.multiclass.skills_on_entry.{$class}");
+        $classe = app(ClassCatalogue::class)->find($class);
 
-        if ($entry === null) {
+        if ($classe === null || $classe->multiclass_skill_count === 0) {
             return ['count' => 0, 'from' => []];
         }
 
-        $from = $entry['from'] === 'any'
-            ? array_keys(config('dnd.character.skills', []))
-            : $entry['from'];
-
-        return ['count' => (int) $entry['count'], 'from' => array_values($from)];
+        return ['count' => $classe->multiclass_skill_count, 'from' => array_values($classe->multiclass_skill_choices ?? [])];
     }
 
     /**

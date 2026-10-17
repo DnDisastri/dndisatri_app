@@ -11,7 +11,7 @@ use RuntimeException;
 /**
  * La lista degli incantesimi preparati per oggi (D16).
  *
- * Riguarda solo le classi che preparano (config/dnd/rules.php).
+ * Riguarda solo le classi che preparano, segnate così dal pannello.
  * Le altre conoscono un numero fisso di incantesimi e li hanno sempre pronti.
  *
  * **Non passa dalla bacheca**, come gli slot e i punti ferita: preparare gli

@@ -9,6 +9,8 @@ enum CasterType: string
     case None = 'none';
     case Full = 'full';
     case Half = 'half';
+    /** Mezzo incantatore che arrotonda per eccesso, come l'Artefice: ha slot dal 1° livello. */
+    case HalfUp = 'half_up';
     case Third = 'third';
     case Pact = 'pact';
 
@@ -19,13 +21,7 @@ enum CasterType: string
      */
     public static function for(?string $class, ?string $subclass = null): self
     {
-        $caster = config("dnd.classes.list.{$class}.caster");
-
-        if ($caster === null) {
-            return self::None;
-        }
-
-        $type = self::from($caster);
+        $type = ClassRules::casterType($class);
 
         // Cavaliere Mistico e Furfante Arcano lanciano pur stando in una
         // classe che non lancia, e una homebrew può fare lo stesso: il
@@ -40,6 +36,24 @@ enum CasterType: string
         }
 
         return $type;
+    }
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::None => 'Non lancia incantesimi',
+            self::Full => 'Incantatore completo',
+            self::Half => 'Mezzo incantatore',
+            self::HalfUp => 'Mezzo incantatore, arrotondato per eccesso',
+            self::Third => 'Un terzo di incantatore',
+            self::Pact => 'Magia del patto',
+        };
+    }
+
+    /** @return array<string, string> */
+    public static function options(): array
+    {
+        return collect(self::cases())->mapWithKeys(fn (self $t) => [$t->value => $t->label()])->all();
     }
 
     public function castsSpells(): bool

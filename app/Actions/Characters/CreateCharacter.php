@@ -99,7 +99,7 @@ final class CreateCharacter
                 ...$scores,
                 // L'elfo dei boschi cammina più svelto della sua razza: se la
                 // sottorazza dichiara un passo, è il suo che vale.
-                'speed' => $sottorazza?->speed ?? config("dnd.species.{$species}.speed", 9),
+                'speed' => $sottorazza?->speed ?? SpeciesRules::speed($species),
                 // Al primo livello il dado vita si prende pieno.
                 'hp_max' => max(1, $hitDie + $abilityScores->modifier(Ability::Con)),
                 'hp_current' => max(1, $hitDie + $abilityScores->modifier(Ability::Con)),
@@ -113,7 +113,7 @@ final class CreateCharacter
                 // Razza e sottorazza di seguito: sulla scheda si deve leggere
                 // da dove viene ogni bonus, non solo il totale nei punteggi.
                 'species_traits' => collect([
-                    config("dnd.species.{$species}.traits"),
+                    SpeciesRules::traits($species),
                     $sottorazza?->traits,
                 ])->filter()->join("\n\n"),
                 'background_feature' => config("dnd.backgrounds.features.{$background}"),
@@ -154,7 +154,7 @@ final class CreateCharacter
             throw new InvalidArgumentException("Classe sconosciuta: {$class}.");
         }
 
-        if (config("dnd.species.{$species}") === null) {
+        if (! SpeciesRules::exists($species)) {
             throw new InvalidArgumentException("Specie sconosciuta: {$species}.");
         }
 
@@ -292,7 +292,7 @@ final class CreateCharacter
      */
     private function giveStartingItems(Character $character, string $class, string $background, array $choices, ?int $pack = null): void
     {
-        $equipment = config("dnd.equipment.{$class}", ['fixed' => [], 'choices' => []]);
+        $equipment = ClassRules::startingEquipment($class);
 
         $items = $equipment['fixed'] ?? [];
 
