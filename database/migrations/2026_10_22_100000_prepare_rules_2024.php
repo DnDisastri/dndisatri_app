@@ -1,6 +1,7 @@
 <?php
 
 use Database\Seeders\BackgroundSeeder;
+use Database\Seeders\Rules2024Seeder;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -44,9 +45,10 @@ return new class extends Migration
             $table->unique(['name', 'rules_edition']);
         });
 
-        // I background prima stavano in config/dnd/backgrounds.php.
+        // I background prima stavano in config/dnd/backgrounds.php; il resto è il materiale 2024 dell'SRD 5.2.1.
         activity()->withoutLogging(fn () => DB::transaction(function () {
             (new BackgroundSeeder)->run();
+            (new Rules2024Seeder)->run();
         }));
     }
 
