@@ -68,6 +68,8 @@ class BaseItem extends Model
                     DB::table($tabella)->where('base', $vecchio)->update(['base' => $item->name]);
                     DB::table($tabella)->whereNull('base')->where('name', $vecchio)->update(['base' => $item->name]);
                 }
+
+                DB::table('magic_items')->where('base', $vecchio)->update(['base' => $item->name]);
             }
 
             app()->forgetInstance(ItemCatalogue::class);
@@ -87,7 +89,7 @@ class BaseItem extends Model
         return collect($this->properties ?? [])->contains(fn (string $p) => str_starts_with(mb_strtolower($p), 'accurata'));
     }
 
-    /** Gli oggetti che lo indicano, negli zaini o nell'Emporio: finché ci sono non si cancella. */
+    /** Gli oggetti che lo indicano (zaini, Emporio, oggetti magici): finché ci sono non si cancella. */
     public function isInUse(): bool
     {
         foreach (['character_items', 'market_items'] as $tabella) {
@@ -100,7 +102,7 @@ class BaseItem extends Model
             }
         }
 
-        return false;
+        return DB::table('magic_items')->where('base', $this->name)->exists();
     }
 
     /** In una riga: «1d8 taglienti · Versatile (1d10)», «CA 14 + DES (max 2)», «+2 CA». */
