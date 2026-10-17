@@ -15,6 +15,9 @@ use App\Models\Character;
  * - **breve**: azzera solo gli slot da patto, che sono la particolarità del
  *   Warlock — pochi, ma tornano molto più spesso. Non tocca i punti ferita.
  *
+ * In tutti e due tornano gli usi dei privilegi che si ripristinano con quel
+ * riposo, e gli effetti accesi (l'Ira) si spengono.
+ *
  * Il recupero dei punti ferita è la decisione D8. La vecchia applicazione non
  * lo faceva, ma non era una scelta del gruppo: era una dimenticanza, e nel
  * regolamento il riposo lungo rimette a nuovo.
@@ -50,6 +53,8 @@ final class TakeRest
             'spell_slots_used' => $remaining,
             ...$restored,
         ])->save();
+
+        app(UseFeature::class)->afterRest($character, $type);
 
         return $character;
     }

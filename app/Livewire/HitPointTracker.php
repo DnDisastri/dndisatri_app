@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Actions\Characters\AdjustHitPoints;
 use App\Actions\Characters\SpendHitDie;
 use App\Actions\Characters\TakeRest;
+use App\Domain\Dnd\Features;
 use App\Enums\RestType;
 use App\Models\Character;
 use Livewire\Attributes\Locked;
@@ -155,6 +156,8 @@ class HitPointTracker extends Component
                 $voci[] = "Tornano {$indietro} dadi vita su ".$character->hit_dice_used.' spesi.';
             }
 
+            $voci = [...$voci, ...$this->privilegiCheTornano($character, $tipo)];
+
             return $voci ?: ['Sei già a posto: non cambia niente.'];
         }
 
@@ -162,11 +165,40 @@ class HitPointTracker extends Component
             $voci[] = "Tornano gli slot da patto: {$slotSpesi} spesi.";
         }
 
+        $voci = [...$voci, ...$this->privilegiCheTornano($character, $tipo)];
+
+        // Quelli che si usano proprio durante o dopo il riposo breve, come il Recupero arcano.
+        $daUsare = Features::for($character)
+            ->filter(fn (array $p) => $p['privilegio']->usableOnShortRest() && $p['massimo'] !== null && $p['usati'] < $p['massimo'])
+            ->pluck('nome');
+
+        if ($daUsare->isNotEmpty()) {
+            $voci[] = 'Puoi usare adesso: '.$daUsare->join(', ', ' e ').'.';
+        }
+
         // Il breve non cura da solo, ed è la cosa che più spesso si dà per
         // scontata: qui si dice, invece di lasciarla scoprire dopo.
         $voci[] = $character->hitDiceLeft() > 0
             ? 'I punti ferita non tornano da soli: spendi un dado vita, ne hai '.$character->hitDiceLeft().'.'
             : 'I punti ferita non tornano da soli, e non ti restano dadi vita.';
+
+        return $voci;
+    }
+
+    /** @return list<string> */
+    private function privilegiCheTornano(Character $character, RestType $tipo): array
+    {
+        $tornano = Features::for($character)
+            ->filter(fn (array $p) => $p['usati'] > 0 && $p['privilegio']->rechargesOn($tipo, $p['livelloClasse']))
+            ->map(fn (array $p) => "{$p['nome']} ({$p['usati']} ".($p['usati'] === 1 ? 'speso' : 'spesi').')');
+
+        $voci = $tornano->isEmpty() ? [] : ['Tornano: '.$tornano->join(', ', ' e ').'.'];
+
+        $accesi = Features::for($character)->filter(fn (array $p) => $p['attivo'])->pluck('nome');
+
+        if ($accesi->isNotEmpty()) {
+            $voci[] = 'Finisce: '.$accesi->join(', ', ' e ').'.';
+        }
 
         return $voci;
     }
