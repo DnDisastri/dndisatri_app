@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Dnd;
 
+use App\Enums\EquipmentSlot;
+
 /**
  * Classe Armatura e iniziativa: si ricalcolano sempre dai punteggi EFFICACI e
  * dall'equipaggiamento indossato.
@@ -22,18 +24,21 @@ final class ArmorClass
     /** `$magicBonus` è la somma dei +N di armatura e scudo indossati. */
     public static function compute(AbilityScores $effective, ?string $armor = null, ?string $shield = null, int $magicBonus = 0): int
     {
+        $catalogo = app(ItemCatalogue::class);
         $dex = $effective->modifier(Ability::Dex);
-        $worn = $armor === null ? null : config("dnd.combat.armor.{$armor}");
+        $worn = $catalogo->findOf(EquipmentSlot::Armor, $armor);
 
-        $ac = match ($worn['type'] ?? null) {
-            'light' => $worn['base'] + $dex,
-            // L'armatura media limita il contributo della Destrezza a +2.
-            'medium' => $worn['base'] + min($dex, 2),
-            'heavy' => $worn['base'],
-            // Senza armatura, o con un nome che non è a catalogo.
-            default => 10 + $dex,
-        };
+        // Senza armatura, o con un nome che non è a catalogo, 10 + DES. Il
+        // tetto vuoto è «tutta la Destrezza» (leggere), 0 è «niente» (pesanti).
+        $ac = $worn === null
+            ? 10 + $dex
+            : (int) $worn->armor_base + match ($worn->dex_cap) {
+                null => $dex,
+                // Le pesanti ignorano la Destrezza, anche negativa.
+                0 => 0,
+                default => min($dex, $worn->dex_cap),
+            };
 
-        return $ac + ($shield === null ? 0 : (int) config("dnd.combat.shields.{$shield}", 0)) + $magicBonus;
+        return $ac + (int) $catalogo->findOf(EquipmentSlot::Shield, $shield)?->shield_bonus + $magicBonus;
     }
 }
