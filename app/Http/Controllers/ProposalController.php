@@ -9,12 +9,15 @@ use App\Actions\Characters\RequestLevelUp;
 use App\Domain\Dnd\Ability;
 use App\Domain\Dnd\ClassRules;
 use App\Domain\Dnd\Coins;
+use App\Domain\Dnd\HitPoints;
 use App\Domain\Dnd\ItemEffectMode;
 use App\Domain\Dnd\Multiclass;
 use App\Domain\Dnd\Progression;
+use App\Domain\Dnd\SpellSlots;
 use App\Enums\EquipmentSlot;
 use App\Models\Character;
 use App\Models\CharacterItem;
+use App\Models\Feat;
 use App\Models\GameSession;
 use App\Models\PendingChange;
 use Illuminate\Http\RedirectResponse;
@@ -143,6 +146,18 @@ class ProposalController extends Controller
         $classLevel = ($levels[$class] ?? 0) + 1;
         $row = $character->classes()->where('class', $class)->first();
 
+        $hitDie = ClassRules::hitDie($class);
+        $known = $character->spells()->get();
+        $reach = SpellSlots::for($character->casterType(), $newLevel)->maxSpellLevel();
+        $classList = ClassRules::spellList($class);
+
+        // Solo quelli che può davvero imparare: della classe, nuovi, alla sua portata.
+        $learnable = collect($classList)
+            ->reject(fn (string $spell) => $known->contains('name', $spell))
+            ->groupBy(fn (string $spell) => ClassRules::spellLevel($spell))
+            ->filter(fn ($spells, int $level) => $level === 0 || $level <= $reach)
+            ->sortKeys();
+
         return view('proposals.level-up', [
             'character' => $character,
             'newLevel' => $newLevel,
@@ -167,6 +182,14 @@ class ProposalController extends Controller
             'canPickSubclass' => $row?->subclass === null
                 && $classLevel >= Progression::subclassLevel($class),
             'subclasses' => ClassRules::subclasses($class),
+            'hitDie' => $hitDie,
+            'hpAverage' => HitPoints::gainForLevel($hitDie, $character->baseScores()->modifier(Ability::Con)),
+            'feats' => Feat::ofEdition($character->rules_edition)->get(),
+            'learnable' => $learnable,
+            // La sostituzione vale solo salendo in una classe che si ha già.
+            'swappable' => ClassRules::swapsSpells($class) && array_key_exists($class, $levels)
+                ? $known->reject->isCantrip()->whereIn('name', $classList)->sortBy('name')->pluck('name')
+                : collect(),
         ]);
     }
 
@@ -181,12 +204,19 @@ class ProposalController extends Controller
             'asi_mode' => ['nullable', Rule::in(['plus2', 'plus1', 'feat'])],
             'asi_first' => ['nullable', Rule::in($abilities)],
             'asi_second' => ['nullable', Rule::in($abilities)],
-            'feat_name' => ['nullable', 'string', 'max:255'],
-            'feat_description' => ['nullable', 'string'],
+            'feat_id' => ['nullable', 'integer'],
             'subclass' => ['nullable', 'string', 'max:255'],
             'skills' => ['array'],
             'skills.*' => ['string'],
+            'spells' => ['array', 'max:20'],
+            'spells.*' => ['string', 'max:255'],
+            'forget' => ['nullable', 'string', 'max:255'],
+            'replace_with' => ['nullable', 'string', 'max:255'],
+            'hp_method' => ['nullable', Rule::in(['media', 'tiro'])],
+            'hp_roll' => ['nullable', 'required_if:hp_method,tiro', 'integer', 'min:1', 'max:20'],
             'game_session_id' => ['nullable', 'integer'],
+        ], [
+            'hp_roll.required_if' => 'Scrivi quanto hai tirato.',
         ]);
 
         return $this->propose(
@@ -196,11 +226,14 @@ class ProposalController extends Controller
                 class: $validated['class'] ?? null,
                 asiMode: $validated['asi_mode'] ?? null,
                 asiAbilities: array_filter([$validated['asi_first'] ?? null, $validated['asi_second'] ?? null]),
-                featName: $validated['feat_name'] ?? null,
-                featDescription: $validated['feat_description'] ?? null,
                 subclass: $validated['subclass'] ?? null,
+                spells: array_values($validated['spells'] ?? []),
                 skills: array_values($validated['skills'] ?? []),
                 session: $this->sessioneGiocata($character, $validated['game_session_id'] ?? null),
+                hpRoll: ($validated['hp_method'] ?? null) === 'tiro' ? (int) $validated['hp_roll'] : null,
+                featId: isset($validated['feat_id']) ? (int) $validated['feat_id'] : null,
+                forget: $validated['forget'] ?? null,
+                replaceWith: $validated['replace_with'] ?? null,
             ),
             $character,
         );

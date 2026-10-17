@@ -130,6 +130,12 @@ final class ClassRules
         return max(1, $modifier + ($rule['half_level'] ? intdiv($level, 2) : $level));
     }
 
+    /** Sostituisce un incantesimo conosciuto salendo di livello in questa classe? */
+    public static function swapsSpells(?string $class): bool
+    {
+        return in_array($class, config('dnd.rules.spell_swap', []), true);
+    }
+
     /** @return list<string> gli incantesimi che la classe può imparare */
     public static function spellList(?string $class): array
     {

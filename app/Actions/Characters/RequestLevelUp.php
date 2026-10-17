@@ -13,6 +13,7 @@ use App\Domain\Dnd\Progression;
 use App\Domain\Dnd\SpellSlots;
 use App\Enums\PendingChangeType;
 use App\Models\Character;
+use App\Models\Feat;
 use App\Models\GameSession;
 use App\Models\PendingChange;
 use App\Models\User;
@@ -42,6 +43,7 @@ final class RequestLevelUp
      * @param  list<string>  $asiAbilities  una caratteristica per il +2, due per il +1/+1
      * @param  list<string>  $spells  gli incantesimi imparati salendo
      * @param  list<string>  $skills  le abilità scelte entrando in una classe nuova
+     * @param  int|null  $hpRoll  il dado vita tirato al tavolo; null è la media
      */
     public function handle(
         Character $character,
@@ -49,12 +51,14 @@ final class RequestLevelUp
         ?string $class = null,
         ?string $asiMode = null,
         array $asiAbilities = [],
-        ?string $featName = null,
-        ?string $featDescription = null,
         ?string $subclass = null,
         array $spells = [],
         array $skills = [],
         ?GameSession $session = null,
+        ?int $hpRoll = null,
+        ?int $featId = null,
+        ?string $forget = null,
+        ?string $replaceWith = null,
     ): PendingChange {
         $newLevel = $character->level + 1;
 
@@ -81,7 +85,8 @@ final class RequestLevelUp
         // voluta dal manuale, dove dipendono dal livello nella singola classe.
         if (Progression::isAsiLevel($newLevel) && $asiMode !== null) {
             [$scores, $note, $feat] = $this->applyAsi(
-                $scores, $asiMode, $asiAbilities, $featName, $featDescription
+                $scores, $asiMode, $asiAbilities,
+                $asiMode === 'feat' ? Feat::pick($character->rules_edition, $featId) : null,
             );
             $summary[] = $note;
         }
@@ -92,10 +97,16 @@ final class RequestLevelUp
         // scheda: un Guerriero che prende un livello da Mago tira un d6.
         $hitDie = ClassRules::hitDie($class);
 
-        $gain = HitPoints::gainForLevel($hitDie, $conAfter);
+        if ($hpRoll !== null && ($hpRoll < 1 || $hpRoll > $hitDie)) {
+            throw new InvalidArgumentException("Il tiro del d{$hitDie} va da 1 a {$hitDie}.");
+        }
+
+        $gain = HitPoints::gainForLevel($hitDie, $conAfter, $hpRoll);
         $retro = HitPoints::retroactiveGain($conAfter - $conBefore, $newLevel);
 
-        $summary[] = "+{$gain} PF (d{$hitDie})";
+        $summary[] = $hpRoll === null
+            ? "+{$gain} PF (d{$hitDie}, media)."
+            : "+{$gain} PF (d{$hitDie}, tirato {$hpRoll}).";
 
         if ($retro > 0) {
             $summary[] = "+{$retro} PF retroattivi (COS +".($conAfter - $conBefore).')';
@@ -136,12 +147,19 @@ final class RequestLevelUp
         }
 
         if ($spells !== []) {
-            $this->assertSpellsAllowed($character, $spells, $newLevel);
+            $this->assertSpellsAllowed($character, $class, $spells, $newLevel);
 
             // Stessa strada dei talenti: righe a parte sotto una chiave che il
             // filtro dei campi non riconosce come colonna.
             $diff['spells'] = array_values(array_unique($spells));
             $summary[] = 'Impara: '.implode(', ', $diff['spells']).'.';
+        }
+
+        if ($forget !== null || $replaceWith !== null) {
+            $this->assertSwapAllowed($character, $class, (string) $forget, (string) $replaceWith, $newLevel, $diff['spells'] ?? []);
+
+            $diff['swap'] = ['forget' => $forget, 'learn' => $replaceWith];
+            $summary[] = "Sostituisce {$forget} con {$replaceWith}.";
         }
 
         $change = PendingChange::create([
@@ -162,15 +180,11 @@ final class RequestLevelUp
     /**
      * @param  array<string,int>  $scores
      * @param  list<string>  $abilities
+     * @param  array{name: string, description: ?string, prerequisite: ?string}|null  $feat
      * @return array{0: array<string,int>, 1: string, 2: array{name: string, description: ?string}|null}
      */
-    private function applyAsi(
-        array $scores,
-        string $mode,
-        array $abilities,
-        ?string $featName,
-        ?string $featDescription,
-    ): array {
+    private function applyAsi(array $scores, string $mode, array $abilities, ?array $feat): array
+    {
         $cap = Progression::ASI_SCORE_CAP;
 
         return match ($mode) {
@@ -194,15 +208,16 @@ final class RequestLevelUp
                 return [$scores, "ASI: +1 {$first->label()}, +1 {$second->label()}.", null];
             })(),
 
-            'feat' => (function () use ($scores, $featName, $featDescription) {
-                if (blank($featName)) {
-                    throw new InvalidArgumentException('Serve il nome del talento.');
+            'feat' => (function () use ($scores, $feat) {
+                if ($feat === null) {
+                    throw new InvalidArgumentException('Scegli il talento dall\'elenco.');
                 }
 
-                return [$scores, "Talento: {$featName}.", [
-                    'name' => $featName,
-                    'description' => $featDescription,
-                ]];
+                $note = blank($feat['prerequisite'])
+                    ? "Talento: {$feat['name']}."
+                    : "Talento: {$feat['name']} (prerequisito: {$feat['prerequisite']}).";
+
+                return [$scores, $note, ['name' => $feat['name'], 'description' => $feat['description']]];
             })(),
 
             default => throw new InvalidArgumentException("Scelta ASI sconosciuta: {$mode}."),
@@ -229,16 +244,16 @@ final class RequestLevelUp
      *
      * @param  list<string>  $spells
      */
-    private function assertSpellsAllowed(Character $character, array $spells, int $newLevel): void
+    private function assertSpellsAllowed(Character $character, string $class, array $spells, int $newLevel): void
     {
-        $available = ClassRules::spellList($character->class);
+        $available = ClassRules::spellList($class);
         $known = $character->spells()->pluck('name')->all();
         $reach = SpellSlots::for($character->casterType(), $newLevel)->maxSpellLevel();
 
         foreach (array_unique($spells) as $spell) {
             if (! in_array($spell, $available, true)) {
                 throw new InvalidArgumentException(
-                    "«{$spell}» non è nella lista di un {$character->class}."
+                    "«{$spell}» non è nella lista di un {$class}."
                 );
             }
 
@@ -255,6 +270,40 @@ final class RequestLevelUp
                 );
             }
         }
+    }
+
+    /**
+     * Bardo, Stregone, Warlock e Ranger, salendo nella loro classe, possono
+     * scambiare un incantesimo conosciuto con un altro che possono imparare.
+     * I trucchetti no.
+     *
+     * @param  list<string>  $learning  quelli che impara nello stesso passaggio
+     */
+    private function assertSwapAllowed(Character $character, string $class, string $forget, string $learn, int $newLevel, array $learning): void
+    {
+        if (! ClassRules::swapsSpells($class)) {
+            throw new InvalidArgumentException("Un {$class} non sostituisce incantesimi salendo di livello.");
+        }
+
+        if ($forget === '' || $learn === '') {
+            throw new InvalidArgumentException("Per sostituire servono l'incantesimo da dimenticare e quello nuovo.");
+        }
+
+        $known = $character->spells()->where('name', $forget)->first();
+
+        if ($known === null || $known->isCantrip() || ! in_array($forget, ClassRules::spellList($class), true)) {
+            throw new InvalidArgumentException("«{$forget}» non è un incantesimo da {$class} che conosci.");
+        }
+
+        if (ClassRules::spellLevel($learn) === 0) {
+            throw new InvalidArgumentException('Un trucchetto non prende il posto di un incantesimo.');
+        }
+
+        if (in_array($learn, $learning, true)) {
+            throw new InvalidArgumentException("«{$learn}» lo stai già imparando.");
+        }
+
+        $this->assertSpellsAllowed($character, $class, [$learn], $newLevel);
     }
 
     /**

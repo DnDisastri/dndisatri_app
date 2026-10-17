@@ -14,4 +14,8 @@ return [
         'Mago' => ['from_level' => 1, 'half_level' => false],
         'Paladino' => ['from_level' => 2, 'half_level' => true],
     ],
+
+    // Chi conosce un numero fisso di incantesimi e, salendo di livello in
+    // quella classe, può sostituirne uno.
+    'spell_swap' => ['Bardo', 'Stregone', 'Warlock', 'Ranger'],
 ];

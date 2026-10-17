@@ -10,6 +10,7 @@ use App\Domain\Dnd\Coins;
 use App\Domain\Dnd\ItemEffectMode;
 use App\Enums\PendingChangeType;
 use App\Models\Character;
+use App\Models\Feat;
 use App\Models\User;
 
 // La proposta calcola il nuovo stato, ma la scheda cambia solo quando un DM la approva.
@@ -94,9 +95,10 @@ describe('passaggio di livello', function () {
             'level' => 3, 'class' => 'Guerriero', 'hit_die' => 10, 'con' => 14, 'str' => 16,
         ]);
 
+        $talento = Feat::create(['name' => 'Attaccabrighe', 'description' => 'Attacco bonus con l\'arma secondaria.']);
+
         $change = app(RequestLevelUp::class)->handle(
-            $character, $player, asiMode: 'feat',
-            featName: 'Attaccabrighe', featDescription: 'Attacco bonus con l\'arma secondaria.',
+            $character, $player, asiMode: 'feat', featId: $talento->id,
         );
 
         expect($change->diff['str'])->toBe(16)

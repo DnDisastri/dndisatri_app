@@ -138,6 +138,14 @@ final class ApprovePendingChange
             ]);
         }
 
+        if ($swap = ($change->diff['swap'] ?? null)) {
+            $character->spells()->where('name', $swap['forget'])->delete();
+            $character->spells()->firstOrCreate(
+                ['name' => $swap['learn']],
+                ['level' => ClassRules::spellLevel($swap['learn'])],
+            );
+        }
+
         // `firstOrCreate`: un incantesimo già conosciuto non si sdoppia.
         foreach ($change->diff['spells'] ?? [] as $spell) {
             $character->spells()->firstOrCreate(
