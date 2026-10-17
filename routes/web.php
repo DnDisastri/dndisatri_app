@@ -189,6 +189,9 @@ Route::middleware('auth')->group(function () {
 
         Route::get('oggetto-magico', [ProposalController::class, 'itemEffectForm'])->name('item-effect');
         Route::post('oggetto-magico', [ProposalController::class, 'submitItemEffect']);
+
+        Route::get('pergamena', [ProposalController::class, 'scrollForm'])->name('scroll');
+        Route::post('pergamena', [ProposalController::class, 'submitScroll']);
     });
 });
 

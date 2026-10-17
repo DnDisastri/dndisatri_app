@@ -8,12 +8,14 @@
         ['nome' => 'Sali di livello', 'rotta' => 'proposals.level-up', 'serve' => 'propose', 'icona' => \App\Enums\Icon::LevelUp],
         ['nome' => 'Registra un bottino', 'rotta' => 'proposals.loot', 'serve' => 'propose', 'icona' => \App\Enums\Icon::Loot],
         ['nome' => 'Oggetto magico', 'rotta' => 'proposals.item-effect', 'serve' => 'propose', 'icona' => \App\Enums\Icon::MagicItem],
+        ['nome' => 'Copia da una pergamena', 'rotta' => 'proposals.scroll', 'serve' => 'propose', 'icona' => \App\Enums\Icon::CastSpell,
+            'solo' => \App\Actions\Characters\ProposeChange::scrollClass($character) !== null],
         // Il registro è staccato dalle proposte: è l'estratto conto, altro permesso.
         ['nome' => 'Registro del personaggio', 'rotta' => 'characters.ledger', 'serve' => 'viewLedger', 'separa' => true, 'icona' => \App\Enums\Icon::CharacterLedger],
     ];
 
     $voci = collect($azioni)->filter(
-        fn (array $azione) => auth()->user()?->can($azione['serve'], $character),
+        fn (array $azione) => ($azione['solo'] ?? true) && auth()->user()?->can($azione['serve'], $character),
     );
 @endphp
 

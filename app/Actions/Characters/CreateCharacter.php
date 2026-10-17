@@ -8,10 +8,13 @@ use App\Domain\Dnd\Ability;
 use App\Domain\Dnd\AbilityScores;
 use App\Domain\Dnd\ClassRules;
 use App\Domain\Dnd\PointBuy;
+use App\Domain\Dnd\SpeciesRules;
 use App\Domain\Dnd\SpellSlots;
 use App\Domain\Dnd\SubraceCatalogue;
 use App\Enums\EquipmentSlot;
+use App\Enums\RulesEdition;
 use App\Models\Character;
+use App\Models\Feat;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -30,6 +33,7 @@ final class CreateCharacter
      * @param  array<string,int>  $speciesChoices  i +1 a scelta, per le specie che li hanno
      * @param  list<string>  $skills  le abilità scelte fra quelle della classe
      * @param  list<string>  $spells  gli incantesimi scelti
+     * @param  list<string>  $speciesSkills  le competenze a scelta di Umano Variante e Mezzelfo
      */
     public function handle(
         User $owner,
@@ -48,9 +52,23 @@ final class CreateCharacter
         array $backgroundSkills = [],
         ?int $pack = null,
         ?string $privateStory = null,
+        RulesEdition $edition = RulesEdition::Classic,
+        array $speciesSkills = [],
+        ?int $featId = null,
     ): Character {
+        if (! $edition->isCreatable()) {
+            throw new InvalidArgumentException("Le regole {$edition->label()} non sono ancora disponibili.");
+        }
+
         $this->validate($name, $class, $species, $background, $boughtScores, $skills, $spells);
         $this->validateBackgroundSkills($background, $backgroundSkills);
+        $speciesSkills = $this->validateSpeciesSkills($species, $speciesSkills);
+
+        $feat = SpeciesRules::grantsFeat($species) ? Feat::pick($edition, $featId) : null;
+
+        if (SpeciesRules::grantsFeat($species) && $feat === null) {
+            throw new InvalidArgumentException("L'Umano Variante sceglie un talento al primo livello.");
+        }
 
         $sottorazza = app(SubraceCatalogue::class)->find($species, $subspecies);
 
@@ -61,7 +79,7 @@ final class CreateCharacter
         return DB::transaction(function () use (
             $owner, $name, $class, $species, $background, $subclass, $story,
             $scores, $abilityScores, $hitDie, $skills, $spells, $equipmentChoices, $sottorazza,
-            $backgroundSkills, $pack, $privateStory
+            $backgroundSkills, $pack, $privateStory, $edition, $speciesSkills, $feat
         ) {
             $character = Character::create([
                 'user_id' => $owner->getKey(),
@@ -76,6 +94,7 @@ final class CreateCharacter
                 'story' => $story,
                 'private_story' => $privateStory,
                 'level' => 1,
+                'rules_edition' => $edition,
                 'hit_die' => $hitDie,
                 ...$scores,
                 // L'elfo dei boschi cammina più svelto della sua razza: se la
@@ -88,7 +107,7 @@ final class CreateCharacter
                 'saving_throws' => collect(ClassRules::savingThrows($class))
                     ->mapWithKeys(fn (string $ability) => [$ability => true])
                     ->all(),
-                'skills' => $this->skillMap($skills, $background, $backgroundSkills),
+                'skills' => $this->skillMap([...$skills, ...$speciesSkills], $background, $backgroundSkills),
                 'spell_slots_used' => [],
                 'spell_ability' => SpellSlots::abilityFor($class)?->value,
                 // Razza e sottorazza di seguito: sulla scheda si deve leggere
@@ -99,6 +118,15 @@ final class CreateCharacter
                 ])->filter()->join("\n\n"),
                 'background_feature' => config("dnd.backgrounds.features.{$background}"),
             ]);
+
+            if ($feat !== null) {
+                $character->feats()->create([
+                    'name' => $feat['name'],
+                    'description' => $feat['description'],
+                    'level' => 1,
+                    'source' => 'species',
+                ]);
+            }
 
             $this->giveStartingItems($character, $class, $background, $equipmentChoices, $pack);
             $this->giveSpells($character, $spells);
@@ -189,6 +217,32 @@ final class CreateCharacter
         $zaini = config('dnd.backgrounds.packs', []);
 
         return $zaini[$index] ?? $zaini[0] ?? null;
+    }
+
+    /**
+     * @param  list<string>  $chosen
+     * @return list<string>
+     */
+    private function validateSpeciesSkills(string $species, array $chosen): array
+    {
+        $quante = SpeciesRules::skillChoices($species);
+        $chosen = array_values(array_unique(array_filter($chosen)));
+
+        if (count($chosen) !== $quante) {
+            throw new InvalidArgumentException($quante === 0
+                ? "La specie «{$species}» non fa scegliere abilità."
+                : "La specie «{$species}» vuole {$quante} abilità a scelta, diverse.");
+        }
+
+        $esistenti = array_keys(config('dnd.character.skills', []));
+
+        foreach ($chosen as $skill) {
+            if (! in_array($skill, $esistenti, true)) {
+                throw new InvalidArgumentException("Abilità sconosciuta: {$skill}.");
+            }
+        }
+
+        return $chosen;
     }
 
     /** @param  list<string>  $chosen */

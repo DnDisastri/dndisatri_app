@@ -11,7 +11,7 @@ use RuntimeException;
 /**
  * La lista degli incantesimi preparati per oggi (D16).
  *
- * Riguarda solo le classi che preparano — Chierico e Druido nei dati di gioco.
+ * Riguarda solo le classi che preparano (config/dnd/rules.php).
  * Le altre conoscono un numero fisso di incantesimi e li hanno sempre pronti.
  *
  * **Non passa dalla bacheca**, come gli slot e i punti ferita: preparare gli
@@ -35,16 +35,18 @@ final class PrepareSpells
         $names = array_values(array_unique($names));
         $limit = $character->preparationLimit();
 
-        if (count($names) > $limit) {
-            throw new RuntimeException(
-                "Puoi tenerne pronti {$limit}, non ".count($names).'.'
-            );
-        }
-
-        return DB::transaction(function () use ($character, $names) {
+        return DB::transaction(function () use ($character, $names, $limit) {
             // I trucchetti restano fuori: non si preparano, e toccarli
             // significherebbe poterli spegnere per sbaglio.
             $spells = $character->spells()->where('level', '>', 0)->get();
+
+            // Sopra il limite (incantesimi nuovi arrivano già pronti) si può
+            // solo scendere, una spunta alla volta.
+            if (count($names) > $limit && count($names) >= $spells->where('prepared', true)->count()) {
+                throw new RuntimeException(
+                    "Puoi tenerne pronti {$limit}, non ".count($names).'.'
+                );
+            }
 
             $unknown = array_diff($names, $spells->pluck('name')->all());
 

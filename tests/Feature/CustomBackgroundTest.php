@@ -170,8 +170,8 @@ describe('nel wizard', function () {
 
         $opzioni = $componente->instance()->skillOptions();
 
-        expect($opzioni['athletics']['fromBackground'])->toBeTrue()
-            ->and($opzioni['perception']['fromBackground'])->toBeTrue()
-            ->and($opzioni['stealth']['fromBackground'])->toBeFalse();
+        expect($opzioni['athletics']['lockedBy'])->toBe('dal background')
+            ->and($opzioni['perception']['lockedBy'])->toBe('dal background')
+            ->and($opzioni['stealth']['lockedBy'])->toBeNull();
     });
 });

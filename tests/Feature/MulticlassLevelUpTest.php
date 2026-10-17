@@ -31,7 +31,7 @@ describe('la richiesta', function () {
 
         $change = app(RequestLevelUp::class)->handle($character, $character->user, class: 'Mago');
         expect($change->summary)->toContain('Nuova classe: Mago 1.')
-            ->and($change->summary)->toContain('+6 PF (d6)')
+            ->and($change->summary)->toContain('+6 PF (d6, media)')
             ->and($change->diff['hp_max'])->toBe(36)
             ->and($change->diff['class_up']['is_new'])->toBeTrue();
     });
@@ -43,7 +43,7 @@ describe('la richiesta', function () {
 
         expect($change->summary)->toContain('Guerriero 3 → 4.')
             ->and($change->diff['class_up']['is_new'])->toBeFalse()
-            ->and($change->summary)->toContain('+8 PF (d10)');
+            ->and($change->summary)->toContain('+8 PF (d10, media)');
     });
 
     it('senza dire la classe si sale nella principale', function () {

@@ -75,6 +75,7 @@ final class ApprovePendingChange
                 PendingChangeType::Loot => $this->applyLoot($character, $locked),
                 PendingChangeType::ItemEffect => $this->applyItemEffect($character, $locked),
                 PendingChangeType::Barter => $this->applyBarter($character, $locked),
+                PendingChangeType::ScrollSpell => $this->applyScrollSpell($character, $locked),
             };
 
             $locked->forceFill([
@@ -136,6 +137,14 @@ final class ApprovePendingChange
                 'level' => $change->diff['level'] ?? $character->level,
                 'source' => 'asi',
             ]);
+        }
+
+        if ($swap = ($change->diff['swap'] ?? null)) {
+            $character->spells()->where('name', $swap['forget'])->delete();
+            $character->spells()->firstOrCreate(
+                ['name' => $swap['learn']],
+                ['level' => ClassRules::spellLevel($swap['learn'])],
+            );
         }
 
         // `firstOrCreate`: un incantesimo già conosciuto non si sdoppia.
@@ -262,6 +271,38 @@ final class ApprovePendingChange
         $magazzino->forceFill(['in_storage' => true])->save();
 
         return Coins::none();
+    }
+
+    /** Monete e pergamena si controllano adesso: dalla richiesta può essere cambiato tutto. */
+    private function applyScrollSpell(Character $character, PendingChange $change): Coins
+    {
+        $scroll = $change->diff['scroll'] ?? [];
+
+        if ($character->spells()->where('name', $scroll['spell'])->exists()) {
+            throw new RuntimeException("«{$scroll['spell']}» è già nel libro: rifiuta la richiesta.");
+        }
+
+        if ($scroll['item_id'] !== null) {
+            $item = $character->items()->whereKey($scroll['item_id'])->first()
+                ?? throw new RuntimeException("{$character->name} non ha più «{$scroll['item_name']}»: rifiuta la richiesta.");
+
+            $character->removeFromInventory($item->name);
+        }
+
+        try {
+            $delta = app(Purse::class)->pay($character, (int) $scroll['cost_cp']);
+        } catch (MarketException $e) {
+            throw new RuntimeException($e->getMessage());
+        }
+
+        // Copiato nel libro, non ancora preparato.
+        $character->spells()->create([
+            'name' => $scroll['spell'],
+            'level' => (int) $scroll['spell_level'],
+            'prepared' => false,
+        ]);
+
+        return $delta;
     }
 
     /**

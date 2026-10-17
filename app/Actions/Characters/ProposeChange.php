@@ -6,6 +6,7 @@ namespace App\Actions\Characters;
 
 use App\Actions\Approvals\AnnounceForApproval;
 use App\Domain\Dnd\Ability;
+use App\Domain\Dnd\ClassRules;
 use App\Domain\Dnd\Coins;
 use App\Domain\Dnd\ItemEffectMode;
 use App\Enums\PendingChangeType;
@@ -143,6 +144,72 @@ final class ProposeChange
             ],
             'summary' => "Baratto: {$given->name} per {$wanted->name}",
         ]);
+    }
+
+    /**
+     * Il Mago copia nel libro un incantesimo trovato su una pergamena. Costo e
+     * regole stanno in config/dnd/rules.php; le monete si pagano all'approvazione.
+     */
+    public function scrollSpell(Character $character, User $requester, string $spell, ?int $itemId, ?GameSession $session = null): PendingChange
+    {
+        $class = self::scrollClass($character)
+            ?? throw new InvalidArgumentException('Solo un Mago copia incantesimi da una pergamena.');
+
+        if (! in_array($spell, ClassRules::spellList($class), true)) {
+            throw new InvalidArgumentException("«{$spell}» non è nella lista di un {$class}.");
+        }
+
+        $level = ClassRules::spellLevel($spell);
+
+        if ($level === 0) {
+            throw new InvalidArgumentException('I trucchetti non si copiano nel libro.');
+        }
+
+        if ($level > $character->spellSlots()->maxSpellLevel()) {
+            throw new InvalidArgumentException("«{$spell}» è di livello {$level}: non hai ancora slot di quel livello.");
+        }
+
+        if ($character->spells()->where('name', $spell)->exists()) {
+            throw new InvalidArgumentException("«{$spell}» è già nel tuo libro.");
+        }
+
+        $cost = self::scrollCost($level);
+
+        if ($character->purseValue() < $cost) {
+            throw new InvalidArgumentException('Copiarlo costa '.Coins::formatValue($cost).': non bastano le monete.');
+        }
+
+        $item = null;
+
+        if (config('dnd.rules.scroll_copy.consumes_scroll')) {
+            $item = $character->items()->whereKey($itemId)->first()
+                ?? throw new InvalidArgumentException('Scegli la pergamena dallo zaino: la copia la consuma.');
+        }
+
+        return $this->create($character, $requester, PendingChangeType::ScrollSpell, [
+            'diff' => ['scroll' => [
+                'spell' => $spell,
+                'spell_level' => $level,
+                'cost_cp' => $cost,
+                'item_id' => $item?->getKey(),
+                'item_name' => $item?->name,
+            ]],
+            'summary' => "Copia «{$spell}» (liv. {$level}) nel libro: ".Coins::formatValue($cost)
+                .($item ? ", consuma «{$item->name}»." : '.'),
+            'game_session_id' => $session?->getKey(),
+        ]);
+    }
+
+    /** La classe con cui si copia, se il personaggio ne ha una. */
+    public static function scrollClass(Character $character): ?string
+    {
+        return collect(config('dnd.rules.scroll_copy.classes', []))
+            ->first(fn (string $class) => $character->levelIn($class) > 0);
+    }
+
+    public static function scrollCost(int $spellLevel): int
+    {
+        return $spellLevel * (int) config('dnd.rules.scroll_copy.gp_per_level') * 100;
     }
 
     /** @param array<string,mixed> $attributes */

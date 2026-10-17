@@ -12,8 +12,7 @@
             livello {{ $character->level }} <span class="text-muted">→</span> {{ $newLevel }}
         </p>
         <p class="mt-2 text-sm text-muted">
-            I punti ferita si calcolano col metodo media, e
-            l'aumento lo vedrà il dungeon master prima di approvare.
+            Il dungeon master vedrà tutto quello che scegli qui prima di approvare.
         </p>
     </x-panel>
 
@@ -78,6 +77,36 @@
     <form method="POST" action="{{ route('proposals.level-up', $character) }}" class="space-y-4">
         @csrf
         <input type="hidden" name="class" value="{{ $pickedClass }}">
+
+        @php $campo = 'w-full rounded-md border-2 border-line bg-surface px-3 py-2 text-sm text-fg placeholder:text-muted focus:border-active focus:outline-none'; @endphp
+
+        <x-panel title="Punti ferita">
+            <div class="space-y-3">
+                <label class="flex items-start gap-2">
+                    <input type="radio" name="hp_method" value="media" class="mt-1 accent-active"
+                           @checked(old('hp_method', 'media') === 'media')>
+                    <span>
+                        <span class="font-medium">La media: +{{ $hpAverage }}</span>
+                        <span class="block text-xs text-muted">{{ App\Domain\Dnd\HitPoints::average($hitDie) }} del d{{ $hitDie }} più la Costituzione.</span>
+                    </span>
+                </label>
+
+                <label class="flex items-start gap-2">
+                    <input type="radio" name="hp_method" value="tiro" class="mt-1 accent-active"
+                           @checked(old('hp_method') === 'tiro')>
+                    <span class="flex-1">
+                        <span class="font-medium">Tirato al tavolo</span>
+                        <span class="block text-xs text-muted">Scrivi il risultato del d{{ $hitDie }}: la Costituzione si aggiunge da sola.</span>
+                        <input type="number" name="hp_roll" min="1" max="{{ $hitDie }}" inputmode="numeric"
+                               value="{{ old('hp_roll') }}" placeholder="Da 1 a {{ $hitDie }}"
+                               class="{{ $campo }} mt-1 max-w-40">
+                        @error('hp_roll')
+                            <span class="mt-1 block text-sm text-on-danger-soft">{{ $message }}</span>
+                        @enderror
+                    </span>
+                </label>
+            </div>
+        </x-panel>
 
         @if ($entrySkills['count'] > 0)
             <x-panel title="Competenze da {{ $pickedClass }}">
@@ -161,14 +190,59 @@
                                @checked(old('asi_mode') === 'feat')>
                         <span class="flex-1">
                             <span class="font-medium">Un talento</span>
-                            <input type="text" name="feat_name" value="{{ old('feat_name') }}"
-                                   placeholder="Nome del talento"
-                                   class="mt-1 w-full rounded-md border-2 border-line bg-surface px-3 py-2 text-sm text-fg placeholder:text-muted">
-                            <textarea name="feat_description" rows="2" placeholder="Cosa fa (facoltativo)"
-                                      class="mt-1 w-full rounded-md border-2 border-line bg-surface px-3 py-2 text-sm text-fg placeholder:text-muted">{{ old('feat_description') }}</textarea>
+                            @include('proposals.partials.talento')
                         </span>
                     </label>
                 </div>
+            </x-panel>
+        @endif
+
+        @if ($learnable->isNotEmpty())
+            <x-panel title="Incantesimi da {{ $pickedClass }}">
+                <p class="mb-3 text-sm text-muted">
+                    Spunta quelli che impari salendo. Quanti dipende dalla tua classe: il dungeon master controlla prima di approvare.
+                </p>
+
+                <div class="space-y-2">
+                    @foreach ($learnable as $livello => $nomi)
+                        <details class="rounded-md border border-line" @if (array_intersect($nomi->all(), old('spells', []))) open @endif>
+                            <summary class="cursor-pointer px-3 py-2 text-sm font-medium text-fg">
+                                {{ $livello === 0 ? 'Trucchetti' : 'Livello '.$livello }}
+                                <span class="font-normal text-muted">({{ $nomi->count() }})</span>
+                            </summary>
+                            <div class="grid gap-1 px-3 pb-3 sm:grid-cols-2">
+                                @foreach ($nomi as $nome)
+                                    <label class="flex items-center gap-2 rounded bg-page px-3 py-1.5 text-sm">
+                                        <input type="checkbox" name="spells[]" value="{{ $nome }}" class="accent-active"
+                                               @checked(in_array($nome, old('spells', []), true))>
+                                        <span>{{ $nome }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </details>
+                    @endforeach
+                </div>
+
+                @if ($swappable->isNotEmpty())
+                    <div class="mt-4 border-t border-line pt-4">
+                        <p class="mb-2 text-sm font-medium text-fg">Sostituisci un incantesimo</p>
+                        <p class="mb-2 text-xs text-muted">Facoltativo: ne dimentichi uno che conosci e al suo posto ne impari un altro (non un trucchetto).</p>
+                        <div class="grid gap-2 sm:grid-cols-2">
+                            <select name="forget" aria-label="Incantesimo da dimenticare" class="{{ $campo }}">
+                                <option value="">Non sostituisco</option>
+                                @foreach ($swappable as $nome)
+                                    <option value="{{ $nome }}" @selected(old('forget') === $nome)>Dimentico {{ $nome }}</option>
+                                @endforeach
+                            </select>
+                            <select name="replace_with" aria-label="Incantesimo nuovo" class="{{ $campo }}">
+                                <option value="">Al suo posto…</option>
+                                @foreach ($learnable->except(0)->flatten() as $nome)
+                                    <option value="{{ $nome }}" @selected(old('replace_with') === $nome)>{{ $nome }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                @endif
             </x-panel>
         @endif
 

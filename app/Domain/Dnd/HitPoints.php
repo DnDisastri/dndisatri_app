@@ -15,12 +15,17 @@ namespace App\Domain\Dnd;
 final class HitPoints
 {
     /**
-     * PF guadagnati salendo di un livello, metodo "media" 5e:
-     * (dado / 2 + 1) + modificatore di Costituzione, mai meno di 1.
+     * PF guadagnati salendo di un livello: il dado tirato al tavolo, o la
+     * media 5e (dado / 2 + 1), più Costituzione, mai meno di 1.
      */
-    public static function gainForLevel(int $hitDie, int $constitutionModifier): int
+    public static function gainForLevel(int $hitDie, int $constitutionModifier, ?int $roll = null): int
     {
-        return max(1, intdiv($hitDie, 2) + 1 + $constitutionModifier);
+        return max(1, ($roll ?? self::average($hitDie)) + $constitutionModifier);
+    }
+
+    public static function average(int $hitDie): int
+    {
+        return intdiv($hitDie, 2) + 1;
     }
 
     /**

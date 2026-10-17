@@ -7,9 +7,12 @@ use App\Domain\Dnd\Ability;
 use App\Domain\Dnd\AbilityScores;
 use App\Domain\Dnd\ClassRules;
 use App\Domain\Dnd\PointBuy;
+use App\Domain\Dnd\SpeciesRules;
 use App\Domain\Dnd\SubraceCatalogue;
+use App\Enums\RulesEdition;
 use App\Models\Build;
 use App\Models\Character;
+use App\Models\Feat;
 use App\Models\Subrace;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
@@ -36,6 +39,8 @@ class CharacterWizard extends Component
     public array $buildSnapshot = [];
 
     // Passo 1
+    public string $rulesEdition = '2014';
+
     public string $name = '';
 
     public string $class = '';
@@ -53,6 +58,12 @@ class CharacterWizard extends Component
 
     /** @var array<string,int> i +1 a scelta di Umano Variante e Mezzelfo */
     public array $speciesChoices = [];
+
+    /** @var array<int,string> le competenze a scelta di Umano Variante e Mezzelfo */
+    public array $speciesSkills = [];
+
+    /** Il talento dell'Umano Variante, dal catalogo. */
+    public string $featId = '';
 
     // Passo 3
     /** @var array<string,int> */
@@ -118,8 +129,10 @@ class CharacterWizard extends Component
             'skills' => $this->skills,
         ];
 
+        // Le competenze e il talento di specie la build non li ha: si passa di lì.
         if ($build->isComplete()) {
-            $this->step = self::LAST_STEP;
+            $this->step = $this->speciesExtrasReady() ? self::LAST_STEP : 2;
+            $this->editing = $this->step === 2;
         }
     }
 
@@ -173,6 +186,13 @@ class CharacterWizard extends Component
         $this->spells = [];
     }
 
+    public function selectEdition(string $edition): void
+    {
+        if (RulesEdition::tryFrom($edition)?->isCreatable()) {
+            $this->rulesEdition = $edition;
+        }
+    }
+
     public function selectSpecies(string $species): void
     {
         if ($species === $this->species) {
@@ -186,6 +206,26 @@ class CharacterWizard extends Component
         // cosa per la sottorazza, che appartiene alla razza di prima.
         $this->speciesChoices = [];
         $this->subspecies = '';
+        $this->speciesSkills = [];
+        $this->featId = '';
+    }
+
+    /** Le competenze e il talento che la specie fa scegliere sono a posto? */
+    public function speciesExtrasReady(): bool
+    {
+        $skills = array_filter($this->speciesSkills);
+
+        return count(array_unique($skills)) === SpeciesRules::skillChoices($this->species)
+            && count($skills) === count(array_unique($skills))
+            && (! SpeciesRules::grantsFeat($this->species) || filled($this->featId));
+    }
+
+    /** @return Collection<int,Feat> */
+    public function featOptions(): Collection
+    {
+        return SpeciesRules::grantsFeat($this->species)
+            ? Feat::ofEdition(RulesEdition::from($this->rulesEdition))->get()
+            : collect();
     }
 
     public function selectSubspecies(string $subspecies): void
@@ -344,7 +384,8 @@ class CharacterWizard extends Component
             // elfo è di qualche tipo, non «elfo e basta».
             2 => filled($this->species)
                 && count(array_filter($this->speciesChoices)) === PointBuy::freeBonusesFor($this->species)
-                && (filled($this->subspecies) || ! app(SubraceCatalogue::class)->required($this->species)),
+                && (filled($this->subspecies) || ! app(SubraceCatalogue::class)->required($this->species))
+                && $this->speciesExtrasReady(),
             3 => PointBuy::isValid($this->scores),
             // Se il background lascia scegliere le abilità, sceglierle non
             // è facoltativo, e non si ripetono.
@@ -363,6 +404,7 @@ class CharacterWizard extends Component
         try {
             $character = app(CreateCharacter::class)->handle(
                 owner: auth()->user(),
+                edition: RulesEdition::from($this->rulesEdition),
                 name: $this->name,
                 class: $this->class,
                 species: $this->species,
@@ -377,6 +419,8 @@ class CharacterWizard extends Component
                 backgroundSkills: array_values(array_filter($this->backgroundSkills)),
                 pack: $this->pack,
                 privateStory: filled($this->privateStory) ? mb_substr($this->privateStory, 0, 5000) : null,
+                speciesSkills: array_values(array_filter($this->speciesSkills)),
+                featId: filled($this->featId) ? (int) $this->featId : null,
             );
         } catch (InvalidArgumentException $e) {
             $this->addError('creazione', $e->getMessage());
@@ -412,15 +456,20 @@ class CharacterWizard extends Component
             ...config("dnd.backgrounds.list.{$this->background}.skills", []),
             ...array_filter($this->backgroundSkills),
         ];
+        $fromSpecies = array_filter($this->speciesSkills);
         $names = config('dnd.character.skill_names', []);
 
         return collect(ClassRules::skillChoices($this->class))
             ->mapWithKeys(fn (string $key) => [$key => [
                 'name' => $names[$key] ?? $key,
                 'ability' => Ability::from(config("dnd.character.skills.{$key}"))->label(),
-                // Quelle del background arrivano comunque: sceglierle di
-                // nuovo sprecherebbe una scelta di classe.
-                'fromBackground' => in_array($key, $fromBackground, true),
+                // Quelle già avute arrivano comunque: sceglierle di nuovo
+                // sprecherebbe una scelta di classe.
+                'lockedBy' => match (true) {
+                    in_array($key, $fromBackground, true) => 'dal background',
+                    in_array($key, $fromSpecies, true) => 'dalla specie',
+                    default => null,
+                },
             ]]);
     }
 
@@ -465,6 +514,7 @@ class CharacterWizard extends Component
     {
         return view('livewire.character-wizard', [
             'abilities' => Ability::cases(),
+            'editions' => RulesEdition::cases(),
             'classes' => ClassRules::names(),
             'speciesList' => array_keys(config('dnd.species', [])),
             'backgrounds' => config('dnd.backgrounds.list', []),

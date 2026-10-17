@@ -20,6 +20,7 @@ use App\Enums\EquipmentSlot;
 use App\Enums\LedgerAction;
 use App\Enums\PendingChangeStatus;
 use App\Enums\PendingChangeType;
+use App\Enums\RulesEdition;
 use App\Models\Concerns\ShrinksImages;
 use App\Support\ImageShrinker;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -39,7 +40,7 @@ use Spatie\Activitylog\Support\LogOptions;
 
 #[Fillable([
     'user_id', 'name', 'class', 'subclass', 'race', 'subrace', 'background', 'story', 'private_story',
-    'level', 'hit_die', 'str', 'dex', 'con', 'int', 'wis', 'cha',
+    'level', 'rules_edition', 'hit_die', 'str', 'dex', 'con', 'int', 'wis', 'cha',
     'speed', 'hp_max', 'hp_current', 'hp_temp', 'pp', 'gp', 'sp', 'cp',
     'death_save_successes', 'death_save_failures',
     'saving_throws', 'skills', 'spell_slots_used', 'spell_ability',
@@ -48,6 +49,8 @@ use Spatie\Activitylog\Support\LogOptions;
 class Character extends Model
 {
     use HasFactory, LogsActivity, ShrinksImages, SoftDeletes;
+
+    protected $attributes = ['rules_edition' => '2014'];
 
     /** @return array<string, int> */
     public function imageLimits(): array
@@ -75,6 +78,7 @@ class Character extends Model
             'spell_slots_used' => 'array',
             'died_at' => 'datetime',
             'speed' => 'float',
+            'rules_edition' => RulesEdition::class,
         ];
     }
 
@@ -582,28 +586,24 @@ class Character extends Model
 
     public function preparesSpells(): bool
     {
-        return collect(array_keys($this->classLevels()))->contains(
-            fn (string $class) => ClassRules::prepares($class)
+        return collect($this->classLevels())->contains(
+            fn (int $level, string $class) => ClassRules::prepares($class, $level)
         );
     }
 
-    /** `modificatore + livello nella classe`, minimo uno; con più classi i budget si sommano. */
+    /** Con più classi i budget si sommano. */
     public function preparationLimit(): int
     {
         $total = 0;
 
         foreach ($this->classLevels() as $class => $level) {
-            if (! ClassRules::prepares($class)) {
-                continue;
-            }
-
             $ability = SpellSlots::abilityFor($class);
             $modifier = $ability === null ? 0 : $this->effectiveScores()->modifier($ability);
 
-            $total += max(0, $modifier + $level);
+            $total += ClassRules::preparationLimit($class, $level, $modifier);
         }
 
-        return $this->preparesSpells() ? max(1, $total) : 0;
+        return $total;
     }
 
     /**

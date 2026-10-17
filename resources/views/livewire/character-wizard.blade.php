@@ -39,6 +39,25 @@
         {{-- 1. Nome, storia e classe. --}}
         @if ($step === 1)
             <div class="space-y-4">
+                <div>
+                    <p class="mb-2 text-sm font-medium text-fg">Con quali regole lo crei?</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        @foreach ($editions as $edizione)
+                            @php $presa = $rulesEdition === $edizione->value; @endphp
+                            <button type="button" wire:click="selectEdition('{{ $edizione->value }}')"
+                                    @disabled(! $edizione->isCreatable())
+                                    @class([
+                                        'rounded-card border px-3 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-50',
+                                        'border-active bg-page' => $presa,
+                                        'border-line hover:border-active' => ! $presa,
+                                    ])>
+                                <span class="block font-bold text-fg">{{ $edizione->label() }}</span>
+                                <span class="block text-xs text-muted">{{ $edizione->isCreatable() ? 'Manuale del 2014' : 'In arrivo' }}</span>
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+
                 {{-- Partire da una build: solo se non si è già partiti da una. --}}
                 @unless ($buildTitle)
                     <a href="{{ route('builds.index') }}" wire:navigate
@@ -177,6 +196,45 @@
                                                 </select>
                                             @endforeach
                                         </div>
+                                    </x-inset>
+                                @endif
+
+                                @php $abilitaSpecie = \App\Domain\Dnd\SpeciesRules::skillChoices($option); @endphp
+                                @if ($abilitaSpecie > 0)
+                                    <x-inset class="mt-3">
+                                        <p class="mb-2 text-sm text-fg">
+                                            Scegli <strong>{{ $abilitaSpecie === 1 ? 'un\'abilità' : $abilitaSpecie.' abilità' }}</strong> in cui sei competente.
+                                        </p>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            @foreach (range(0, $abilitaSpecie - 1) as $slot)
+                                                <select wire:model.live="speciesSkills.{{ $slot }}"
+                                                        aria-label="Abilità dalla specie"
+                                                        class="rounded-md border border-line bg-page px-3 py-2 text-sm text-fg focus:border-active focus:outline-none">
+                                                    <option value="">Scegli</option>
+                                                    @foreach (config('dnd.character.skill_names', []) as $chiave => $nome)
+                                                        <option value="{{ $chiave }}">{{ $nome }}</option>
+                                                    @endforeach
+                                                </select>
+                                            @endforeach
+                                        </div>
+
+                                        @if (count(array_filter($speciesSkills)) !== count(array_unique(array_filter($speciesSkills))))
+                                            <p class="mt-2 text-sm text-on-danger-soft">Scegline due diverse.</p>
+                                        @endif
+                                    </x-inset>
+                                @endif
+
+                                @if (\App\Domain\Dnd\SpeciesRules::grantsFeat($option))
+                                    <x-inset class="mt-3">
+                                        <p class="mb-2 text-sm text-fg">E il tuo <strong>talento</strong> di primo livello.</p>
+                                        <select wire:model.live="featId" aria-label="Talento"
+                                                class="w-full rounded-md border border-line bg-page px-3 py-2 text-sm text-fg focus:border-active focus:outline-none">
+                                            <option value="">Scegli il talento</option>
+                                            @foreach ($this->featOptions() as $talento)
+                                                <option value="{{ $talento->id }}">{{ $talento->name }}{{ $talento->prerequisite ? ' ('.$talento->prerequisite.')' : '' }}</option>
+                                            @endforeach
+                                        </select>
+                                        <p class="mt-2 text-xs text-muted">Manca quello che cerchi? Chiedi a un dungeon master di aggiungerlo.</p>
                                     </x-inset>
                                 @endif
 
@@ -372,7 +430,7 @@
         @if ($step === 5)
             <p class="mb-3 text-sm text-muted">
                 Scegli <strong>{{ ClassRules::skillCount($class) }}</strong> abilità del tuo {{ $class }}.
-                Quelle che hai già dal background sono <strong>bloccate</strong>: sono tue comunque,
+                Quelle che hai già dal background o dalla specie sono <strong>bloccate</strong>: sono tue comunque,
                 sceglierle non aggiungerebbe niente.
             </p>
 
@@ -383,12 +441,12 @@
 
             <div class="grid gap-2 sm:grid-cols-2">
                 @foreach ($this->skillOptions() as $key => $skill)
-                    @if ($skill['fromBackground'])
+                    @if ($skill['lockedBy'])
                         {{-- Fuori da `wire:model`: non deve contare fra le scelte di classe. --}}
                         <div class="flex items-center gap-2 rounded-md border border-line bg-page px-3 py-2 text-sm">
                             <input type="checkbox" checked disabled class="accent-active">
                             <span class="text-muted">{{ $skill['name'] }} ({{ $skill['ability'] }})</span>
-                            <x-badge tone="own" class="ml-auto">dal background</x-badge>
+                            <x-badge tone="own" class="ml-auto">{{ $skill['lockedBy'] }}</x-badge>
                         </div>
                     @else
                         <label @class([
@@ -482,6 +540,7 @@
                 $skillNames = collect($skills)->map(fn ($s) => config("dnd.character.skill_names.$s", $s));
 
                 $righe = [
+                    ['Regole', \App\Enums\RulesEdition::from($rulesEdition)->label(), 1],
                     ['Chi sei', filled($name) ? $name : 'Nome da scrivere', 1],
                     ['Classe', filled($class) ? $class : 'Vuoto', 1],
                     ['Specie', filled($species) ? $species : 'Vuoto', 2],

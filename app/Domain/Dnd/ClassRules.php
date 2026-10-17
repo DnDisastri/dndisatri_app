@@ -108,11 +108,32 @@ final class ClassRules
 
     /**
      * La classe prepara gli incantesimi ogni giorno invece di conoscerne un
-     * numero fisso? Nei dati di gioco sono Chierico e Druido.
+     * numero fisso? Con il livello, dice anche se ci è già arrivata (il
+     * Paladino prepara dal 2°).
      */
-    public static function prepares(?string $class): bool
+    public static function prepares(?string $class, ?int $level = null): bool
     {
-        return (self::spellsKnownAtFirst($class)['spells'] ?? null) === 'prepared';
+        $rule = config("dnd.rules.preparation.{$class}");
+
+        return $rule !== null && ($level === null || $level >= $rule['from_level']);
+    }
+
+    /** Quanti ne prepara: caratteristica più livello (o metà), mai meno di uno. */
+    public static function preparationLimit(?string $class, int $level, int $modifier): int
+    {
+        if (! self::prepares($class, $level)) {
+            return 0;
+        }
+
+        $rule = config("dnd.rules.preparation.{$class}");
+
+        return max(1, $modifier + ($rule['half_level'] ? intdiv($level, 2) : $level));
+    }
+
+    /** Sostituisce un incantesimo conosciuto salendo di livello in questa classe? */
+    public static function swapsSpells(?string $class): bool
+    {
+        return in_array($class, config('dnd.rules.spell_swap', []), true);
     }
 
     /** @return list<string> gli incantesimi che la classe può imparare */

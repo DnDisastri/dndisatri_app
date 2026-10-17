@@ -21,6 +21,9 @@ enum PendingChangeType: string
     /** Un oggetto del giocatore in cambio di un articolo del negozio. */
     case Barter = 'barter';
 
+    /** Il Mago che copia un incantesimo da una pergamena nel suo libro. */
+    case ScrollSpell = 'scroll_spell';
+
     public function label(): string
     {
         return match ($this) {
@@ -29,15 +32,17 @@ enum PendingChangeType: string
             self::Loot => 'Bottino',
             self::ItemEffect => 'Oggetto magico',
             self::Barter => 'Baratto',
+            self::ScrollSpell => 'Incantesimo da pergamena',
         };
     }
 
     /**
-     * Bottini e baratti si applicano sul valore corrente, non lo sovrascrivono:
-     * non annullano quello che è successo fra la proposta e l'approvazione.
+     * Bottini, baratti e pergamene si applicano sul valore corrente, non lo
+     * sovrascrivono: non annullano quello che è successo fra la proposta e
+     * l'approvazione.
      */
     public function appliesAsDelta(): bool
     {
-        return $this === self::Loot || $this === self::Barter;
+        return in_array($this, [self::Loot, self::Barter, self::ScrollSpell], true);
     }
 }
