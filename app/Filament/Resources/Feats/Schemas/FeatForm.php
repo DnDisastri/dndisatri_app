@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Feats\Schemas;
 
 use App\Enums\RulesEdition;
+use App\Models\Feat;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -32,6 +33,12 @@ class FeatForm
                         ->default(RulesEdition::Classic->value)
                         ->required()
                         ->selectablePlaceholder(false),
+
+                    Select::make('category')
+                        ->label('Categoria (regole 2024)')
+                        ->options(Feat::CATEGORIES)
+                        ->placeholder('Nessuna')
+                        ->helperText('Di origine: si sceglie col background o con l\'Umano.'),
 
                     TextInput::make('prerequisite')
                         ->label('Prerequisito')

@@ -3,10 +3,12 @@
 namespace App\Filament\Resources\Species\Tables;
 
 use App\Domain\Dnd\Ability;
+use App\Enums\RulesEdition;
 use App\Models\Species;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class SpeciesTable
@@ -30,6 +32,11 @@ class SpeciesTable
                         ->join(', ') ?: null)
                     ->placeholder('Nessuno'),
 
+                TextColumn::make('rules_edition')
+                    ->label('Regole')
+                    ->formatStateUsing(fn (RulesEdition $state) => $state->label())
+                    ->badge(),
+
                 TextColumn::make('speed')
                     ->label('Velocità')
                     ->suffix(' m'),
@@ -41,6 +48,11 @@ class SpeciesTable
                         $record->grants_feat ? 'talento' : null,
                     ])->filter()->join(', ') ?: null)
                     ->placeholder('Nessuna'),
+            ])
+            ->filters([
+                SelectFilter::make('rules_edition')
+                    ->label('Regole')
+                    ->options(RulesEdition::options()),
             ])
             ->recordActions([
                 EditAction::make(),

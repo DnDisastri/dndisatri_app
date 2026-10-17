@@ -4,12 +4,14 @@ namespace App\Filament\Resources\Subraces\Schemas;
 
 use App\Domain\Dnd\Ability;
 use App\Domain\Dnd\SpeciesRules;
+use App\Enums\RulesEdition;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 class SubraceForm
@@ -19,12 +21,20 @@ class SubraceForm
         return $schema->components([
             Section::make()
                 ->schema([
+                    Select::make('rules_edition')
+                        ->label('Regole')
+                        ->options(RulesEdition::options())
+                        ->default(RulesEdition::Classic->value)
+                        ->required()
+                        ->live()
+                        ->selectablePlaceholder(false),
+
                     Select::make('race')
                         ->label('Specie')
                         ->required()
                         // Le specie del manuale: non si aggiungono dal pannello,
                         // solo le loro varianti.
-                        ->options(fn () => collect(SpeciesRules::names())
+                        ->options(fn (Get $get) => collect(SpeciesRules::names(RulesEdition::tryFrom((string) ($get('rules_edition') instanceof RulesEdition ? $get('rules_edition')->value : $get('rules_edition'))) ?? RulesEdition::Classic))
                             ->mapWithKeys(fn (string $r) => [$r => $r])
                             ->all())
                         ->searchable(),

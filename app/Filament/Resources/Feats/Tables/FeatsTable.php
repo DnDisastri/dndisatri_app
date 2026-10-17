@@ -24,6 +24,12 @@ class FeatsTable
                     ->searchable()
                     ->sortable(),
 
+                TextColumn::make('category')
+                    ->label('Categoria')
+                    ->formatStateUsing(fn (?string $state) => Feat::CATEGORIES[$state] ?? null)
+                    ->placeholder('Nessuna')
+                    ->toggleable(),
+
                 TextColumn::make('prerequisite')
                     ->label('Prerequisito')
                     ->placeholder('Nessuno')

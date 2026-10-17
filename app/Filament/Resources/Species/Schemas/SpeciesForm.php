@@ -10,7 +10,9 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rules\Unique;
 
 class SpeciesForm
 {
@@ -24,7 +26,8 @@ class SpeciesForm
                         ->label('Nome')
                         ->required()
                         ->maxLength(255)
-                        ->unique(ignoreRecord: true)
+                        ->unique(ignoreRecord: true, modifyRuleUsing: fn (Unique $rule, Get $get) => $rule->where('rules_edition', $get('rules_edition')))
+                        ->validationMessages(['unique' => "Con queste regole c'è già una specie con questo nome."])
                         ->disabledOn('edit')
                         ->helperText('Personaggi, sottospecie e build la indicano per nome: dopo averla creata non si cambia.'),
 
@@ -33,7 +36,8 @@ class SpeciesForm
                         ->options(RulesEdition::options())
                         ->default(RulesEdition::Classic->value)
                         ->required()
-                        ->selectablePlaceholder(false),
+                        ->selectablePlaceholder(false)
+                        ->disabledOn('edit'),
 
                     Textarea::make('description')
                         ->label('In una riga')

@@ -63,8 +63,8 @@ class Species extends Model
     /** Personaggi, sottospecie o build che la usano: finché ci sono non si cancella. */
     public function isInUse(): bool
     {
-        return Character::withTrashed()->where('race', $this->name)->exists()
-            || Subrace::where('race', $this->name)->exists()
-            || Build::where('species', $this->name)->exists();
+        return Character::withTrashed()->where('race', $this->name)->where('rules_edition', $this->rules_edition->value)->exists()
+            || Subrace::where('race', $this->name)->where('rules_edition', $this->rules_edition->value)->exists()
+            || ($this->rules_edition === RulesEdition::Classic && Build::where('species', $this->name)->exists());
     }
 }

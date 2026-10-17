@@ -17,10 +17,20 @@ use Spatie\Activitylog\Support\LogOptions;
  * Il personaggio ne tiene una copia (`character_feats`): cambiare il testo qui
  * non riscrive le schede.
  */
-#[Fillable(['name', 'rules_edition', 'prerequisite', 'description', 'is_homebrew'])]
+#[Fillable(['name', 'rules_edition', 'category', 'prerequisite', 'description', 'is_homebrew'])]
 class Feat extends Model
 {
     use HasFactory, LogsActivity;
+
+    /** Le categorie del 2024: d'origine (background e Umano), generali, stili di combattimento, doni epici. */
+    public const ORIGIN = 'origin';
+
+    public const CATEGORIES = [
+        self::ORIGIN => 'Di origine',
+        'general' => 'Generale',
+        'fighting_style' => 'Stile di combattimento',
+        'epic_boon' => 'Dono epico',
+    ];
 
     protected $attributes = ['rules_edition' => '2014', 'is_homebrew' => true];
 

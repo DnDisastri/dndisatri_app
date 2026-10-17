@@ -10,6 +10,22 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Nel 2024 tornano gli stessi nomi (Elfo, Nano, Accolito): unici per edizione.
+        Schema::table('species', function (Blueprint $table) {
+            $table->dropUnique(['name']);
+            $table->unique(['name', 'rules_edition']);
+        });
+
+        Schema::table('subraces', function (Blueprint $table) {
+            $table->string('rules_edition', 4)->default('2014')->after('race');
+            $table->dropUnique(['race', 'name']);
+            $table->unique(['race', 'name', 'rules_edition']);
+        });
+
+        Schema::table('feats', function (Blueprint $table) {
+            $table->string('category', 20)->nullable()->after('rules_edition');
+        });
+
         Schema::create('backgrounds', function (Blueprint $table) {
             $table->id();
             $table->string('name');
@@ -37,5 +53,16 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('backgrounds');
+
+        Schema::table('feats', fn (Blueprint $table) => $table->dropColumn('category'));
+        Schema::table('subraces', function (Blueprint $table) {
+            $table->dropUnique(['race', 'name', 'rules_edition']);
+            $table->unique(['race', 'name']);
+            $table->dropColumn('rules_edition');
+        });
+        Schema::table('species', function (Blueprint $table) {
+            $table->dropUnique(['name', 'rules_edition']);
+            $table->unique(['name']);
+        });
     }
 };

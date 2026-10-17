@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Subraces\Tables;
 
 use App\Domain\Dnd\Ability;
 use App\Domain\Dnd\SpeciesRules;
+use App\Enums\RulesEdition;
 use App\Models\Subrace;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -57,9 +58,13 @@ class SubracesTable
             ->filters([
                 SelectFilter::make('race')
                     ->label('Specie')
-                    ->options(fn () => collect(SpeciesRules::names())
+                    ->options(fn () => collect([...SpeciesRules::names(), ...SpeciesRules::names(RulesEdition::Revised)])->unique()
                         ->mapWithKeys(fn (string $r) => [$r => $r])
                         ->all()),
+
+                SelectFilter::make('rules_edition')
+                    ->label('Regole')
+                    ->options(RulesEdition::options()),
 
                 TernaryFilter::make('is_homebrew')
                     ->label('Origine')
