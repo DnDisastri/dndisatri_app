@@ -45,6 +45,12 @@ return new class extends Migration
             $table->unique(['name', 'rules_edition']);
         });
 
+        Schema::create('app_settings', function (Blueprint $table) {
+            $table->string('key')->primary();
+            $table->json('value')->nullable();
+            $table->timestamps();
+        });
+
         // I background prima stavano in config/dnd/backgrounds.php; il resto è il materiale 2024 dell'SRD 5.2.1.
         activity()->withoutLogging(fn () => DB::transaction(function () {
             (new BackgroundSeeder)->run();
@@ -54,6 +60,7 @@ return new class extends Migration
 
     public function down(): void
     {
+        Schema::dropIfExists('app_settings');
         Schema::dropIfExists('backgrounds');
 
         Schema::table('feats', fn (Blueprint $table) => $table->dropColumn('category'));

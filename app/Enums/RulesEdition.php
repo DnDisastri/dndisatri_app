@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
+use App\Models\AppSetting;
 use App\Models\User;
 
 /** Con quali regole è fatto un personaggio; le righe dei cataloghi nuovi la portano anche loro. */
@@ -20,11 +21,15 @@ enum RulesEdition: string
         };
     }
 
-    /** Il 2014 sempre. Il 2024 per ora solo i DM, per provarlo. */
+    /**
+     * Il 2014 sempre. Il 2024 i DM lo possono provare sempre, i giocatori solo
+     * quando un admin lo apre dalle Impostazioni del pannello.
+     */
     public function isCreatableBy(?User $user): bool
     {
         return $this === self::Classic
-            || ($user?->isDm() ?? false);
+            || ($user?->isDm() ?? false)
+            || (bool) AppSetting::get(AppSetting::RULES_2024_OPEN, false);
     }
 
     /** @return array<string, string> */

@@ -55,7 +55,8 @@
                                 <span class="block text-xs text-muted">{{ match (true) {
                                     $edizione === \App\Enums\RulesEdition::Classic => 'Manuale del 2014',
                                     ! $edizione->isCreatableBy(auth()->user()) => 'In arrivo',
-                                    default => 'In prova, solo per i DM',
+                                    ! \App\Models\AppSetting::get(\App\Models\AppSetting::RULES_2024_OPEN, false) => 'In prova, solo per i DM',
+                                    default => 'SRD 5.2',
                                 } }}</span>
                             </button>
                         @endforeach
