@@ -2,6 +2,8 @@
 
 /*
  * I privilegi di classe, livello per livello, per la sezione Turno della scheda.
+ * Arrivano nella tabella `class_features` con la migrazione; da lì si cambiano
+ * dal pannello. Gli usi a parole diventano numeri in ClassFeatureSeeder.
  *
  * DA DOVE VIENE
  * Regole 2014 dal SRD 5.1 (in inglese); nomi italiani dal SRD 5.2.1 italiano.
@@ -708,6 +710,81 @@ return [
                 'testo' => 'Un minuto di supplica al tuo patrono e riprendi tutti gli slot della magia del patto.',
             ],
         ],
+        // L'Artefice non è nell'SRD: nomi e testi sono nostri.
+        'Artefice' => [
+            [
+                'livello' => 1,
+                'nome' => 'Ritocchi magici',
+                'costo' => 'azione',
+                'testo' => "Tocchi un oggetto piccolo e gli dai una proprietà magica minore: luce, un messaggio registrato, un odore, un'immagine. Ne tieni attivi tanti quanti il tuo modificatore di Intelligenza.",
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 2,
+                'nome' => 'Infondere oggetti',
+                'costo' => 'passivo',
+                'testo' => "Alla fine di un riposo lungo infondi la magia in alcuni oggetti comuni, che diventano oggetti magici finché l'infusione dura. Il numero di infusioni conosciute e attive cresce col livello.",
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 3,
+                'nome' => 'Lo strumento giusto',
+                'costo' => 'passivo',
+                'testo' => "Con un'ora di lavoro e gli strumenti da inventore crei un set di strumenti da artigiano qualsiasi, che dura finché non ne crei un altro.",
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 6,
+                'nome' => 'Esperto di strumenti',
+                'costo' => 'passivo',
+                'testo' => 'Raddoppi il bonus di competenza alle prove con gli strumenti in cui sei competente.',
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 7,
+                'nome' => 'Lampo di genio',
+                'costo' => 'reazione',
+                'usi' => 'Tante volte quanto il tuo modificatore di Intelligenza, minimo una; tornano col riposo lungo.',
+                'testo' => 'Quando tu o qualcuno entro 9 metri fa una prova o un tiro salvezza, aggiungi il tuo modificatore di Intelligenza al risultato.',
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 10,
+                'nome' => 'Adepto degli oggetti magici',
+                'costo' => 'passivo',
+                'testo' => 'Puoi stare in sintonia con quattro oggetti magici, e creare oggetti comuni e non comuni ti costa metà tempo e metà oro.',
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 11,
+                'nome' => 'Oggetto incantato',
+                'costo' => 'azione',
+                'testo' => 'Dopo un riposo lungo leghi un incantesimo di 1º o 2º livello a un oggetto: chi lo tiene in mano può lanciarlo, un numero di volte pari al doppio del tuo modificatore di Intelligenza.',
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 14,
+                'nome' => 'Sapiente degli oggetti magici',
+                'costo' => 'passivo',
+                'testo' => 'Sintonia con cinque oggetti magici, e ignori i requisiti di classe, specie e livello per andarci in sintonia.',
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 18,
+                'nome' => 'Maestro degli oggetti magici',
+                'costo' => 'passivo',
+                'testo' => 'Sintonia con sei oggetti magici.',
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 20,
+                'nome' => "Anima dell'artificio",
+                'costo' => 'reazione',
+                'testo' => "Hai +1 ai tiri salvezza per ogni oggetto magico in sintonia. Quando scendi a 0 punti ferita, puoi rinunciare a un'infusione per restare a 1.",
+                'nome_mio' => true,
+            ],
+        ],
+
     ],
 
     /*
@@ -3036,5 +3113,148 @@ return [
                 'testo' => 'Non ti serve più né mangiare né bere né respirare, e puoi trasformare in necrotici i danni di un incantesimo, una volta per turno.',
             ],
         ],
+        // Le sottoclassi dell'Artefice: nomi e testi nostri.
+        'Alchimista' => [
+            [
+                'livello' => 3,
+                'nome' => 'Elisir sperimentale',
+                'costo' => 'azione',
+                'usi' => 'Uno gratis dopo ogni riposo lungo, poi spendendo uno slot incantesimo.',
+                'testo' => 'Alla fine di un riposo lungo prepari un elisir magico con un effetto tirato a caso: cura, velocità, resilienza, volo, trasformazione.',
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 5,
+                'nome' => 'Sapiente alchimista',
+                'costo' => 'passivo',
+                'testo' => 'Quando un tuo incantesimo cura o fa danni da acido, fuoco, necrotici o veleno, aggiungi il tuo modificatore di Intelligenza a un tiro.',
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 9,
+                'nome' => 'Reagenti ristoratori',
+                'costo' => 'passivo',
+                'usi' => 'Ristorare inferiore tante volte quanto il tuo modificatore di Intelligenza; tornano col riposo lungo.',
+                'testo' => 'Chi beve un tuo elisir guadagna anche punti ferita temporanei, e puoi lanciare ristorare inferiore senza slot.',
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 15,
+                'nome' => 'Maestria chimica',
+                'costo' => 'passivo',
+                'testo' => "Resistenza ai danni da acido e da veleno, immunità all'avvelenamento, e qualche incantesimo maggiore senza slot una volta al giorno.",
+                'nome_mio' => true,
+            ],
+        ],
+
+        'Armaiolo' => [
+            [
+                'livello' => 3,
+                'nome' => 'Armatura arcana',
+                'costo' => 'azione',
+                'testo' => 'La tua armatura diventa il tuo strumento: la indossi e la togli in un attimo, copre tutto il corpo e non ha requisiti di Forza.',
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 3,
+                'nome' => "Modello d'armatura",
+                'costo' => 'passivo',
+                'testo' => 'Scegli guardiano (guanti tonanti e un campo di difesa) o infiltratore (lanciafulmini, passo silenzioso). Puoi cambiarlo dopo un riposo.',
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 5,
+                'nome' => 'Attacco extra',
+                'costo' => 'passivo',
+                'testo' => 'Quando attacchi col tuo turno, fai due attacchi invece di uno.',
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 9,
+                'nome' => "Modifiche all'armatura",
+                'costo' => 'passivo',
+                'testo' => "L'armatura conta come più oggetti separati per le infusioni: due infusioni in più, solo sull'armatura.",
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 15,
+                'nome' => 'Armatura perfezionata',
+                'costo' => 'passivo',
+                'testo' => "Il modello scelto migliora: il guardiano attira i nemici a sé, l'infiltratore rende i bersagli più facili da colpire.",
+                'nome_mio' => true,
+            ],
+        ],
+
+        'Artigliere' => [
+            [
+                'livello' => 3,
+                'nome' => 'Cannone mistico',
+                'costo' => 'azione',
+                'usi' => 'Uno gratis dopo ogni riposo lungo, poi spendendo uno slot incantesimo.',
+                'testo' => 'Crei un piccolo cannone magico che spara fiamme, scaglia una forza o protegge chi è vicino con punti ferita temporanei.',
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 5,
+                'nome' => 'Arma arcana da fuoco',
+                'costo' => 'passivo',
+                'testo' => 'Con una bacchetta, un bastone o una verga incisi, aggiungi 1d8 ai danni o alla cura di un tuo incantesimo.',
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 9,
+                'nome' => 'Cannone esplosivo',
+                'costo' => 'reazione',
+                'testo' => 'I danni del cannone crescono di 1d8, e puoi farlo esplodere a distanza.',
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 15,
+                'nome' => 'Postazione fortificata',
+                'costo' => 'passivo',
+                'testo' => 'Puoi tenere due cannoni alla volta, e chi sta vicino al cannone ha mezza copertura.',
+                'nome_mio' => true,
+            ],
+        ],
+
+        'Fabbro da Battaglia' => [
+            [
+                'livello' => 3,
+                'nome' => 'Pronto alla battaglia',
+                'costo' => 'passivo',
+                'testo' => "Competenza nelle armi da guerra, e attacchi con le armi magiche usando l'Intelligenza.",
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 3,
+                'nome' => "Difensore d'acciaio",
+                'costo' => 'bonus',
+                'testo' => 'Costruisci un compagno meccanico che combatte al tuo fianco, ripara e protegge chi gli sta vicino.',
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 5,
+                'nome' => 'Attacco extra',
+                'costo' => 'passivo',
+                'testo' => 'Quando attacchi col tuo turno, fai due attacchi invece di uno.',
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 9,
+                'nome' => 'Scarica arcana',
+                'costo' => 'passivo',
+                'usi' => 'Tante volte quanto il tuo modificatore di Intelligenza; tornano col riposo lungo.',
+                'testo' => 'Quando tu o il difensore colpite, potete aggiungere 2d6 danni da forza o curare qualcuno vicino.',
+                'nome_mio' => true,
+            ],
+            [
+                'livello' => 15,
+                'nome' => 'Difensore migliorato',
+                'costo' => 'passivo',
+                'testo' => 'La scarica arcana diventa più forte, e il difensore respinge chi lo attacca.',
+                'nome_mio' => true,
+            ],
+        ],
+
     ],
 ];

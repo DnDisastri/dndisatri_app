@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Domain\Dnd\ClassCatalogue;
+use App\Domain\Dnd\FeatureCatalogue;
 use App\Domain\Dnd\ItemCatalogue;
 use App\Domain\Dnd\SpeciesCatalogue;
 use App\Domain\Dnd\SubclassCatalogue;
@@ -33,6 +34,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ItemCatalogue::class);
         $this->app->singleton(ClassCatalogue::class);
         $this->app->singleton(SpeciesCatalogue::class);
+        $this->app->singleton(FeatureCatalogue::class);
     }
 
     /**
