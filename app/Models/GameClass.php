@@ -14,9 +14,9 @@ use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * Una classe giocabile, con tutto quello che serve a creazione, livelli,
- * incantesimi e multiclasse. I privilegi livello per livello restano in
- * config/dnd/features.php. I personaggi la indicano per nome: il nome non si
- * cambia dal pannello.
+ * incantesimi e multiclasse. I privilegi livello per livello stanno in
+ * `class_features`. I personaggi la indicano per nome: il nome non si cambia
+ * dal pannello.
  */
 #[Fillable([
     'name', 'rules_edition', 'hit_die', 'saves', 'skill_count', 'skill_choices', 'proficiencies', 'equipment_summary',

@@ -6,6 +6,9 @@ use App\Domain\Dnd\ClassRules;
 use App\Domain\Dnd\Features;
 use App\Enums\ActionCost;
 use App\Models\Character;
+use App\Models\ClassFeature;
+use App\Models\Subclass;
+use Database\Seeders\SubclassSeeder;
 
 describe('quali privilegi ha un personaggio', function () {
     it('quelli del suo livello e di quelli sotto, non gli altri', function () {
@@ -181,45 +184,35 @@ describe('nella scheda', function () {
     });
 });
 
-// Questi test proteggono la corrispondenza tra i nomi configurati e i privilegi, evitando feature irraggiungibili per errori nei dati.
+// Questi test proteggono la corrispondenza tra i nomi delle classi e i privilegi, evitando privilegi irraggiungibili per errori nei dati.
 describe('i dati stessi', function () {
-    // L'Artefice non ha ancora privilegi scritti: arrivano col branch degli usi.
-    it('coprono tutte e dodici le classi del manuale e tutte e 108 le sottoclassi', function () {
-        $privilegi = config('dnd.features');
+    beforeEach(fn () => $this->seed(SubclassSeeder::class));
 
-        $sottoclassi = collect(config('dnd.subclasses'))
-            ->flatten(1)
-            ->pluck('name');
+    it('coprono tutte le classi e tutte le sottoclassi, Artefice compreso', function () {
+        $classi = ClassFeature::where('owner_type', ClassFeature::CLASS_OWNER)->distinct()->pluck('owner')->sort()->values()->all();
+        $sottoclassi = ClassFeature::where('owner_type', ClassFeature::SUBCLASS_OWNER)->distinct()->pluck('owner');
 
-        expect(array_keys($privilegi['classi']))
-            ->toEqual(ClassRules::names()->reject(fn ($c) => $c === 'Artefice')->values()->all())
-            ->and($sottoclassi->diff(array_keys($privilegi['sottoclassi']))->all())->toBe([]);
+        expect($classi)->toEqual(ClassRules::names()->sort()->values()->all())
+            ->and(Subclass::pluck('name')->diff($sottoclassi)->all())->toBe([]);
     });
 
     it('e i nomi delle sottoclassi combaciano con quelli dell\'elenco', function () {
-        $noti = collect(config('dnd.subclasses'))->flatten(1)->pluck('name')->all();
+        $sottoclassi = ClassFeature::where('owner_type', ClassFeature::SUBCLASS_OWNER)->distinct()->pluck('owner');
 
-        expect(array_diff(array_keys(config('dnd.features.sottoclassi')), $noti))->toBe([]);
-    });
-
-    it('e ogni privilegio dice quanto costa, con una parola che esiste', function () {
-        $costi = collect(config('dnd.features.classi'))
-            ->concat(config('dnd.features.sottoclassi'))
-            ->flatten(1)
-            ->pluck('costo')
-            ->unique();
-
-        foreach ($costi as $costo) {
-            expect(ActionCost::tryFrom($costo))->not->toBeNull("«{$costo}» non è un costo valido");
-        }
+        expect($sottoclassi->diff(Subclass::pluck('name'))->all())->toBe([]);
     });
 
     it('e nessuno è senza nome o senza testo', function () {
-        $vuoti = collect(config('dnd.features.classi'))
-            ->concat(config('dnd.features.sottoclassi'))
-            ->flatten(1)
-            ->filter(fn (array $p) => blank($p['nome'] ?? null) || blank($p['testo'] ?? null));
+        expect(ClassFeature::where('name', '')->orWhere('text', '')->count())->toBe(0);
+    });
 
-        expect($vuoti)->toBeEmpty();
+    it('e i privilegi che consumano una riserva la trovano nella loro classe', function () {
+        $orfani = ClassFeature::whereNotNull('spends')->get()->reject(function (ClassFeature $p) {
+            $classe = $p->owner_type === ClassFeature::CLASS_OWNER ? $p->owner : Subclass::firstWhere('name', $p->owner)?->class;
+
+            return ClassFeature::where('owner_type', ClassFeature::CLASS_OWNER)->where('owner', $classe)->where('name', $p->spends)->exists();
+        });
+
+        expect($orfani->pluck('name')->all())->toBe([]);
     });
 });
