@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Domain\Dnd\ItemCatalogue;
+use App\Domain\Dnd\SpeciesCatalogue;
 use App\Domain\Dnd\SubclassCatalogue;
 use App\Http\Controllers\GuestBookingController;
 use App\Notifications\InAppNotification;
@@ -29,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(SubclassCatalogue::class);
         $this->app->singleton(SubraceCatalogue::class);
         $this->app->singleton(ItemCatalogue::class);
+        $this->app->singleton(SpeciesCatalogue::class);
     }
 
     /**

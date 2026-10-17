@@ -516,7 +516,7 @@ class CharacterWizard extends Component
             'abilities' => Ability::cases(),
             'editions' => RulesEdition::cases(),
             'classes' => ClassRules::names(),
-            'speciesList' => array_keys(config('dnd.species', [])),
+            'speciesList' => SpeciesRules::names(),
             'backgrounds' => config('dnd.backgrounds.list', []),
             'equipmentChoices' => config("dnd.equipment.{$this->class}.choices", []),
         ]);

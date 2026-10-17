@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Builds\Schemas;
 use App\Domain\Dnd\Ability;
 use App\Domain\Dnd\ClassRules;
 use App\Domain\Dnd\PointBuy;
+use App\Domain\Dnd\SpeciesRules;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
@@ -121,7 +122,7 @@ class BuildForm
 
                     Select::make('species')
                         ->label('Specie')
-                        ->options(fn () => collect(array_keys(config('dnd.species', [])))
+                        ->options(fn () => collect(SpeciesRules::names())
                             ->mapWithKeys(fn ($s) => [$s => $s]))
                         ->searchable(),
 

@@ -145,7 +145,7 @@
                 @foreach ($speciesList as $option)
                     @php
                         $scelta = $species === $option;
-                        $dati = config("dnd.species.$option");
+                        $dati = ['asi' => \App\Domain\Dnd\SpeciesRules::asi($option), 'speed' => \App\Domain\Dnd\SpeciesRules::speed($option), 'traits' => \App\Domain\Dnd\SpeciesRules::traits($option)];
                         $bonus = PointBuy::freeBonusesFor($option);
                     @endphp
                     <div @class([
@@ -166,7 +166,7 @@
 
                         @if ($scelta)
                             <div class="px-4 pb-4">
-                                @php $descrizione = config("dnd.species_descriptions.$option"); @endphp
+                                @php $descrizione = \App\Domain\Dnd\SpeciesRules::description($option); @endphp
                                 @if ($descrizione)
                                     <p class="mb-3 text-sm text-fg">{{ $descrizione }}</p>
                                 @endif

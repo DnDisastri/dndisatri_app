@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Subraces\Schemas;
 
 use App\Domain\Dnd\Ability;
+use App\Domain\Dnd\SpeciesRules;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -23,7 +24,7 @@ class SubraceForm
                         ->required()
                         // Le specie del manuale: non si aggiungono dal pannello,
                         // solo le loro varianti.
-                        ->options(fn () => collect(array_keys(config('dnd.species', [])))
+                        ->options(fn () => collect(SpeciesRules::names())
                             ->mapWithKeys(fn (string $r) => [$r => $r])
                             ->all())
                         ->searchable(),

@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class CharacterFactory extends Factory
 {
+    private const SPECIE = ['Umano', 'Nano', 'Elfo', 'Halfling', 'Dragonide', 'Gnomo', 'Mezzorco', 'Tiefling'];
+
     public function definition(): array
     {
         $class = fake()->randomElement(array_keys(config('dnd.classes.list')));
@@ -20,7 +22,7 @@ class CharacterFactory extends Factory
             'name' => fake('it_IT')->firstName(),
             'class' => $class,
             'subclass' => null,
-            'race' => fake()->randomElement(array_keys(config('dnd.species'))),
+            'race' => fake()->randomElement(self::SPECIE),
             'background' => fake()->randomElement(array_keys(config('dnd.backgrounds.list'))),
             'level' => 1,
             'hit_die' => config("dnd.classes.list.{$class}.hitDie"),
