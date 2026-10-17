@@ -9,6 +9,8 @@ enum CasterType: string
     case None = 'none';
     case Full = 'full';
     case Half = 'half';
+    /** Mezzo incantatore che arrotonda per eccesso, come l'Artefice: ha slot dal 1° livello. */
+    case HalfUp = 'half_up';
     case Third = 'third';
     case Pact = 'pact';
 
@@ -42,6 +44,7 @@ enum CasterType: string
             self::None => 'Non lancia incantesimi',
             self::Full => 'Incantatore completo',
             self::Half => 'Mezzo incantatore',
+            self::HalfUp => 'Mezzo incantatore, arrotondato per eccesso',
             self::Third => 'Un terzo di incantatore',
             self::Pact => 'Magia del patto',
         };

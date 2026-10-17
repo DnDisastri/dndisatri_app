@@ -44,6 +44,7 @@ final class Multiclass
             $total += match (CasterType::for($class)) {
                 CasterType::Full => $level,
                 CasterType::Half => intdiv($level, 2),
+                CasterType::HalfUp => intdiv($level + 1, 2),
                 CasterType::Third => intdiv($level, 3),
                 // Il patto non entra nel conto: ha una riserva sua.
                 CasterType::Pact, CasterType::None => 0,

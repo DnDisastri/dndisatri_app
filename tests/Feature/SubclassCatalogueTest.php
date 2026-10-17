@@ -21,7 +21,8 @@ describe('il catalogo', function () {
 
         $attese = collect(config('dnd.subclasses'))->flatten(1)->count();
 
-        expect(Subclass::count())->toBe($attese)
+        // Le quattro dell'Artefice arrivano con la migrazione delle classi.
+        expect(Subclass::where('class', '!=', 'Artefice')->count())->toBe($attese)
             ->and(Subclass::where('is_homebrew', true)->count())->toBe(0);
     });
 

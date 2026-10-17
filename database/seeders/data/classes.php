@@ -1297,4 +1297,63 @@ return [
             ],
         ],
     ],
+    // L'Artefice non è nell'SRD: numeri di regola dal manuale, testi nostri.
+    [
+        'name' => 'Artefice',
+        'hit_die' => 8,
+        'saves' => ['con', 'int'],
+        'skill_count' => 2,
+        'skill_choices' => ['arcana', 'history', 'investigation', 'medicine', 'nature', 'perception', 'sleightOfHand'],
+        'proficiencies' => 'Armature leggere e medie, scudi; armi semplici; arnesi da scasso, strumenti da inventore e un tipo di strumenti da artigiano.',
+        'equipment_summary' => 'Due armi semplici, balestra leggera con 20 quadrelli, cuoio borchiato o corazza di scaglie, arnesi da scasso, pacchetto da esploratore di dungeon.',
+        'caster_type' => 'half_up',
+        'spell_ability' => 'int',
+        'cantrips_at_1' => 2,
+        'spells_at_1' => null,
+        'prepares' => true,
+        'prepare_from_level' => 1,
+        'prepare_half_level' => true,
+        'swaps_spells' => false,
+        'copies_scrolls' => false,
+        'subclass_level' => 3,
+        'spell_list' => [
+            'Dardo di Fuoco', 'Spruzzo Acido', 'Veleno Spettrale', 'Mano Magica', 'Luce', 'Prestidigitazione', 'Guida', 'Raggio di Gelo',
+            'Cura Ferite', 'Individuazione del Magico',
+            'Invisibilità', 'Ristorare Inferiore',
+            'Dissolvi Magie', 'Rivitalizzare', 'Volare',
+        ],
+        'multiclass_requirements' => [['int']],
+        'multiclass_skill_count' => 0,
+        'multiclass_skill_choices' => [],
+        'starting_equipment' => [
+            'fixed' => [
+                ['name' => 'Balestra Leggera', 'category' => 'Armi'],
+                ['name' => 'Quadrelli', 'qty' => 20, 'category' => 'Armi'],
+                ['name' => 'Arnesi da scasso', 'category' => 'Kit e Strumenti'],
+                ['name' => 'Pacchetto da esploratore di dungeon', 'category' => 'Varie'],
+            ],
+            'choices' => [
+                [
+                    'label' => 'Armatura',
+                    'options' => [
+                        ['label' => 'Cuoio Borchiato', 'items' => [['name' => 'Cuoio Borchiato', 'category' => 'Armature']]],
+                        ['label' => 'Corazza di Scaglie', 'items' => [['name' => 'Corazza di Scaglie', 'category' => 'Armature']]],
+                    ],
+                ],
+                [
+                    'label' => 'Due armi semplici',
+                    'options' => [
+                        ['label' => 'Due pugnali', 'items' => [['name' => 'Pugnale', 'qty' => 2, 'category' => 'Armi']]],
+                        ['label' => 'Mazza e pugnale', 'items' => [['name' => 'Mazza', 'category' => 'Armi'], ['name' => 'Pugnale', 'category' => 'Armi']]],
+                    ],
+                ],
+            ],
+        ],
+        'subclasses' => [
+            ['name' => 'Alchimista', 'description' => 'Pozioni ed elisir: cura, protegge e corrode con la chimica.'],
+            ['name' => 'Armaiolo', 'description' => "Un'armatura che diventa arma: guardiano o infiltratore."],
+            ['name' => 'Artigliere', 'description' => 'Un cannone magico al suo fianco, per colpire da lontano o proteggere.'],
+            ['name' => 'Fabbro da Battaglia', 'description' => 'Combatte in prima linea con un difensore d\'acciaio che obbedisce ai suoi ordini.'],
+        ],
+    ],
 ];

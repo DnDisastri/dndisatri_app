@@ -101,8 +101,9 @@ describe('quello che concede la classe', function () {
         expect(ClassRules::skillChoices('Bardo'))->toHaveCount(18);
     });
 
-    it('tutte e dodici le classi sono a catalogo', function () {
-        expect(ClassRules::names())->toHaveCount(12)
+    it('le dodici classi del manuale e l\'Artefice sono a catalogo', function () {
+        expect(ClassRules::names())->toHaveCount(13)
+            ->and(ClassRules::exists('Artefice'))->toBeTrue()
             ->and(ClassRules::exists('Paladino'))->toBeTrue()
             ->and(ClassRules::exists('Pasticciere'))->toBeFalse();
     });
