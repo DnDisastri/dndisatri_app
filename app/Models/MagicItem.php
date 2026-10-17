@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Domain\Dnd\Ability;
 use App\Domain\Dnd\ItemEffectMode;
+use App\Enums\EquipmentSlot;
 use App\Enums\ItemRarity;
 use App\Enums\RulesEdition;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -54,6 +55,45 @@ class MagicItem extends Model
     public function scopeOfEdition(Builder $query, RulesEdition $edition): void
     {
         $query->where('rules_edition', $edition->value)->orderBy('name');
+    }
+
+    /**
+     * Una riga di bottino o ricompensa con l'id del catalogo ripulito: intero
+     * se l'oggetto esiste, altrimenti tolto.
+     *
+     * @param  array<string,mixed>  $row
+     * @return array<string,mixed>
+     */
+    public static function linkRow(array $row): array
+    {
+        $id = filled($row['magic_item_id'] ?? null) ? (int) $row['magic_item_id'] : null;
+
+        if ($id === null || ! self::whereKey($id)->exists()) {
+            unset($row['magic_item_id']);
+
+            return $row;
+        }
+
+        return [...$row, 'magic_item_id' => $id];
+    }
+
+    /**
+     * Gli argomenti di `addToInventory` per una riga: il catalogo completa tipo,
+     * bonus ed effetti, quello che la riga dice già vince.
+     *
+     * @param  array<string,mixed>  $row
+     * @return array{base: ?string, magicBonus: int, effects: list<array{ability: string, mode: string, value: int}>|null}
+     */
+    public static function inventoryExtras(array $row): array
+    {
+        $catalogo = filled($row['magic_item_id'] ?? null) ? self::find((int) $row['magic_item_id']) : null;
+        $base = EquipmentSlot::isBase($row['base'] ?? null) ? $row['base'] : null;
+
+        return [
+            'base' => $base ?? (EquipmentSlot::isBase($catalogo?->base) ? $catalogo->base : null),
+            'magicBonus' => max(0, min(CharacterItem::MAX_MAGIC_BONUS, (int) (($row['magic_bonus'] ?? 0) ?: $catalogo?->magic_bonus))),
+            'effects' => $catalogo?->effectsCopy() ?: null,
+        ];
     }
 
     /** «Non comune, sintonia» davanti alla descrizione: è quello che il giocatore legge nello zaino. */

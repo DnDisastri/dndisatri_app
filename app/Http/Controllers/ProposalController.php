@@ -263,6 +263,7 @@ class ProposalController extends Controller
             'items.*.base' => ['nullable', Rule::in(collect(EquipmentSlot::bases())->flatten()->all())],
             'items.*.value' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
             'items.*.details' => ['nullable', 'string', 'max:1000'],
+            'items.*.magic_item_id' => ['nullable', 'integer'],
             'note' => ['nullable', 'string', 'max:255'],
             'game_session_id' => ['nullable', 'integer'],
         ], [

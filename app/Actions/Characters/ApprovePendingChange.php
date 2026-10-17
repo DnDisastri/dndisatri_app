@@ -15,6 +15,7 @@ use App\Enums\PendingChangeType;
 use App\Exceptions\MarketException;
 use App\Models\Character;
 use App\Models\CharacterItem;
+use App\Models\MagicItem;
 use App\Models\MarketItem;
 use App\Models\PendingChange;
 use App\Models\User;
@@ -204,15 +205,14 @@ final class ApprovePendingChange
         }
 
         foreach ($change->grant_items ?? [] as $item) {
-            $character->addToInventory(
-                name: $item['name'],
-                qty: (int) ($item['qty'] ?? 1),
-                category: $item['category'] ?? null,
-                valueCp: (int) ($item['value_cp'] ?? 0),
-                details: $item['details'] ?? null,
-                base: EquipmentSlot::isBase($item['base'] ?? null) ? $item['base'] : null,
-                magicBonus: $this->bonus($item['magic_bonus'] ?? 0),
-            );
+            $character->addToInventory(...[
+                'name' => $item['name'],
+                'qty' => (int) ($item['qty'] ?? 1),
+                'category' => $item['category'] ?? null,
+                'valueCp' => (int) ($item['value_cp'] ?? 0),
+                'details' => $item['details'] ?? null,
+                ...MagicItem::inventoryExtras($item),
+            ]);
         }
 
         return $coins;
@@ -322,6 +322,10 @@ final class ApprovePendingChange
             $base = $fix['base'] ?? null;
             $items[$indice]['base'] = EquipmentSlot::isBase($base) ? $base : null;
             $items[$indice]['magic_bonus'] = $this->bonus($fix['magic_bonus'] ?? 0);
+
+            if (array_key_exists('magic_item_id', $fix)) {
+                $items[$indice] = MagicItem::linkRow([...$items[$indice], 'magic_item_id' => $fix['magic_item_id']]);
+            }
         }
 
         return $items;

@@ -13,6 +13,7 @@ use App\Enums\PendingChangeType;
 use App\Models\Character;
 use App\Models\CharacterItem;
 use App\Models\GameSession;
+use App\Models\MagicItem;
 use App\Models\MarketItem;
 use App\Models\PendingChange;
 use App\Models\User;
@@ -59,6 +60,8 @@ final class ProposeChange
         if ($coins->hasNegative()) {
             throw new InvalidArgumentException('Le monete non possono essere negative.');
         }
+
+        $items = array_map(MagicItem::linkRow(...), $items);
 
         if ($coins->isEmpty() && $items === []) {
             throw new InvalidArgumentException('Un bottino vuoto non si registra.');

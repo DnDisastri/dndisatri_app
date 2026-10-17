@@ -6,10 +6,10 @@ namespace App\Actions\Sessions;
 
 use App\Actions\Market\GrantCoins;
 use App\Domain\Dnd\Coins;
-use App\Enums\EquipmentSlot;
 use App\Enums\LedgerAction;
 use App\Models\Character;
 use App\Models\GameSession;
+use App\Models\MagicItem;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -38,6 +38,8 @@ final class AwardSessionRewards
         ?int $characterId = null,
         array $items = [],
     ): Collection {
+        $items = array_map(MagicItem::linkRow(...), $items);
+
         if ($perHead->hasNegative() || ($perHead->isEmpty() && $items === [])) {
             throw new InvalidArgumentException('Indica le monete a testa, gli oggetti o tutti e due.');
         }
@@ -101,14 +103,14 @@ final class AwardSessionRewards
     private function giveItems(Character $personaggio, array $items): void
     {
         foreach ($items as $item) {
-            $personaggio->addToInventory(
-                name: $item['name'],
-                qty: (int) ($item['qty'] ?? 1),
-                category: $item['category'] ?? null,
-                valueCp: (int) ($item['value_cp'] ?? 0),
-                details: $item['details'] ?? null,
-                base: EquipmentSlot::isBase($item['base'] ?? null) ? $item['base'] : null,
-            );
+            $personaggio->addToInventory(...[
+                'name' => $item['name'],
+                'qty' => (int) ($item['qty'] ?? 1),
+                'category' => $item['category'] ?? null,
+                'valueCp' => (int) ($item['value_cp'] ?? 0),
+                'details' => $item['details'] ?? null,
+                ...MagicItem::inventoryExtras($item),
+            ]);
         }
     }
 }
