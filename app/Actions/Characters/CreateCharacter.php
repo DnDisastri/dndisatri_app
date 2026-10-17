@@ -292,7 +292,7 @@ final class CreateCharacter
      */
     private function giveStartingItems(Character $character, string $class, string $background, array $choices, ?int $pack = null): void
     {
-        $equipment = config("dnd.equipment.{$class}", ['fixed' => [], 'choices' => []]);
+        $equipment = ClassRules::startingEquipment($class);
 
         $items = $equipment['fixed'] ?? [];
 

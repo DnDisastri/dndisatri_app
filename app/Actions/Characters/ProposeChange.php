@@ -156,7 +156,7 @@ final class ProposeChange
     public function scrollSpell(Character $character, User $requester, string $spell, ?int $itemId, ?GameSession $session = null): PendingChange
     {
         $class = self::scrollClass($character)
-            ?? throw new InvalidArgumentException('Solo un Mago copia incantesimi da una pergamena.');
+            ?? throw new InvalidArgumentException('La tua classe non copia incantesimi da una pergamena.');
 
         if (! in_array($spell, ClassRules::spellList($class), true)) {
             throw new InvalidArgumentException("«{$spell}» non è nella lista di un {$class}.");
@@ -206,8 +206,9 @@ final class ProposeChange
     /** La classe con cui si copia, se il personaggio ne ha una. */
     public static function scrollClass(Character $character): ?string
     {
-        return collect(config('dnd.rules.scroll_copy.classes', []))
-            ->first(fn (string $class) => $character->levelIn($class) > 0);
+        return collect($character->classLevels())
+            ->keys()
+            ->first(fn (string $class) => ClassRules::copiesScrolls($class));
     }
 
     public static function scrollCost(int $spellLevel): int

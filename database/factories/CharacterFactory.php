@@ -11,11 +11,17 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class CharacterFactory extends Factory
 {
+    /** Le classi del manuale con i loro dadi vita: niente database per scegliere a caso. */
+    private const CLASSI = [
+        'Barbaro' => 12, 'Bardo' => 8, 'Chierico' => 8, 'Druido' => 8, 'Guerriero' => 10, 'Ladro' => 8,
+        'Mago' => 6, 'Monaco' => 8, 'Paladino' => 10, 'Ranger' => 10, 'Stregone' => 6, 'Warlock' => 8,
+    ];
+
     private const SPECIE = ['Umano', 'Nano', 'Elfo', 'Halfling', 'Dragonide', 'Gnomo', 'Mezzorco', 'Tiefling'];
 
     public function definition(): array
     {
-        $class = fake()->randomElement(array_keys(config('dnd.classes.list')));
+        $class = fake()->randomElement(array_keys(self::CLASSI));
 
         return [
             'user_id' => User::factory()->player(),
@@ -25,7 +31,7 @@ class CharacterFactory extends Factory
             'race' => fake()->randomElement(self::SPECIE),
             'background' => fake()->randomElement(array_keys(config('dnd.backgrounds.list'))),
             'level' => 1,
-            'hit_die' => config("dnd.classes.list.{$class}.hitDie"),
+            'hit_die' => self::CLASSI[$class],
             'str' => 10, 'dex' => 14, 'con' => 14,
             'int' => 10, 'wis' => 12, 'cha' => 10,
             'speed' => 9,

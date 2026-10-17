@@ -518,7 +518,7 @@ class CharacterWizard extends Component
             'classes' => ClassRules::names(),
             'speciesList' => SpeciesRules::names(),
             'backgrounds' => config('dnd.backgrounds.list', []),
-            'equipmentChoices' => config("dnd.equipment.{$this->class}.choices", []),
+            'equipmentChoices' => ClassRules::startingEquipment($this->class)['choices'],
         ]);
     }
 }

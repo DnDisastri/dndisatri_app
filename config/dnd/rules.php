@@ -2,26 +2,13 @@
 
 /*
  * Regole scritte a mano (non generate): i numeri che il gruppo potrebbe voler
- * cambiare stanno qui, in un punto solo.
+ * cambiare stanno qui. Chi prepara, chi sostituisce e chi copia dalle
+ * pergamene si decide per classe, dal pannello.
  */
 
 return [
-    // Chi prepara gli incantesimi ogni giorno: caratteristica + livello nella
-    // classe (o metà livello, arrotondato per difetto), da quale livello.
-    'preparation' => [
-        'Chierico' => ['from_level' => 1, 'half_level' => false],
-        'Druido' => ['from_level' => 1, 'half_level' => false],
-        'Mago' => ['from_level' => 1, 'half_level' => false],
-        'Paladino' => ['from_level' => 2, 'half_level' => true],
-    ],
-
-    // Chi conosce un numero fisso di incantesimi e, salendo di livello in
-    // quella classe, può sostituirne uno.
-    'spell_swap' => ['Bardo', 'Stregone', 'Warlock', 'Ranger'],
-
     // Il Mago che copia un incantesimo da una pergamena nel suo libro.
     'scroll_copy' => [
-        'classes' => ['Mago'],
         'gp_per_level' => 50,
         'consumes_scroll' => true,
     ],

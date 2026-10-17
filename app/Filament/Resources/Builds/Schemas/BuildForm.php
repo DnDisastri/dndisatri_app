@@ -160,7 +160,7 @@ class BuildForm
                     // A/B, e si conserva come **indici**: è la forma che il
                     // mago della creazione sa rimettere nei suoi pulsanti.
                     Section::make('Equipaggiamento')
-                        ->schema(fn (Get $get) => collect(config("dnd.equipment.{$get('class')}.choices", []))
+                        ->schema(fn (Get $get) => collect(ClassRules::startingEquipment($get('class'))['choices'])
                             ->map(fn (array $choice, int $index) => Select::make("equipment.{$index}")
                                 ->label($choice['label'] ?? 'Scelta '.($index + 1))
                                 ->options(collect($choice['options'] ?? [])
@@ -168,7 +168,7 @@ class BuildForm
                             )->all())
                         ->columns(2)
                         ->columnSpanFull()
-                        ->visible(fn (Get $get) => config("dnd.equipment.{$get('class')}.choices", []) !== []),
+                        ->visible(fn (Get $get) => ClassRules::startingEquipment($get('class'))['choices'] !== []),
 
                     CheckboxList::make('spells')
                         ->label('Incantesimi')

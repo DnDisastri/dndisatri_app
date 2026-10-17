@@ -129,7 +129,7 @@
                                                 @endforeach
                                             </div>
                                         </div>
-                                        <p class="mt-3 text-sm text-muted">{{ config("dnd.classes.list.$option.prof") }}</p>
+                                        <p class="mt-3 text-sm text-muted">{{ ClassRules::proficiencies($option) }}</p>
                                     </div>
                                 @endif
                             </div>

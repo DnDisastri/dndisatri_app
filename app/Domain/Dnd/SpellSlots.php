@@ -50,8 +50,6 @@ final class SpellSlots
     /** La caratteristica da incantatore della classe, se ne ha una. */
     public static function abilityFor(?string $class): ?Ability
     {
-        $ability = config("dnd.spells.ability_by_class.{$class}");
-
-        return $ability === null ? null : Ability::from($ability);
+        return ClassRules::spellAbility($class);
     }
 }

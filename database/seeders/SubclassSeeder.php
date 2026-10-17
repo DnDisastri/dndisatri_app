@@ -16,7 +16,7 @@ class SubclassSeeder extends Seeder
 {
     public function run(): void
     {
-        $terzi = config('dnd.classes.third_caster_subclasses', []);
+        $terzi = ['Cavaliere Mistico', 'Furfante Arcano'];
 
         foreach (config('dnd.subclasses', []) as $classe => $sottoclassi) {
             foreach (array_values($sottoclassi) as $posizione => $sottoclasse) {

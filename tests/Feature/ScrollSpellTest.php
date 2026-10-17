@@ -23,11 +23,11 @@ describe('la richiesta', function () {
             ->and($change->summary)->toContain('Pergamena di Palla di Fuoco');
     });
 
-    it('solo un Mago', function () {
+    it('solo chi copia dalle pergamene, come il Mago', function () {
         $chierico = Character::factory()->create(['class' => 'Chierico', 'level' => 5]);
 
         expect(fn () => app(ProposeChange::class)->scrollSpell($chierico, $chierico->user, 'Palla di Fuoco', null))
-            ->toThrow(InvalidArgumentException::class, 'Solo un Mago');
+            ->toThrow(InvalidArgumentException::class, 'non copia incantesimi');
     });
 
     it('non oltre il livello degli slot', function () {
