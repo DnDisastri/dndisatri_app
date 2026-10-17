@@ -3,6 +3,7 @@
 /*
  * Il listino del Manuale del DM, dall'SRD 5.1 (licenza CC-BY-4.0, Wizards of the Coast).
  * Prezzi in rame: 1 mo = 100 mr. Separato dall'Emporio: non tocca i prezzi veri.
+ * Dopo la prima migrazione si cambia dal pannello.
  */
 
 return [
