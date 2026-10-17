@@ -18,4 +18,11 @@ return [
     // Chi conosce un numero fisso di incantesimi e, salendo di livello in
     // quella classe, può sostituirne uno.
     'spell_swap' => ['Bardo', 'Stregone', 'Warlock', 'Ranger'],
+
+    // Il Mago che copia un incantesimo da una pergamena nel suo libro.
+    'scroll_copy' => [
+        'classes' => ['Mago'],
+        'gp_per_level' => 50,
+        'consumes_scroll' => true,
+    ],
 ];

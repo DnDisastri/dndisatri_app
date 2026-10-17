@@ -334,6 +334,55 @@ class ProposalController extends Controller
         );
     }
 
+    public function scrollForm(Character $character): View
+    {
+        $this->authorize('propose', $character);
+
+        $class = ProposeChange::scrollClass($character);
+        abort_if($class === null, 404);
+
+        $reach = $character->spellSlots()->maxSpellLevel();
+        $known = $character->spells()->pluck('name');
+
+        return view('proposals.scroll', [
+            'character' => $character,
+            'copiabili' => collect(ClassRules::spellList($class))
+                ->reject(fn (string $spell) => $known->contains($spell))
+                ->groupBy(fn (string $spell) => ClassRules::spellLevel($spell))
+                ->filter(fn ($spells, int $level) => $level > 0 && $level <= $reach)
+                ->sortKeys(),
+            // Prima quelle che si chiamano pergamena: è lì che si cerca.
+            'oggetti' => $character->items()->orderBy('name')->get()
+                ->sortByDesc(fn (CharacterItem $item) => str_contains(mb_strtolower($item->name), 'pergamena'))
+                ->values(),
+            'consuma' => (bool) config('dnd.rules.scroll_copy.consumes_scroll'),
+        ]);
+    }
+
+    public function submitScroll(Request $request, Character $character, ProposeChange $proposals): RedirectResponse
+    {
+        $this->authorize('propose', $character);
+
+        $validated = $request->validate([
+            'spell' => ['required', 'string', 'max:255'],
+            'item_id' => ['nullable', 'integer'],
+            'game_session_id' => ['nullable', 'integer'],
+        ], [
+            'spell.required' => 'Scegli l\'incantesimo da copiare.',
+        ]);
+
+        return $this->propose(
+            fn () => $proposals->scrollSpell(
+                $character,
+                $request->user(),
+                $validated['spell'],
+                isset($validated['item_id']) ? (int) $validated['item_id'] : null,
+                $this->sessioneGiocata($character, $validated['game_session_id'] ?? null),
+            ),
+            $character,
+        );
+    }
+
     /** Le eccezioni delle azioni di dominio diventano errori di modulo. */
     private function propose(callable $action, Character $character): RedirectResponse
     {

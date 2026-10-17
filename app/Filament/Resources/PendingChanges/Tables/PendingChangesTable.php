@@ -28,6 +28,7 @@ class PendingChangesTable
                         PendingChangeType::Loot => 'success',
                         PendingChangeType::ItemEffect => 'warning',
                         PendingChangeType::Barter => 'primary',
+                        PendingChangeType::ScrollSpell => 'info',
                         PendingChangeType::CharacterEdit => 'gray',
                     }),
 

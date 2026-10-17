@@ -108,7 +108,7 @@ class PendingChange extends Model
     }
 
     /** Chiavi del diff che non sono colonne della scheda: senza un «prima» da confrontare. */
-    private const NON_COLONNE = ['photo_path', 'class_up', 'feat', 'spells', 'swap', 'give', 'take'];
+    private const NON_COLONNE = ['photo_path', 'class_up', 'feat', 'spells', 'swap', 'give', 'take', 'scroll'];
 
     /** @return list<string> i campi del diff che sono colonne della scheda */
     public function columnFields(): array
