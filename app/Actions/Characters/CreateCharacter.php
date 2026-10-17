@@ -6,6 +6,7 @@ namespace App\Actions\Characters;
 
 use App\Domain\Dnd\Ability;
 use App\Domain\Dnd\AbilityScores;
+use App\Domain\Dnd\BackgroundRules;
 use App\Domain\Dnd\ClassRules;
 use App\Domain\Dnd\PointBuy;
 use App\Domain\Dnd\SpeciesRules;
@@ -13,6 +14,7 @@ use App\Domain\Dnd\SpellSlots;
 use App\Domain\Dnd\SubraceCatalogue;
 use App\Enums\EquipmentSlot;
 use App\Enums\RulesEdition;
+use App\Models\Background;
 use App\Models\Character;
 use App\Models\Feat;
 use App\Models\User;
@@ -34,6 +36,7 @@ final class CreateCharacter
      * @param  list<string>  $skills  le abilità scelte fra quelle della classe
      * @param  list<string>  $spells  gli incantesimi scelti
      * @param  list<string>  $speciesSkills  le competenze a scelta di Umano Variante e Mezzelfo
+     * @param  array<string,int>  $backgroundBonuses  regole 2024: +2/+1 o +1/+1/+1 alle caratteristiche del background
      */
     public function handle(
         User $owner,
@@ -55,31 +58,45 @@ final class CreateCharacter
         RulesEdition $edition = RulesEdition::Classic,
         array $speciesSkills = [],
         ?int $featId = null,
+        array $backgroundBonuses = [],
     ): Character {
-        if (! $edition->isCreatable()) {
-            throw new InvalidArgumentException("Le regole {$edition->label()} non sono ancora disponibili.");
+        if (! $edition->isCreatableBy($owner)) {
+            throw new InvalidArgumentException("Le regole {$edition->label()} non sono ancora aperte ai giocatori.");
         }
 
-        $this->validate($name, $class, $species, $background, $boughtScores, $skills, $spells);
-        $this->validateBackgroundSkills($background, $backgroundSkills);
-        $speciesSkills = $this->validateSpeciesSkills($species, $speciesSkills);
+        $this->validate($name, $class, $species, $background, $boughtScores, $skills, $spells, $edition);
+        $this->validateBackgroundSkills($background, $backgroundSkills, $edition);
+        $speciesSkills = $this->validateSpeciesSkills($species, $speciesSkills, $edition);
 
-        $feat = SpeciesRules::grantsFeat($species) ? Feat::pick($edition, $featId) : null;
+        $feat = SpeciesRules::grantsFeat($species, $edition) ? Feat::pick($edition, $featId) : null;
 
-        if (SpeciesRules::grantsFeat($species) && $feat === null) {
-            throw new InvalidArgumentException("L'Umano Variante sceglie un talento al primo livello.");
+        if (SpeciesRules::grantsFeat($species, $edition) && $feat === null) {
+            throw new InvalidArgumentException("La specie «{$species}» sceglie un talento al primo livello.");
         }
 
-        $sottorazza = app(SubraceCatalogue::class)->find($species, $subspecies);
+        // Nel 2024 il talento della specie è di origine, come quello del background.
+        if ($feat !== null && $edition === RulesEdition::Revised && Feat::find($featId)?->category !== Feat::ORIGIN) {
+            throw new InvalidArgumentException('Nelle regole 2024 la specie dà un talento di origine.');
+        }
 
-        $scores = PointBuy::withSpecies($boughtScores, $species, $speciesChoices, $subspecies);
+        $sfondo = BackgroundRules::of($background, $edition);
+        [$bonusSfondo, $talentoSfondo] = $this->fromBackground($sfondo, $backgroundBonuses);
+
+        $sottorazza = app(SubraceCatalogue::class)->find($species, $subspecies, $edition);
+
+        $scores = PointBuy::withSpecies($boughtScores, $species, $speciesChoices, $subspecies, $edition);
+
+        foreach ($bonusSfondo as $ability => $bonus) {
+            $scores[$ability] += $bonus;
+        }
+
         $abilityScores = AbilityScores::fromArray($scores);
         $hitDie = ClassRules::hitDie($class);
 
         return DB::transaction(function () use (
             $owner, $name, $class, $species, $background, $subclass, $story,
             $scores, $abilityScores, $hitDie, $skills, $spells, $equipmentChoices, $sottorazza,
-            $backgroundSkills, $pack, $privateStory, $edition, $speciesSkills, $feat
+            $backgroundSkills, $pack, $privateStory, $edition, $speciesSkills, $feat, $sfondo, $talentoSfondo
         ) {
             $character = Character::create([
                 'user_id' => $owner->getKey(),
@@ -99,24 +116,24 @@ final class CreateCharacter
                 ...$scores,
                 // L'elfo dei boschi cammina più svelto della sua razza: se la
                 // sottorazza dichiara un passo, è il suo che vale.
-                'speed' => $sottorazza?->speed ?? SpeciesRules::speed($species),
+                'speed' => $sottorazza?->speed ?? SpeciesRules::speed($species, $edition),
                 // Al primo livello il dado vita si prende pieno.
                 'hp_max' => max(1, $hitDie + $abilityScores->modifier(Ability::Con)),
                 'hp_current' => max(1, $hitDie + $abilityScores->modifier(Ability::Con)),
-                'gp' => (int) config("dnd.backgrounds.list.{$background}.gp", 0),
+                'gp' => $sfondo->gp,
                 'saving_throws' => collect(ClassRules::savingThrows($class))
                     ->mapWithKeys(fn (string $ability) => [$ability => true])
                     ->all(),
-                'skills' => $this->skillMap([...$skills, ...$speciesSkills], $background, $backgroundSkills),
+                'skills' => $this->skillMap([...$skills, ...$speciesSkills], $sfondo->skills ?? [], $backgroundSkills),
                 'spell_slots_used' => [],
                 'spell_ability' => SpellSlots::abilityFor($class)?->value,
                 // Razza e sottorazza di seguito: sulla scheda si deve leggere
                 // da dove viene ogni bonus, non solo il totale nei punteggi.
                 'species_traits' => collect([
-                    SpeciesRules::traits($species),
+                    SpeciesRules::traits($species, $edition),
                     $sottorazza?->traits,
                 ])->filter()->join("\n\n"),
-                'background_feature' => config("dnd.backgrounds.features.{$background}"),
+                'background_feature' => $sfondo->feature,
             ]);
 
             if ($feat !== null) {
@@ -128,7 +145,16 @@ final class CreateCharacter
                 ]);
             }
 
-            $this->giveStartingItems($character, $class, $background, $equipmentChoices, $pack);
+            if ($talentoSfondo !== null) {
+                $character->feats()->create([
+                    'name' => $talentoSfondo->name,
+                    'description' => $talentoSfondo->description,
+                    'level' => 1,
+                    'source' => 'background',
+                ]);
+            }
+
+            $this->giveStartingItems($character, $class, $sfondo, $equipmentChoices, $pack);
             $this->giveSpells($character, $spells);
             $this->autoEquip($character);
 
@@ -141,7 +167,7 @@ final class CreateCharacter
      * @param  list<string>  $skills
      * @param  list<string>  $spells
      */
-    private function validate(string $name, string $class, string $species, string $background, array $scores, array $skills, array $spells = []): void
+    private function validate(string $name, string $class, string $species, string $background, array $scores, array $skills, array $spells, RulesEdition $edition): void
     {
         // Un personaggio senza nome non deve nascere. Nel wizard il primo passo
         // lo pretende, ma partendo da una build si atterra dritti sul riepilogo
@@ -154,11 +180,11 @@ final class CreateCharacter
             throw new InvalidArgumentException("Classe sconosciuta: {$class}.");
         }
 
-        if (! SpeciesRules::exists($species)) {
+        if (! SpeciesRules::exists($species, $edition)) {
             throw new InvalidArgumentException("Specie sconosciuta: {$species}.");
         }
 
-        if (config("dnd.backgrounds.list.{$background}") === null) {
+        if (! BackgroundRules::exists($background, $edition)) {
             throw new InvalidArgumentException("Background sconosciuto: {$background}.");
         }
 
@@ -202,15 +228,15 @@ final class CreateCharacter
     }
 
     /** Quante abilità lascia scegliere il background: zero per quelli del manuale. */
-    public static function freeSkillsFor(?string $background): int
+    public static function freeSkillsFor(?string $background, RulesEdition $edition = RulesEdition::Classic): int
     {
-        return (int) config("dnd.backgrounds.list.{$background}.free_skills", 0);
+        return BackgroundRules::freeSkills($background, $edition);
     }
 
     /** Lo zaino scelto, o il primo dell'elenco se il background ne prevede uno. */
-    public static function pack(?string $background, ?int $index): ?array
+    public static function pack(?string $background, ?int $index, RulesEdition $edition = RulesEdition::Classic): ?array
     {
-        if (self::freeSkillsFor($background) === 0) {
+        if (self::freeSkillsFor($background, $edition) === 0) {
             return null;
         }
 
@@ -223,9 +249,9 @@ final class CreateCharacter
      * @param  list<string>  $chosen
      * @return list<string>
      */
-    private function validateSpeciesSkills(string $species, array $chosen): array
+    private function validateSpeciesSkills(string $species, array $chosen, RulesEdition $edition): array
     {
-        $quante = SpeciesRules::skillChoices($species);
+        $quante = SpeciesRules::skillChoices($species, $edition);
         $chosen = array_values(array_unique(array_filter($chosen)));
 
         if (count($chosen) !== $quante) {
@@ -246,9 +272,9 @@ final class CreateCharacter
     }
 
     /** @param  list<string>  $chosen */
-    private function validateBackgroundSkills(string $background, array $chosen): void
+    private function validateBackgroundSkills(string $background, array $chosen, RulesEdition $edition): void
     {
-        $quante = self::freeSkillsFor($background);
+        $quante = self::freeSkillsFor($background, $edition);
 
         if ($quante === 0) {
             return;
@@ -269,14 +295,36 @@ final class CreateCharacter
         }
     }
 
-    private function skillMap(array $chosen, string $background, array $backgroundSkills = []): array
+    /**
+     * Regole 2024: i bonus alle caratteristiche e il talento di origine
+     * arrivano dal background. Nel 2014 non ce ne sono.
+     *
+     * @param  array<string,int>  $bonuses
+     * @return array{0: array<string,int>, 1: ?Feat}
+     */
+    private function fromBackground(Background $sfondo, array $bonuses): array
+    {
+        if ($sfondo->rules_edition !== RulesEdition::Revised) {
+            if (array_filter($bonuses) !== []) {
+                throw new InvalidArgumentException('Nelle regole 2014 il background non aumenta le caratteristiche.');
+            }
+
+            return [[], null];
+        }
+
+        $talento = filled($sfondo->origin_feat)
+            ? Feat::ofEdition(RulesEdition::Revised)->where('name', $sfondo->origin_feat)->first()
+            : null;
+
+        return [BackgroundRules::validateBonuses($sfondo, $bonuses), $talento];
+    }
+
+    /** @param  list<string>  $dalBackground */
+    private function skillMap(array $chosen, array $dalBackground, array $backgroundSkills = []): array
     {
         // «Personalizzato» non ne impone nessuna: le sue sono quelle che il
         // giocatore ha scelto, e valgono come se fossero fisse.
-        $fromBackground = [
-            ...config("dnd.backgrounds.list.{$background}.skills", []),
-            ...$backgroundSkills,
-        ];
+        $fromBackground = [...$dalBackground, ...$backgroundSkills];
 
         return collect([...$chosen, ...$fromBackground])
             ->unique()
@@ -290,7 +338,7 @@ final class CreateCharacter
      *
      * @param  array<int,int>  $choices  indice della scelta => indice dell'opzione
      */
-    private function giveStartingItems(Character $character, string $class, string $background, array $choices, ?int $pack = null): void
+    private function giveStartingItems(Character $character, string $class, Background $sfondo, array $choices, ?int $pack = null): void
     {
         $equipment = ClassRules::startingEquipment($class);
 
@@ -302,11 +350,11 @@ final class CreateCharacter
             $items = [...$items, ...($picked['items'] ?? [])];
         }
 
-        $items = [...$items, ...config("dnd.starting_items.by_background.{$background}", [])];
+        $items = [...$items, ...($sfondo->starting_items ?? [])];
 
         // Lo zaino del background personalizzato: un oggetto solo, che porta
         // il suo contenuto scritto nella descrizione.
-        if ($scelto = self::pack($background, $pack)) {
+        if ($scelto = self::pack($sfondo->name, $pack, $sfondo->rules_edition)) {
             $items[] = ['name' => $scelto['name'], 'qty' => 1, 'category' => 'Varie'];
         }
 

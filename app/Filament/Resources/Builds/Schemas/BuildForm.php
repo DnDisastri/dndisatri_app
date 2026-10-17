@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Builds\Schemas;
 
 use App\Domain\Dnd\Ability;
+use App\Domain\Dnd\BackgroundRules;
 use App\Domain\Dnd\ClassRules;
 use App\Domain\Dnd\PointBuy;
 use App\Domain\Dnd\SpeciesRules;
@@ -128,7 +129,7 @@ class BuildForm
 
                     Select::make('background')
                         ->label('Background')
-                        ->options(fn () => collect(array_keys(config('dnd.backgrounds.list', [])))
+                        ->options(fn () => collect(BackgroundRules::names())
                             ->mapWithKeys(fn ($b) => [$b => $b]))
                         ->searchable(),
 

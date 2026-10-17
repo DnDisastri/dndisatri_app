@@ -5,6 +5,8 @@ namespace App\Livewire;
 use App\Actions\Characters\CreateCharacter;
 use App\Domain\Dnd\Ability;
 use App\Domain\Dnd\AbilityScores;
+use App\Domain\Dnd\BackgroundCatalogue;
+use App\Domain\Dnd\BackgroundRules;
 use App\Domain\Dnd\ClassRules;
 use App\Domain\Dnd\PointBuy;
 use App\Domain\Dnd\SpeciesRules;
@@ -64,6 +66,13 @@ class CharacterWizard extends Component
 
     /** Il talento dell'Umano Variante, dal catalogo. */
     public string $featId = '';
+
+    /** Regole 2024: i bonus del background, «2-1» (+2 e +1) o «1-1-1» (+1 a tutte e tre). */
+    public string $bonusMode = '2-1';
+
+    public string $bonusPlus2 = '';
+
+    public string $bonusPlus1 = '';
 
     // Passo 3
     /** @var array<string,int> */
@@ -188,9 +197,58 @@ class CharacterWizard extends Component
 
     public function selectEdition(string $edition): void
     {
-        if (RulesEdition::tryFrom($edition)?->isCreatable()) {
-            $this->rulesEdition = $edition;
+        if ($edition === $this->rulesEdition || ! RulesEdition::tryFrom($edition)?->isCreatableBy(auth()->user())) {
+            return;
         }
+
+        $this->rulesEdition = $edition;
+
+        // Specie e background cambiano con le regole: quelli scelti prima non valgono più.
+        $this->species = '';
+        $this->speciesChoices = [];
+        $this->subspecies = '';
+        $this->speciesSkills = [];
+        $this->featId = '';
+        $this->background = '';
+        $this->backgroundSkills = [];
+        $this->pack = null;
+        $this->resetBonus();
+    }
+
+    public function edition(): RulesEdition
+    {
+        return RulesEdition::from($this->rulesEdition);
+    }
+
+    private function resetBonus(): void
+    {
+        $this->bonusMode = '2-1';
+        $this->bonusPlus2 = '';
+        $this->bonusPlus1 = '';
+    }
+
+    /**
+     * Regole 2024: i bonus del background scelti, o vuoto finché non sono completi.
+     *
+     * @return array<string,int>
+     */
+    public function backgroundBonuses(): array
+    {
+        $opzioni = BackgroundRules::of($this->background, $this->edition())?->ability_options ?? [];
+
+        if ($this->edition() !== RulesEdition::Revised || $opzioni === []) {
+            return [];
+        }
+
+        if ($this->bonusMode === '1-1-1') {
+            return array_fill_keys($opzioni, 1);
+        }
+
+        if (! in_array($this->bonusPlus2, $opzioni, true) || ! in_array($this->bonusPlus1, $opzioni, true) || $this->bonusPlus2 === $this->bonusPlus1) {
+            return [];
+        }
+
+        return [$this->bonusPlus2 => 2, $this->bonusPlus1 => 1];
     }
 
     public function selectSpecies(string $species): void
@@ -215,17 +273,22 @@ class CharacterWizard extends Component
     {
         $skills = array_filter($this->speciesSkills);
 
-        return count(array_unique($skills)) === SpeciesRules::skillChoices($this->species)
+        return count(array_unique($skills)) === SpeciesRules::skillChoices($this->species, $this->edition())
             && count($skills) === count(array_unique($skills))
-            && (! SpeciesRules::grantsFeat($this->species) || filled($this->featId));
+            && (! SpeciesRules::grantsFeat($this->species, $this->edition()) || filled($this->featId));
     }
 
     /** @return Collection<int,Feat> */
     public function featOptions(): Collection
     {
-        return SpeciesRules::grantsFeat($this->species)
-            ? Feat::ofEdition(RulesEdition::from($this->rulesEdition))->get()
-            : collect();
+        if (! SpeciesRules::grantsFeat($this->species, $this->edition())) {
+            return collect();
+        }
+
+        // Nel 2024 la specie dà un talento di origine.
+        return Feat::ofEdition($this->edition())
+            ->when($this->edition() === RulesEdition::Revised, fn ($q) => $q->where('category', Feat::ORIGIN))
+            ->get();
     }
 
     public function selectSubspecies(string $subspecies): void
@@ -236,7 +299,7 @@ class CharacterWizard extends Component
     /** @return Collection<int,Subrace> */
     public function subspeciesOptions(): Collection
     {
-        return app(SubraceCatalogue::class)->of($this->species);
+        return app(SubraceCatalogue::class)->of($this->species, $this->edition());
     }
 
     /**
@@ -247,9 +310,12 @@ class CharacterWizard extends Component
      */
     public function subspeciesLabel(): string
     {
-        return match ($this->species) {
-            'Dragonide' => 'Discendenza draconica',
-            'Umano', 'Umano (Variante)' => 'Etnia',
+        return match (true) {
+            $this->species === 'Dragonide' => 'Discendenza draconica',
+            in_array($this->species, ['Umano', 'Umano (Variante)'], true) => 'Etnia',
+            $this->edition() === RulesEdition::Revised && $this->species === 'Goliath' => 'Ascendenza gigante',
+            $this->edition() === RulesEdition::Revised && $this->species === 'Tiefling' => 'Eredità diabolica',
+            $this->edition() === RulesEdition::Revised => 'Lignaggio',
             default => 'Sottospecie',
         };
     }
@@ -266,12 +332,13 @@ class CharacterWizard extends Component
         // Accolito con le abilità scelte da Personalizzato.
         $this->backgroundSkills = [];
         $this->pack = null;
+        $this->resetBonus();
     }
 
     /** Quante abilità lascia scegliere il background scelto. Zero per quasi tutti. */
     public function backgroundSkillSlots(): int
     {
-        return CreateCharacter::freeSkillsFor($this->background);
+        return CreateCharacter::freeSkillsFor($this->background, $this->edition());
     }
 
     /** @return list<array{name: string, contents: string}> */
@@ -383,14 +450,15 @@ class CharacterWizard extends Component
             // Se la razza ha sottorazze, sceglierne una non è facoltativo: un
             // elfo è di qualche tipo, non «elfo e basta».
             2 => filled($this->species)
-                && count(array_filter($this->speciesChoices)) === PointBuy::freeBonusesFor($this->species)
-                && (filled($this->subspecies) || ! app(SubraceCatalogue::class)->required($this->species))
+                && count(array_filter($this->speciesChoices)) === PointBuy::freeBonusesFor($this->species, $this->edition())
+                && (filled($this->subspecies) || ! app(SubraceCatalogue::class)->required($this->species, $this->edition()))
                 && $this->speciesExtrasReady(),
             3 => PointBuy::isValid($this->scores),
             // Se il background lascia scegliere le abilità, sceglierle non
             // è facoltativo, e non si ripetono.
             4 => filled($this->background)
-                && count(array_unique(array_filter($this->backgroundSkills))) === $this->backgroundSkillSlots(),
+                && count(array_unique(array_filter($this->backgroundSkills))) === $this->backgroundSkillSlots()
+                && ($this->edition() !== RulesEdition::Revised || $this->backgroundBonuses() !== []),
             5 => count($this->skills) === ClassRules::skillCount($this->class),
             6 => true,
             default => true,
@@ -421,6 +489,7 @@ class CharacterWizard extends Component
                 privateStory: filled($this->privateStory) ? mb_substr($this->privateStory, 0, 5000) : null,
                 speciesSkills: array_values(array_filter($this->speciesSkills)),
                 featId: filled($this->featId) ? (int) $this->featId : null,
+                backgroundBonuses: $this->backgroundBonuses(),
             );
         } catch (InvalidArgumentException $e) {
             $this->addError('creazione', $e->getMessage());
@@ -436,12 +505,19 @@ class CharacterWizard extends Component
     /** I punteggi finali, bonus di specie compresi. */
     public function finalScores(): array
     {
-        return PointBuy::withSpecies(
+        $punteggi = PointBuy::withSpecies(
             $this->scores,
             $this->species,
             array_filter($this->speciesChoices),
             $this->subspecies ?: null,
+            $this->edition(),
         );
+
+        foreach ($this->backgroundBonuses() as $ability => $bonus) {
+            $punteggi[$ability] += $bonus;
+        }
+
+        return $punteggi;
     }
 
     public function remainingPoints(): int
@@ -453,7 +529,7 @@ class CharacterWizard extends Component
     public function skillOptions(): Collection
     {
         $fromBackground = [
-            ...config("dnd.backgrounds.list.{$this->background}.skills", []),
+            ...(BackgroundRules::of($this->background, $this->edition())?->skills ?? []),
             ...array_filter($this->backgroundSkills),
         ];
         $fromSpecies = array_filter($this->speciesSkills);
@@ -516,8 +592,8 @@ class CharacterWizard extends Component
             'abilities' => Ability::cases(),
             'editions' => RulesEdition::cases(),
             'classes' => ClassRules::names(),
-            'speciesList' => SpeciesRules::names(),
-            'backgrounds' => config('dnd.backgrounds.list', []),
+            'speciesList' => SpeciesRules::names($this->edition()),
+            'backgrounds' => app(BackgroundCatalogue::class)->all($this->edition()),
             'equipmentChoices' => ClassRules::startingEquipment($this->class)['choices'],
         ]);
     }

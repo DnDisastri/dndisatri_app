@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
+use App\Models\User;
+
 /** Con quali regole è fatto un personaggio; le righe dei cataloghi nuovi la portano anche loro. */
 enum RulesEdition: string
 {
@@ -18,10 +20,11 @@ enum RulesEdition: string
         };
     }
 
-    /** Le regole 2024 arrivano più avanti: per ora si crea solo in 2014. */
-    public function isCreatable(): bool
+    /** Il 2014 sempre. Il 2024 per ora solo i DM, per provarlo. */
+    public function isCreatableBy(?User $user): bool
     {
-        return $this === self::Classic;
+        return $this === self::Classic
+            || ($user?->isDm() ?? false);
     }
 
     /** @return array<string, string> */
