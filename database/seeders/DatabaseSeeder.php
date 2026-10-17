@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             // legge: senza, nessuno può scegliere una sottoclasse.
             SubclassSeeder::class,
             SubraceSeeder::class,
+            FeatSeeder::class,
             // Contenuti di partenza modificabili dal pannello, anche in produzione.
             MarketSeeder::class,
             FaqSeeder::class,
