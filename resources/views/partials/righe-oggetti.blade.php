@@ -11,6 +11,7 @@
         <div data-riga-bottino @if ($i >= $aperte) hidden @endif
              class="border-t border-line py-3 first:border-0 first:pt-0">
             <div class="grid grid-cols-6 gap-2">
+                <input type="hidden" name="items[{{ $i }}][magic_item_id]" value="{{ old("items.$i.magic_item_id") }}" data-campo="magic_item_id">
                 <div class="relative col-span-6 sm:col-span-4" data-cerca-oggetto>
                     <input type="text" name="items[{{ $i }}][name]" placeholder="Nome (cerca)" maxlength="100"
                            value="{{ old("items.$i.name") }}" aria-label="Nome dell'oggetto {{ $i + 1 }}"

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Domain\Dnd\ItemCatalogue;
 use App\Domain\Dnd\SubclassCatalogue;
 use App\Http\Controllers\GuestBookingController;
 use App\Notifications\InAppNotification;
@@ -27,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
         // Singleton perché facciano da memoria per la durata della richiesta.
         $this->app->singleton(SubclassCatalogue::class);
         $this->app->singleton(SubraceCatalogue::class);
+        $this->app->singleton(ItemCatalogue::class);
     }
 
     /**

@@ -11,11 +11,13 @@ use App\Domain\Dnd\Checks;
 use App\Domain\Dnd\ClassRules;
 use App\Domain\Dnd\Coins;
 use App\Domain\Dnd\HitPoints;
+use App\Domain\Dnd\ItemCatalogue;
 use App\Domain\Dnd\Multiclass;
 use App\Domain\Dnd\Progression;
 use App\Domain\Dnd\SkillProficiency;
 use App\Domain\Dnd\SpellSlots;
 use App\Domain\Dnd\SpellSlotSet;
+use App\Enums\DamageType;
 use App\Enums\EquipmentSlot;
 use App\Enums\LedgerAction;
 use App\Enums\PendingChangeStatus;
@@ -665,7 +667,7 @@ class Character extends Model
      * Dall'inventario: un'arma venduta sparisce da sé. `character_weapons` non
      * duplica le armi, le corregge (spada +1, arma fuori catalogo).
      *
-     * @return Collection<int, array{name: string, ability: Ability, attack: int, damage: string, equipped: bool}>
+     * @return Collection<int, array{name: string, ability: Ability, attack: int, damage: string, damage_type: ?string, equipped: bool}>
      */
     public function attacks(): Collection
     {
@@ -677,16 +679,20 @@ class Character extends Model
             ->filter(fn (CharacterItem $item) => $overrides->has($item->name)
                 || EquipmentSlot::Weapon->accepts($item->catalogKey()))
             ->map(function (CharacterItem $item) use ($overrides, $scores, $proficiency) {
-                $catalog = config("dnd.combat.weapons.{$item->catalogKey()}", []);
+                $catalog = app(ItemCatalogue::class)->findOf(EquipmentSlot::Weapon, $item->catalogKey());
                 $override = $overrides->get($item->name);
 
-                // Sulla correzione è già un Ability (cast del modello); nel catalogo è una stringa.
-                $ability = $override?->attack_ability
-                    ?? Ability::from($catalog['stat'] ?? Ability::Str->value);
+                $ability = $override?->attack_ability ?? $catalog?->ability ?? Ability::Str;
+
+                // Accurata: vale la migliore fra Forza e Destrezza.
+                if ($override?->attack_ability === null && $catalog?->isFinesse()) {
+                    $ability = $scores->modifier(Ability::Dex) > $scores->modifier(Ability::Str) ? Ability::Dex : Ability::Str;
+                }
+
                 $bonus = (int) ($override?->weapon_bonus ?: $item->magic_bonus);
 
                 $attack = Checks::weaponAttack($scores, $ability, $proficiency, $bonus);
-                $damageDie = $override->damage ?? $catalog['damage'] ?? 'Vuoto';
+                $damageDie = $override->damage ?? $catalog?->damage ?? 'Vuoto';
                 $damageMod = $scores->modifier($ability) + $bonus;
 
                 // Una correzione può avere il modificatore già scritto ("1d4+3"): non si somma due volte.
@@ -699,6 +705,8 @@ class Character extends Model
                     'damage' => ($damageMod === 0 || $giàCompleto)
                         ? $damageDie
                         : $damageDie.Ability::format($damageMod),
+                    // Una correzione scrive i suoi danni: il tipo del catalogo potrebbe non valere più.
+                    'damage_type' => $override?->damage ? null : $catalog?->damage_type?->label(),
                     'equipped' => $item->equipped_slot === EquipmentSlot::Weapon,
                 ];
             })
@@ -709,7 +717,7 @@ class Character extends Model
     /**
      * Il colpo senz'armi: chiunque ne è competente, danni 1 + Forza.
      *
-     * @return array{name: string, attack: int, damage: string}
+     * @return array{name: string, attack: int, damage: string, damage_type: string}
      */
     public function unarmedStrike(): array
     {
@@ -720,6 +728,7 @@ class Character extends Model
             'name' => 'Colpo senz\'armi',
             'attack' => Checks::weaponAttack($scores, Ability::Str, $this->proficiencyBonus()),
             'damage' => $mod === 0 ? '1' : '1'.Ability::format($mod),
+            'damage_type' => DamageType::Bludgeoning->label(),
         ];
     }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
+use App\Domain\Dnd\ItemCatalogue;
+
 /**
  * Gli slot di equipaggiamento. Uno solo per slot, garantito dall'indice
  * univoco su `character_items`.
@@ -48,7 +50,7 @@ enum EquipmentSlot: string
     /** La chiave è il nome a catalogo, o la `base` di un oggetto con un nome suo. */
     public function accepts(string $catalogKey): bool
     {
-        return config("dnd.combat.{$this->catalogSection()}.{$catalogKey}") !== null;
+        return app(ItemCatalogue::class)->findOf($this, $catalogKey) !== null;
     }
 
     public static function naturalFor(string $catalogKey): ?self
@@ -73,10 +75,9 @@ enum EquipmentSlot: string
         $gruppi = [];
 
         foreach ([self::Armor, self::Shield, self::Weapon] as $slot) {
-            $nomi = array_filter(
-                array_keys(config("dnd.combat.{$slot->catalogSection()}", [])),
-                fn (string $nome) => ! str_contains($nome, '+'),
-            );
+            $nomi = app(ItemCatalogue::class)->of($slot)->keys()
+                ->reject(fn (string $nome) => str_contains($nome, '+'))
+                ->all();
 
             $gruppi[$slot->groupLabel()] = array_combine($nomi, $nomi);
         }
@@ -95,15 +96,6 @@ enum EquipmentSlot: string
             self::Weapon => 'Armi',
             self::Armor => 'Armature',
             self::Shield => 'Scudi',
-        };
-    }
-
-    private function catalogSection(): string
-    {
-        return match ($this) {
-            self::Weapon => 'weapons',
-            self::Armor => 'armor',
-            self::Shield => 'shields',
         };
     }
 }

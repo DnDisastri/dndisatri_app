@@ -443,6 +443,7 @@ if (righeBottino) {
             campo('base').value = voce.base ?? '';
             campo('value').value = voce.value_cp ? voce.value_cp / 100 : '';
             campo('details').value = voce.details ?? '';
+            campo('magic_item_id').value = voce.magic_item_id ?? '';
             chiudi();
         };
 
@@ -468,7 +469,8 @@ if (righeBottino) {
             nome.setAttribute('aria-expanded', String(!elenco.hidden));
         };
 
-        nome.addEventListener('input', mostra);
+        // Cambiato il nome a mano, non è più l'oggetto del catalogo: niente effetti.
+        nome.addEventListener('input', () => { campo('magic_item_id').value = ''; mostra(); });
         nome.addEventListener('blur', chiudi);
         nome.addEventListener('keydown', (evento) => {
             if (elenco.hidden) return;

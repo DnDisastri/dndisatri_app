@@ -13,7 +13,7 @@
         <div class="flex items-baseline justify-between gap-3 border-t border-line py-2 first:border-t-0">
             <span class="font-medium text-fg">{{ $attacco['name'] }}</span>
             <span class="whitespace-nowrap text-sm text-muted">
-                <span class="font-bold text-fg">{{ Ability::format($attacco['attack']) }} colpire</span> · {{ $attacco['damage'] }}
+                <span class="font-bold text-fg">{{ Ability::format($attacco['attack']) }} colpire</span> · {{ $attacco['damage'] }}{{ filled($attacco['damage_type'] ?? null) ? ' '.$attacco['damage_type'] : '' }}
             </span>
         </div>
     @endforeach

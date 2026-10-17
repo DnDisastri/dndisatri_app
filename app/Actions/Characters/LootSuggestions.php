@@ -4,27 +4,32 @@ declare(strict_types=1);
 
 namespace App\Actions\Characters;
 
+use App\Domain\Dnd\ItemCatalogue;
 use App\Enums\EquipmentSlot;
 use App\Enums\PendingChangeStatus;
 use App\Enums\PendingChangeType;
+use App\Enums\RulesEdition;
+use App\Models\MagicItem;
 use App\Models\MarketItem;
 use App\Models\PendingChange;
 use Illuminate\Support\Collection;
 
 /**
- * Gli oggetti fra cui cercare nel modulo del bottino: catalogo di combattimento,
- * negozio e oggetti già approvati in altri bottini (visibili a tutti, per scelta).
- * A parità di nome vince il negozio, poi il catalogo.
+ * Gli oggetti fra cui cercare nel modulo del bottino: armi e armature,
+ * oggetti magici del catalogo, negozio e oggetti già approvati in altri
+ * bottini (visibili a tutti, per scelta). A parità di nome vince il negozio,
+ * poi il catalogo magico, poi armi e armature.
  */
 final class LootSuggestions
 {
     private const APPROVATI_LETTI = 200;
 
-    /** @return list<array{name: string, category: ?string, value_cp: int, details: ?string, base: ?string, source: string}> */
+    /** @return list<array{name: string, category: ?string, value_cp: int, details: ?string, base: ?string, source: string, magic_item_id: ?int}> */
     public function handle(): array
     {
         return $this->approved()
             ->merge($this->catalog())
+            ->merge($this->magic())
             ->merge($this->shop())
             ->keyBy(fn (array $voce) => mb_strtolower($voce['name']))
             ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
@@ -38,10 +43,24 @@ final class LootSuggestions
             fn (array $nomi, string $gruppo) => collect($nomi)->map(fn (string $nome) => $this->voce(
                 name: $nome,
                 category: $gruppo === 'Armi' ? 'Armi' : 'Armature',
+                valueCp: (int) app(ItemCatalogue::class)->find($nome)?->price_cp,
                 base: $nome,
                 source: 'catalogo',
             ))->values()
         );
+    }
+
+    private function magic(): Collection
+    {
+        return MagicItem::ofEdition(RulesEdition::Classic)->get()->map(fn (MagicItem $item) => $this->voce(
+            name: $item->name,
+            category: $item->category,
+            valueCp: (int) $item->value_cp,
+            details: $item->detailsForInventory(),
+            base: $item->base,
+            source: 'oggetto magico',
+            magicItemId: $item->getKey(),
+        ));
     }
 
     private function shop(): Collection
@@ -81,7 +100,7 @@ final class LootSuggestions
             ));
     }
 
-    /** @return array{name: string, category: ?string, value_cp: int, details: ?string, base: ?string, source: string} */
+    /** @return array{name: string, category: ?string, value_cp: int, details: ?string, base: ?string, source: string, magic_item_id: ?int} */
     private function voce(
         string $name,
         ?string $category = null,
@@ -89,6 +108,7 @@ final class LootSuggestions
         ?string $details = null,
         ?string $base = null,
         string $source = '',
+        ?int $magicItemId = null,
     ): array {
         return [
             'name' => $name,
@@ -97,6 +117,7 @@ final class LootSuggestions
             'details' => $details,
             'base' => $base,
             'source' => $source,
+            'magic_item_id' => $magicItemId,
         ];
     }
 }
